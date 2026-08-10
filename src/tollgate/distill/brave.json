@@ -1,0 +1,97 @@
+{
+  "id": "brave",
+  "title": "Brave Search API",
+  "distilled_at": "2026-08-11",
+  "sources": [
+    "https://brave.com/search/api/",
+    "https://api-dashboard.search.brave.com/documentation/guides/rate-limiting",
+    "https://api-dashboard.search.brave.com/api-reference/web/search/get"
+  ],
+  "openai_compatible": false,
+  "auth": {
+    "type": "header_token",
+    "header": "X-Subscription-Token",
+    "env": ["BRAVE_API_KEY"],
+    "key_prefix": "BSA",
+    "summary": "X-Subscription-Token: <BRAVE_API_KEY>"
+  },
+  "base_urls": {
+    "default": "https://api.search.brave.com"
+  },
+  "endpoints": [
+    {
+      "id": "web_search",
+      "method": "GET",
+      "path": "/res/v1/web/search",
+      "cost": "1 successful request",
+      "purpose": "Web search results",
+      "query_params": {
+        "q": "required, max 400 chars / 50 words",
+        "count": "1–20, default plan-dependent",
+        "country": "2-letter",
+        "search_lang": "2-letter"
+      }
+    }
+  ],
+  "headers_out": [
+    {
+      "name": "X-RateLimit-Limit",
+      "meaning": "per-window limits (e.g. 1, 15000 → 1/s + monthly)"
+    },
+    {
+      "name": "X-RateLimit-Remaining",
+      "meaning": "remaining in each window"
+    },
+    {
+      "name": "X-RateLimit-Reset",
+      "meaning": "seconds until each window resets"
+    },
+    {
+      "name": "X-RateLimit-Policy",
+      "meaning": "limit;w=seconds pairs"
+    }
+  ],
+  "limits": {
+    "kind": "sliding_window + monthly",
+    "window_s": 1,
+    "note": "1s sliding window + monthly quota. Only successful requests count/bill. Observed plan often 1 req/s.",
+    "probe_kind": "metered",
+    "hub_cache_quota_s": 60
+  },
+  "errors": {
+    "401": "bad/missing subscription token",
+    "422": "bad query params",
+    "429": "rate limit — wait X-RateLimit-Reset first value"
+  },
+  "ops": [
+    {
+      "name": "status",
+      "maps_to": "GET /res/v1/web/search?count=1",
+      "args": ["live"],
+      "notes": "live probe costs 1 request unless cached"
+    },
+    {
+      "name": "search",
+      "maps_to": "GET /res/v1/web/search",
+      "args": ["query", "count", "country", "search_lang"]
+    },
+    {
+      "name": "quota",
+      "maps_to": "GET /res/v1/web/search?count=1",
+      "args": ["force"],
+      "notes": "Parse rate headers; cache 60s"
+    },
+    { "name": "research", "maps_to": "distill", "args": [] }
+  ],
+  "gotchas": [
+    "Do not burst; space ≥1s on low plans",
+    "Failed requests do not count against quota",
+    "Hub keys_web_search goes through limits + usage ledger"
+  ],
+  "hub": {
+    "probe": "GET /res/v1/web/search?q=…&count=1",
+    "probe_kind": "metered",
+    "probe_cost": "1 successful request against monthly quota",
+    "capabilities": ["search"]
+  }
+}

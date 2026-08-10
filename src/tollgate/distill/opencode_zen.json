@@ -1,0 +1,108 @@
+{
+  "id": "opencode_zen",
+  "title": "OpenCode Zen Gateway",
+  "distilled_at": "2026-08-11",
+  "sources": [
+    "https://opencode.ai/docs/zen/",
+    "https://docs.docker.com/ai/docker-agent/providers/opencode-zen/"
+  ],
+  "openai_compatible": true,
+  "auth": {
+    "type": "bearer",
+    "header": "Authorization",
+    "scheme": "Bearer",
+    "env": ["OPENCODE_API_KEY", "OPENCODE_ZEN_API_KEY"],
+    "key_prefix": "sk-",
+    "summary": "Authorization: Bearer <OPENCODE_API_KEY> (alias OPENCODE_ZEN_API_KEY)"
+  },
+  "base_urls": {
+    "default": "https://opencode.ai/zen/v1",
+    "chat": "https://opencode.ai/zen/v1/chat/completions",
+    "responses": "https://opencode.ai/zen/v1/responses",
+    "messages": "https://opencode.ai/zen/v1/messages",
+    "go": "https://opencode.ai/zen/go/v1"
+  },
+  "endpoints": [
+    {
+      "id": "models",
+      "method": "GET",
+      "path": "/models",
+      "cost": "none",
+      "purpose": "Full model catalog"
+    },
+    {
+      "id": "chat_completions",
+      "method": "POST",
+      "path": "/chat/completions",
+      "cost": "0 for *-free models; paid otherwise",
+      "purpose": "OpenAI-compatible chat (DeepSeek free, MiniMax, GLM, Kimi, …)"
+    },
+    {
+      "id": "responses",
+      "method": "POST",
+      "path": "/responses",
+      "cost": "paid GPT-class",
+      "purpose": "OpenAI Responses API style models"
+    },
+    {
+      "id": "messages",
+      "method": "POST",
+      "path": "/messages",
+      "cost": "paid Claude-class",
+      "purpose": "Anthropic-compatible messages"
+    }
+  ],
+  "free_models": [
+    "deepseek-v4-flash-free",
+    "mimo-v2.5-free",
+    "laguna-s-2.1-free",
+    "ling-3.0-tiny-free",
+    "longcat-2.0-free",
+    "north-mini-code-free",
+    "nemotron-3-ultra-free",
+    "big-pickle"
+  ],
+  "config_model_id": "opencode/<model-id> in TUI; bare <model-id> on HTTP API",
+  "limits": {
+    "billing": "Zen pay-as-you-go balance; free models cost 0",
+    "go_vs_zen": "OpenCode Go is separate ($/mo, /zen/go/v1)",
+    "probe_kind": "free"
+  },
+  "errors": {
+    "403_cloudflare_1010": "Bot/UA blocked — send browser User-Agent",
+    "401": "bad key",
+    "402": "insufficient Zen balance for paid models"
+  },
+  "ops": [
+    {
+      "name": "status",
+      "maps_to": "GET /models + optional free chat",
+      "args": ["live"]
+    },
+    {
+      "name": "models",
+      "maps_to": "GET /models",
+      "args": []
+    },
+    {
+      "name": "chat",
+      "maps_to": "POST /chat/completions",
+      "args": ["message", "model", "max_tokens"],
+      "notes": "Default model deepseek-v4-flash-free"
+    },
+    { "name": "research", "maps_to": "distill", "args": [] }
+  ],
+  "gotchas": [
+    "Cloudflare blocks default Python urllib without browser UA",
+    "$ top-up is for paid models; free models still need a valid key",
+    "Gnom desk LLM stack uses DeepSeek unless wired to Zen route"
+  ],
+  "hub": {
+    "probe": "GET /models + POST chat free model",
+    "probe_kind": "free",
+    "probe_cost": "none for free models (cost field often \"0\")",
+    "capabilities": ["llm", "free_llm", "paid_llm"],
+    "default_model": "deepseek-v4-flash-free",
+    "user_agent_required": true
+  }
+}

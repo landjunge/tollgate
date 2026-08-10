@@ -1,0 +1,91 @@
+{
+  "id": "deepseek",
+  "title": "DeepSeek API",
+  "distilled_at": "2026-08-11",
+  "sources": [
+    "https://api-docs.deepseek.com/",
+    "https://api-docs.deepseek.com/quick_start/rate_limit",
+    "https://api-docs.deepseek.com/quick_start/pricing"
+  ],
+  "openai_compatible": true,
+  "auth": {
+    "type": "bearer",
+    "header": "Authorization",
+    "scheme": "Bearer",
+    "env": ["DEEPSEEK_API_KEY"],
+    "key_prefix": "sk-",
+    "summary": "Authorization: Bearer <DEEPSEEK_API_KEY>"
+  },
+  "base_urls": {
+    "default": "https://api.deepseek.com",
+    "openai": "https://api.deepseek.com",
+    "anthropic": "https://api.deepseek.com/anthropic"
+  },
+  "endpoints": [
+    {
+      "id": "models",
+      "method": "GET",
+      "path": "/models",
+      "cost": "none",
+      "purpose": "List models; hub probe"
+    },
+    {
+      "id": "chat_completions",
+      "method": "POST",
+      "path": "/chat/completions",
+      "cost": "tokens",
+      "purpose": "Chat / agent completions",
+      "body_notes": "model, messages[]; optional thinking, reasoning_effort, stream"
+    }
+  ],
+  "models": ["deepseek-v4-flash", "deepseek-v4-pro"],
+  "model_notes": {
+    "deepseek-v4-flash": "Default hub model; high concurrency (2500)",
+    "deepseek-v4-pro": "Higher quality; concurrency 500; supports thinking/reasoning_effort"
+  },
+  "limits": {
+    "kind": "concurrency",
+    "flash_concurrent": 2500,
+    "pro_concurrent": 500,
+    "note": "No published RPM/TPM; capacity is concurrency + best-effort under load",
+    "probe_kind": "free"
+  },
+  "errors": {
+    "401": "invalid or missing API key",
+    "429": "capacity / rare rate pressure — backoff",
+    "503": "peak load temporary"
+  },
+  "ops": [
+    {
+      "name": "status",
+      "maps_to": "GET /models",
+      "args": ["live"],
+      "notes": "live=true authenticates via models list"
+    },
+    {
+      "name": "models",
+      "maps_to": "GET /models",
+      "args": [],
+      "notes": "Returns model ids"
+    },
+    {
+      "name": "research",
+      "maps_to": "distill",
+      "args": [],
+      "notes": "Offline distill view"
+    }
+  ],
+  "gotchas": [
+    "WORKER_API_KEY often same account → shared concurrency pool",
+    "Use base_url https://api.deepseek.com with OpenAI SDK",
+    "thinking / reasoning_effort only on pro-class models as documented"
+  ],
+  "hub": {
+    "probe": "GET /models",
+    "probe_kind": "free",
+    "probe_cost": "none",
+    "capabilities": ["llm", "paid_llm"],
+    "default_model": "deepseek-v4-flash",
+    "env_model": "DEEPSEEK_MODEL"
+  }
+}

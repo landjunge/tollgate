@@ -1,0 +1,100 @@
+{
+  "id": "elevenlabs",
+  "title": "ElevenLabs API",
+  "distilled_at": "2026-08-11",
+  "sources": [
+    "https://elevenlabs.io/docs/api-reference/authentication",
+    "https://elevenlabs.io/docs/api-reference/user/subscription/get",
+    "https://elevenlabs.io/docs/overview/administration/workspaces/api-keys"
+  ],
+  "openai_compatible": false,
+  "auth": {
+    "type": "header_token",
+    "header": "xi-api-key",
+    "env": ["ELEVENLABS_API_KEY"],
+    "key_prefix": "sk_",
+    "summary": "xi-api-key: <ELEVENLABS_API_KEY>"
+  },
+  "base_urls": {
+    "default": "https://api.elevenlabs.io"
+  },
+  "endpoints": [
+    {
+      "id": "subscription",
+      "method": "GET",
+      "path": "/v1/user/subscription",
+      "cost": "none",
+      "purpose": "character_count, character_limit, tier — hub budget source of truth"
+    },
+    {
+      "id": "user",
+      "method": "GET",
+      "path": "/v1/user",
+      "cost": "none",
+      "purpose": "User profile + nested subscription"
+    },
+    {
+      "id": "tts",
+      "method": "POST",
+      "path": "/v1/text-to-speech/{voice_id}",
+      "cost": "characters ≈ credits (model-dependent)",
+      "purpose": "TTS generation (MCP/hub may only gate budget; synthesis external)"
+    }
+  ],
+  "limits": {
+    "kind": "monthly_character_credits",
+    "free_tier_chars": 10000,
+    "hub_floor_env": "ELEVENLABS_MIN_REMAINING",
+    "hub_floor_default": 5000,
+    "keys_app_field": "providers.elevenlabs.min_remaining",
+    "note": "Stop spend when remaining ≤ floor. Multilingual v2 ≈ 1 credit/char; flash may be 0.5×.",
+    "probe_kind": "free"
+  },
+  "errors": {
+    "401": "invalid key",
+    "402": "insufficient_credits / payment_required",
+    "403": "missing_permissions / scope restriction on API key"
+  },
+  "ops": [
+    {
+      "name": "status",
+      "maps_to": "GET /v1/user/subscription + budget",
+      "args": ["live"]
+    },
+    {
+      "name": "subscription",
+      "maps_to": "GET /v1/user/subscription",
+      "args": ["force"]
+    },
+    {
+      "name": "budget",
+      "maps_to": "subscription + floor math",
+      "args": ["cost"],
+      "notes": "cost = estimated chars for next call"
+    },
+    {
+      "name": "ensure_budget",
+      "maps_to": "budget",
+      "args": ["cost"],
+      "notes": "raises if not allowed"
+    },
+    { "name": "research", "maps_to": "distill", "args": [] }
+  ],
+  "gotchas": [
+    "Key scopes in dashboard can block TTS even with credits",
+    "Per-key character_limit via API mainly service-account keys",
+    "Voice id from ELEVENLABS_VOICE_ID"
+  ],
+  "hub": {
+    "probe": "GET /v1/user/subscription",
+    "probe_kind": "free",
+    "probe_cost": "none (read subscription)",
+    "capabilities": ["tts"],
+    "meta_env": [
+      "ELEVENLABS_MIN_REMAINING",
+      "ELEVENLABS_VOICE_ID",
+      "ELEVENLABS_VOICE_NAME",
+      "ELEVENLABS_KEY_NAME"
+    ]
+  }
+}

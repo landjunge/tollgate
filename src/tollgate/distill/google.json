@@ -1,0 +1,83 @@
+{
+  "id": "google",
+  "title": "Google AI (Gemini / AI Studio / Vertex)",
+  "distilled_at": "2026-08-11",
+  "sources": [
+    "https://ai.google.dev/gemini-api/docs",
+    "https://ai.google.dev/pricing",
+    "https://cloud.google.com/vertex-ai/generative-ai/pricing"
+  ],
+  "openai_compatible": false,
+  "high_risk": true,
+  "cost_warning": "VERY EASY TO OVERSPEND. Multiple products (AI Studio free tier, paid Gemini API, Vertex AI, Grounding, embeddings, multimodal). Billing is fragmented and opaque. Keep disabled unless intentional. Set max_usd_day + max_calls_day hard caps.",
+  "auth": {
+    "type": "api_key_or_adc",
+    "env": ["GOOGLE_API_KEY", "GEMINI_API_KEY", "GOOGLE_AI_API_KEY"],
+    "summary": "API key (AI Studio) or ADC for Vertex — complex dual path"
+  },
+  "base_urls": {
+    "default": "https://generativelanguage.googleapis.com/v1beta",
+    "vertex": "https://{region}-aiplatform.googleapis.com/v1"
+  },
+  "endpoints": [
+    {
+      "id": "generate_content",
+      "method": "POST",
+      "path": "/models/{model}:generateContent",
+      "cost": "tokens + sometimes grounding/image",
+      "purpose": "Gemini generate"
+    },
+    {
+      "id": "stream",
+      "method": "POST",
+      "path": "/models/{model}:streamGenerateContent",
+      "cost": "tokens",
+      "purpose": "Streaming generate"
+    }
+  ],
+  "models_notes": "gemini-*-flash cheaper than pro; multimodal multiplies cost; long context expensive",
+  "limits": {
+    "kind": "quota + pay-as-you-go",
+    "note": "Free tier has RPM/RPD; paid has no soft emotional limit — only billing",
+    "probe_kind": "free",
+    "recommended_hub_caps": {
+      "enabled": false,
+      "max_calls_day": 20,
+      "max_tokens_day": 50000,
+      "max_usd_day": 1.0
+    }
+  },
+  "errors": {
+    "429": "rate / quota",
+    "400": "bad request / safety",
+    "403": "API not enabled / billing / permission"
+  },
+  "ops": [
+    {
+      "name": "status",
+      "maps_to": "presence + enabled flag",
+      "args": ["live"],
+      "notes": "Default disabled; live probe optional later"
+    },
+    { "name": "research", "maps_to": "distill", "args": [] }
+  ],
+  "gotchas": [
+    "AI Studio key ≠ Vertex project billing",
+    "Enabling APIs in GCP console can attach billing without obvious UI warning",
+    "Grounding / Maps / Search tools add extra line items",
+    "Image/video input burns tokens fast",
+    "Do NOT put Google in free_llm routing chain by default"
+  ],
+  "hub": {
+    "probe": "presence only unless explicitly enabled",
+    "probe_kind": "free",
+    "probe_cost": "none",
+    "capabilities": ["llm", "paid_llm", "media"],
+    "default_enabled": false
+  },
+  "usd_estimate_per_1m_tokens": {
+    "input": 0.5,
+    "output": 1.5,
+    "note": "Rough mid placeholder for budgeting only — real Gemini prices change often; check ai.google.dev/pricing"
+  }
+}

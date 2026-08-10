@@ -1,0 +1,101 @@
+{
+  "id": "openrouter",
+  "title": "OpenRouter",
+  "distilled_at": "2026-08-11",
+  "sources": [
+    "https://openrouter.ai/docs/api_reference/limits",
+    "https://openrouter.ai/docs/faq",
+    "https://openrouter.ai/pricing"
+  ],
+  "openai_compatible": true,
+  "auth": {
+    "type": "bearer",
+    "header": "Authorization",
+    "scheme": "Bearer",
+    "env": ["OPENROUTER_API_KEY"],
+    "env_chain": [
+      "OPENROUTER_API_KEY",
+      "OPENROUTER_API_KEY_GNOM_CONFIG",
+      "OPENROUTER_API_KEY_GNOMHUB",
+      "OPENROUTER_API_KEY_HERMES"
+    ],
+    "key_prefix": "sk-or-v1-",
+    "summary": "Authorization: Bearer <OPENROUTER_API_KEY> (try env_chain)"
+  },
+  "base_urls": {
+    "default": "https://openrouter.ai/api/v1"
+  },
+  "endpoints": [
+    {
+      "id": "key",
+      "method": "GET",
+      "path": "/key",
+      "cost": "none",
+      "purpose": "Credit limits: limit, limit_remaining, usage_*, is_free_tier"
+    },
+    {
+      "id": "models",
+      "method": "GET",
+      "path": "/models",
+      "cost": "none",
+      "purpose": "Model catalog; free variants end with :free"
+    },
+    {
+      "id": "chat_completions",
+      "method": "POST",
+      "path": "/chat/completions",
+      "cost": "credits / tokens",
+      "purpose": "Chat via routed providers"
+    }
+  ],
+  "models_notes": "Hundreds of models; free ids end with :free",
+  "free_models_policy": {
+    "id_suffix": ":free",
+    "rpm": 20,
+    "rpd_no_credits_purchased": 50,
+    "rpd_after_10_credits": 1000,
+    "credits_threshold": 10
+  },
+  "limits": {
+    "credits": "GET /key → data.limit_remaining",
+    "free_models": "platform RPM/RPD caps; paid variants have different limits",
+    "probe_kind": "free"
+  },
+  "errors": {
+    "401": "User not found / invalid key — try next in env_chain",
+    "402": "insufficient credits or per-key limit",
+    "429": "rate limit — honor Retry-After when present"
+  },
+  "ops": [
+    {
+      "name": "status",
+      "maps_to": "GET /key (+ models optional)",
+      "args": ["live"]
+    },
+    {
+      "name": "credits",
+      "maps_to": "GET /key",
+      "args": [],
+      "notes": "Walks env_chain until live key"
+    },
+    {
+      "name": "models",
+      "maps_to": "GET /models",
+      "args": [],
+      "notes": "Respect OPENROUTER_FREE_ONLY / keys_app free_only"
+    },
+    { "name": "research", "maps_to": "distill", "args": [] }
+  ],
+  "gotchas": [
+    "Legacy alias keys often 401 — primary should be the live key",
+    "OPENROUTER_FREE_ONLY=1 → prefer :free model ids",
+    "Making extra accounts does not raise free-model platform caps"
+  ],
+  "hub": {
+    "probe": "GET /api/v1/key",
+    "probe_kind": "free",
+    "probe_cost": "none (credit metadata)",
+    "capabilities": ["llm", "free_llm", "paid_llm"],
+    "meta_env": ["OPENROUTER_FREE_ONLY"]
+  }
+}

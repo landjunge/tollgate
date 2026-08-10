@@ -1,0 +1,64 @@
+{
+  "id": "nvidia",
+  "title": "NVIDIA NIM (API Catalog)",
+  "distilled_at": "2026-08-11",
+  "sources": [
+    "https://build.nvidia.com/",
+    "https://docs.nvidia.com/nim/large-language-models/latest/getting-started.html",
+    "https://developer.nvidia.com/nim"
+  ],
+  "openai_compatible": true,
+  "auth": {
+    "type": "bearer",
+    "header": "Authorization",
+    "scheme": "Bearer",
+    "env": ["NVIDIA_API_KEY"],
+    "key_prefix": "nvapi-",
+    "summary": "Authorization: Bearer <NVIDIA_API_KEY>"
+  },
+  "base_urls": {
+    "default": "https://integrate.api.nvidia.com/v1"
+  },
+  "endpoints": [
+    {
+      "id": "models",
+      "method": "GET",
+      "path": "/models",
+      "cost": "none",
+      "purpose": "Catalog list; hub probe"
+    },
+    {
+      "id": "chat_completions",
+      "method": "POST",
+      "path": "/chat/completions",
+      "cost": "varies / free-tier quotas",
+      "purpose": "Chat; model must be allowed for key"
+    }
+  ],
+  "models": [],
+  "model_notes": "100+ catalog models; /models list ≠ chat ACL for every id",
+  "limits": {
+    "kind": "catalog / developer program",
+    "note": "Free prototyping common; per-model ACLs; no single hub floor",
+    "probe_kind": "free"
+  },
+  "errors": {
+    "401": "bad key",
+    "403": "model not authorized for this key / authorization failed"
+  },
+  "ops": [
+    { "name": "status", "maps_to": "GET /models", "args": ["live"] },
+    { "name": "models", "maps_to": "GET /models", "args": [] },
+    { "name": "research", "maps_to": "distill", "args": [] }
+  ],
+  "gotchas": [
+    "GET /models OK does not guarantee chat on every model id",
+    "Local NIM containers may not need cloud key"
+  ],
+  "hub": {
+    "probe": "GET /models",
+    "probe_kind": "free",
+    "probe_cost": "none",
+    "capabilities": ["llm", "free_llm"]
+  }
+}

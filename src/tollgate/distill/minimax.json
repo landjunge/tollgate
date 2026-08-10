@@ -1,0 +1,79 @@
+{
+  "id": "minimax",
+  "title": "MiniMax API",
+  "distilled_at": "2026-08-11",
+  "sources": [
+    "https://platform.minimax.io/docs/api-reference/api-overview",
+    "https://platform.minimax.io/docs/guides/quickstart-preparation"
+  ],
+  "openai_compatible": true,
+  "auth": {
+    "type": "bearer",
+    "header": "Authorization",
+    "scheme": "Bearer",
+    "env": ["MINIMAX_API_KEY"],
+    "meta_env": ["MINIMAX_GROUP_ID"],
+    "summary": "Authorization: Bearer <MINIMAX_API_KEY>"
+  },
+  "base_urls": {
+    "default": "https://api.minimax.io/v1",
+    "intl": "https://api.minimax.io/v1",
+    "cn": "https://api.minimaxi.com/v1"
+  },
+  "endpoints": [
+    {
+      "id": "files_list",
+      "method": "GET",
+      "path": "/files/list",
+      "cost": "none",
+      "purpose": "Key probe (intl + CN)"
+    },
+    {
+      "id": "chat",
+      "method": "POST",
+      "path": "/text/chatcompletion_v2",
+      "cost": "tokens",
+      "purpose": "Text chat (region-dependent path names)"
+    },
+    {
+      "id": "tts",
+      "method": "POST",
+      "path": "/t2a_v2",
+      "cost": "characters/audio",
+      "purpose": "Speech; may need GROUP_ID on some paths"
+    }
+  ],
+  "limits": {
+    "note": "Pay-as-you-go API key ≠ Token Plan subscription key",
+    "probe_kind": "free"
+  },
+  "errors": {
+    "401": "unauthorized",
+    "2049": "invalid api key — often HTTP 200 + base_resp.status_code=2049"
+  },
+  "ops": [
+    {
+      "name": "status",
+      "maps_to": "probe files/list",
+      "args": ["live"],
+      "notes": "Presence alone is NOT ready — require live probe"
+    },
+    {
+      "name": "probe",
+      "maps_to": "GET /files/list on intl+cn",
+      "args": []
+    },
+    { "name": "research", "maps_to": "distill", "args": [] }
+  ],
+  "gotchas": [
+    "2049 → ready=false always",
+    "Some TTS paths want MINIMAX_GROUP_ID",
+    "Wrong region host looks like invalid key"
+  ],
+  "hub": {
+    "probe": "GET /files/list (intl + CN)",
+    "probe_kind": "free",
+    "probe_cost": "none",
+    "capabilities": ["llm", "media", "tts"]
+  }
+}
