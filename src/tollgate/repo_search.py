@@ -228,10 +228,24 @@ CONCEPTS: list[dict[str, Any]] = [
     },
     {
         "id": "metrics",
-        "title": "Prometheus metrics",
+        "title": "Prometheus metrics (+ auth)",
         "path": "src/tollgate/metrics.py",
-        "summary": "GET /metrics from ledger + circuits.",
-        "keywords": "prometheus metrics scrape /metrics",
+        "summary": "GET /metrics; auth mode / TOLLGATE_METRICS_TOKEN / PUBLIC opt-out.",
+        "keywords": "prometheus metrics scrape /metrics token public auth",
+    },
+    {
+        "id": "circuit-jitter",
+        "title": "Configurable circuit jitter",
+        "path": "src/tollgate/gateway/circuit.py",
+        "summary": "keys_app circuits.jitter_min/max + hard_cooldown_s sticky AUTH_DEAD.",
+        "keywords": "jitter circuits cooldown thundering herd hard_cooldown",
+    },
+    {
+        "id": "safe-defaults",
+        "title": "Safe default envelopes (Protect on)",
+        "path": "src/tollgate/app_config.py",
+        "summary": "consumer_envelopes._default ships with $ / rpm / tool_calls caps.",
+        "keywords": "safe default envelope protect max_usd_day default",
     },
     {
         "id": "getting-started",

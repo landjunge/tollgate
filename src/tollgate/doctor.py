@@ -115,28 +115,35 @@ def run_doctor(*, live: bool = False, root: Path | None = None) -> dict[str, Any
             }
         )
 
-    # Agent protection / envelopes
+    # Agent protection / envelopes (count named lanes + _default)
     envelopes = cfg.get("consumer_envelopes") or {}
+    _prot_keys = (
+        "max_usd_day",
+        "max_usd_hour",
+        "max_usd_request",
+        "max_requests_minute",
+        "max_tokens_request",
+        "max_tool_calls",
+        "max_calls_day",
+    )
+
+    def _block_protected(block: Any) -> bool:
+        if not isinstance(block, dict):
+            return False
+        return any(float(block.get(k) or 0) > 0 for k in _prot_keys)
+
     protected = 0
+    default_on = _block_protected(envelopes.get("_default"))
     for cid, block in envelopes.items():
-        if str(cid).startswith("_") or not isinstance(block, dict):
+        if str(cid).startswith("_"):
             continue
-        if any(
-            float(block.get(k) or 0) > 0
-            for k in (
-                "max_usd_day",
-                "max_usd_hour",
-                "max_usd_request",
-                "max_requests_minute",
-                "max_tokens_request",
-                "max_tool_calls",
-                "max_calls_day",
-            )
-        ):
+        if _block_protected(block):
             protected += 1
+    if default_on:
+        ok_items.append("agent protection: _default envelope has caps (safe defaults)")
     if protected:
-        ok_items.append(f"agent protection: {protected} consumer lane(s) capped")
-    else:
+        ok_items.append(f"agent protection: {protected} named consumer lane(s) capped")
+    if not default_on and not protected:
         issues.append(
             {
                 "level": "warn",
@@ -144,8 +151,18 @@ def run_doctor(*, live: bool = False, root: Path | None = None) -> dict[str, Any
                 "message": "No consumer has spending/rate protection envelopes",
                 "action": (
                     "tollgate consumer-budget n8n --max-usd-day 0.5 "
-                    "--max-requests-minute 30 --max-usd-request 0.25"
+                    "--max-requests-minute 30 --max-usd-request 0.25 "
+                    "(or restore consumer_envelopes._default from DEFAULT_CONFIG)"
                 ),
+            }
+        )
+    elif not default_on and auth.get("required"):
+        issues.append(
+            {
+                "level": "info",
+                "code": "default_envelope_open",
+                "message": "_default envelope is unlimited — only named lanes are capped",
+                "action": "Set consumer_envelopes._default max_usd_day (or leave named-only)",
             }
         )
 

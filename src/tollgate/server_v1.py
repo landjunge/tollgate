@@ -78,7 +78,7 @@ _bootstrap_env()
 
 app = FastAPI(
     title="Tollgate",
-    version="0.2.8",
+    version="0.3.0",
     description=(
         "Tollgate — AI reliability & control plane. "
         "Protect · Route · Prove (chaos failover tests). "
@@ -144,7 +144,7 @@ def health() -> dict[str, Any]:
         "ok": True,
         "service": "tollgate",
         "product": "Tollgate",
-        "version": "0.2.8",
+        "version": "0.3.0",
         "extractable": True,
         "multi_consumer": True,
         "portable": path_snapshot(),
@@ -157,9 +157,85 @@ def health() -> dict[str, Any]:
     }
 
 
+def _metrics_authorized(
+    authorization: str | None,
+    x_consumer_key: str | None,
+    x_api_key: str | None,
+    x_metrics_token: str | None,
+) -> bool:
+    """
+    Metrics access policy (v0.3):
+
+    - TOLLGATE_METRICS_PUBLIC=1 → always open (explicit opt-out of protection)
+    - TOLLGATE_METRICS_TOKEN set → Bearer / X-Metrics-Token must match
+    - else if consumers auth required → any valid consumer key
+    - else open mode (local desk) → open
+    """
+    if (os.environ.get("TOLLGATE_METRICS_PUBLIC") or "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    ):
+        return True
+
+    token = (os.environ.get("TOLLGATE_METRICS_TOKEN") or "").strip()
+    if token:
+        presented = (x_metrics_token or "").strip()
+        if not presented:
+            # Authorization: Bearer <token> or Bearer id:secret handled below
+            presented = parse_bearer(authorization) or ""
+        if presented and hmac_compare(presented, token):
+            return True
+        # also allow full consumer key when token mode is on? no — token only
+        return False
+
+    from tollgate.consumers import auth_required
+
+    if not auth_required():
+        return True
+
+    # Auth mode: any valid consumer (scrape with desk key)
+    try:
+        _require(x_consumer_key, need_admin=False, authorization=authorization, x_api_key=x_api_key)
+        return True
+    except HTTPException:
+        return False
+
+
+def hmac_compare(a: str, b: str) -> bool:
+    import hmac as _hmac
+
+    ba, bb = (a or "").encode("utf-8"), (b or "").encode("utf-8")
+    if len(ba) != len(bb):
+        return False
+    return _hmac.compare_digest(ba, bb)
+
+
 @app.get("/metrics")
-def metrics() -> PlainTextResponse:
-    """Prometheus text exposition (ledger, circuits, cache, portable)."""
+def metrics(
+    authorization: str | None = Header(None),
+    x_consumer_key: str | None = Header(None, alias="X-Consumer-Key"),
+    x_api_key: str | None = Header(None, alias="x-api-key"),
+    x_metrics_token: str | None = Header(None, alias="X-Metrics-Token"),
+) -> PlainTextResponse:
+    """
+    Prometheus text exposition (ledger, circuits, cache, portable).
+
+    Protected when auth mode is on or TOLLGATE_METRICS_TOKEN is set.
+    Opt out: TOLLGATE_METRICS_PUBLIC=1.
+    """
+    if not _metrics_authorized(
+        authorization, x_consumer_key, x_api_key, x_metrics_token
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail=(
+                "metrics unauthorized — pass consumer key, "
+                "X-Metrics-Token / Bearer TOLLGATE_METRICS_TOKEN, "
+                "or set TOLLGATE_METRICS_PUBLIC=1"
+            ),
+        )
     return PlainTextResponse(
         render_prometheus(),
         media_type="text/plain; version=0.0.4; charset=utf-8",

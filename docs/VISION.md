@@ -80,6 +80,8 @@ Agents ────┘         HTTP + MCP + OpenAI/Anthropic drop-ins
 | Control plane v0.2 | Provider health · consumer burn · explain · mini UI | **done** |
 | Agent protection | request/hour/minute hard stops | **done (v0.2.1)** |
 | Health-aware route | Prefer healthy/cheap automatically | **done (v0.2.2)** |
+| Prove (chaos + score) | DR tests + Resilience Score | **done (v0.2.4–0.2.6)** |
+| Safe defaults | Protect-on `_default`, metrics auth, circuit jitter | **done (v0.3.0)** |
 | Enterprise | Teams, SSO/RBAC | later |
 
 ---

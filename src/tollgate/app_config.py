@@ -60,19 +60,35 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "anomaly_burn_factor: soft_warn if spend ≫ linear day pace (no auto config change)."
         ),
     },
-    # Per-consumer day envelopes (n8n / gnom / …). 0 or omit = no consumer-level cap.
-    # Provider + global cost_guard still apply. Open mode uses X-Consumer-Key as label.
-    # Day envelopes + agent protection (loop stops). 0 = unlimited on that dim.
+    # Circuit breaker defaults (per provider|model|key_ref)
+    "circuits": {
+        "failure_threshold": 5,
+        "cooldown_s": 30.0,
+        "hard_cooldown_s": 300.0,
+        "half_open_successes_needed": 1,
+        # Multiplicative jitter on OPEN→HALF_OPEN wait: cooldown * [min, max]
+        "jitter_min": 0.8,
+        "jitter_max": 1.2,
+        "notes": (
+            "jitter_min/max spread canary wake-ups to avoid thundering herd. "
+            "hard_cooldown_s elevates cooldown_s on AUTH_DEAD (and other hard "
+            "failures); the elevated value is persisted on the circuit row. "
+            "Omit this whole block on old installs — defaults apply."
+        ),
+    },
+    # Per-consumer day envelopes + agent protection.
+    # Safe _default: Protect is on out of the box (set 0 = unlimited on that dim).
+    # Named lanes (n8n / gnom) override via tollgate consumer-budget.
     "consumer_envelopes": {
         "_default": {
-            "max_calls_day": 0,
-            "max_tokens_day": 0,
-            "max_usd_day": 0.0,
-            "max_usd_request": 0.0,
-            "max_usd_hour": 0.0,
-            "max_requests_minute": 0,
-            "max_tokens_request": 0,
-            "max_tool_calls": 0,
+            "max_calls_day": 2000,
+            "max_tokens_day": 2_000_000,
+            "max_usd_day": 5.0,
+            "max_usd_request": 0.5,
+            "max_usd_hour": 2.0,
+            "max_requests_minute": 60,
+            "max_tokens_request": 50_000,
+            "max_tool_calls": 25,
         },
         # Examples:
         # "n8n": {"max_usd_day": 0.5, "max_requests_minute": 30, "max_usd_request": 0.25},

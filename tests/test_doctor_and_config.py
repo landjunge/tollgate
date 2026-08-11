@@ -25,6 +25,62 @@ def test_validate_ok_default():
     assert errs == []
 
 
+def test_validate_old_config_without_circuits_block():
+    """
+    Regression (PR #7): legacy keys_app.json has no circuits key.
+    Must stay valid and materialize CircuitsModel defaults (0.8/1.2/30s/5).
+    """
+    old = {
+        "version": 2,
+        "prefer_free": True,
+        "cost_guard": {
+            "enabled": True,
+            "max_usd_day_global": 5.0,
+            "high_risk_providers": ["google"],
+        },
+        "providers": {
+            "deepseek": {"enabled": True, "max_calls_day": 100},
+        },
+        # deliberately no "circuits"
+    }
+    data, errs = validate_config_dict(old)
+    assert errs == [], errs
+    assert data is not None
+    circ = data.get("circuits") or {}
+    assert float(circ.get("jitter_min")) == 0.8
+    assert float(circ.get("jitter_max")) == 1.2
+    assert float(circ.get("cooldown_s")) == 30.0
+    assert float(circ.get("hard_cooldown_s")) == 300.0
+    assert int(circ.get("failure_threshold")) == 5
+
+
+def test_validate_empty_circuits_object_uses_defaults():
+    data, errs = validate_config_dict({"version": 2, "circuits": {}})
+    assert errs == []
+    assert data is not None
+    assert float(data["circuits"]["jitter_min"]) == 0.8
+    assert float(data["circuits"]["jitter_max"]) == 1.2
+
+
+def test_validate_explicit_zero_jitter_rejected():
+    data, errs = validate_config_dict(
+        {"version": 2, "circuits": {"jitter_min": 0, "jitter_max": 0}}
+    )
+    # pydantic gt=0 → errors (not silent accept)
+    assert data is None or errs
+    assert errs
+
+
+def test_default_envelope_is_protective():
+    from tollgate.app_config import DEFAULT_CONFIG
+
+    d = (DEFAULT_CONFIG.get("consumer_envelopes") or {}).get("_default") or {}
+    assert float(d.get("max_usd_day") or 0) > 0
+    assert float(d.get("max_usd_request") or 0) > 0
+    assert int(d.get("max_tool_calls") or 0) > 0
+    assert int(d.get("max_requests_minute") or 0) > 0
+
+
 def test_doctor_runs(monkeypatch, tmp_path):
     monkeypatch.setenv("TOLLGATE_HOME", str(tmp_path))
     (tmp_path / "User").mkdir(parents=True)

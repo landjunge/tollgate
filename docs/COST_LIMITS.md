@@ -113,26 +113,37 @@ Provider caps and `max_usd_day_global` still apply. Additionally, each **consume
 ```json
 {
   "consumer_envelopes": {
-    "_default": { "max_calls_day": 0, "max_tokens_day": 0, "max_usd_day": 0 },
+    "_default": {
+      "max_calls_day": 2000,
+      "max_tokens_day": 2000000,
+      "max_usd_day": 5.0,
+      "max_usd_request": 0.5,
+      "max_usd_hour": 2.0,
+      "max_requests_minute": 60,
+      "max_tokens_request": 50000,
+      "max_tool_calls": 25
+    },
     "n8n":  { "max_calls_day": 200, "max_tokens_day": 500000, "max_usd_day": 0.5 },
     "gnom": { "max_calls_day": 5000, "max_usd_day": 3.0 }
   }
 }
 ```
 
-`0` / omit = **no consumer-level cap** on that dimension. Ledger tracks
+`0` / omit on a named field = **no consumer-level cap** on that dimension. Ledger tracks
 `keys_usage.json → consumers.<id>`.
 
-**Default policy (desk-friendly, not multi-tenant-safe):** `_default` is all zeros —
-an unknown consumer is limited only by **provider** + **global** cost_guard until you
-set an envelope. That is intentional for local testing ("pay the toll" still applies
-at global/provider hard stops). For production agents:
+**Default policy (v0.3+ Protect-on-by-default):** `_default` ships with safe caps
+aligned to `cost_guard.max_usd_day_global` (\$5/day, 60 rpm, 25 tool calls, \$0.50/request).
+New installs get protection without extra setup. Existing `keys_app.json` keeps
+whatever you already wrote (deep-merge does not wipe zeros you set).
 
 ```bash
-# tighten unknown lanes
-tollgate consumer-budget _default --max-usd-day 1 --max-requests-minute 60
-# and explicit per-agent caps
+# tighten unknown lanes further
+tollgate consumer-budget _default --max-usd-day 1 --max-requests-minute 30
+# explicit per-agent caps
 tollgate consumer-budget coding-agent --max-usd-day 20 --max-tool-calls 15
+# unlimited on one dim (escape hatch)
+tollgate consumer-budget desk --max-usd-day 0
 ```
 
 ### Agent protection (loop / runaway stops)

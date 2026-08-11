@@ -90,7 +90,9 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | n8n as consumer | `docs/N8N.md` |
 | Ops boundary (cache ≠ agent memory) | `src/tollgate/ops_boundary.py` |
 | Secret redaction | `src/tollgate/redact.py` |
-| Prometheus metrics | `src/tollgate/metrics.py` |
+| Prometheus metrics (+ auth) | `src/tollgate/metrics.py` |
+| Configurable circuit jitter | `src/tollgate/gateway/circuit.py` |
+| Safe default envelopes (Protect on) | `src/tollgate/app_config.py` |
 | 5-minute getting started | `docs/GETTING_STARTED.md` |
 | 7-layer architecture | `docs/ARCHITECTURE.md` |
 | Repo map (this index) | `docs/MAP.md` |

@@ -125,7 +125,7 @@ curl -s localhost:8787/metrics | head   # Prometheus
 
 → [docs/OPENAI.md](docs/OPENAI.md)
 
-Review-Liste: **OpenAI ✅ · Anthropic ✅ · Stream ✅ · Failover ✅ · n8n node ✅ · Docker ✅ · Webhooks ✅ · Prometheus ✅ · Consumer envelopes ✅**.
+Review-Liste: **OpenAI ✅ · Anthropic ✅ · Stream ✅ · Failover ✅ · n8n node ✅ · Docker ✅ · Webhooks ✅ · Prometheus (auth) ✅ · Safe `_default` envelopes ✅ · Circuit jitter ✅**.
 
 ## HTTP native (kurz)
 
