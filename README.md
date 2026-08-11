@@ -2,6 +2,7 @@
 
 [![Website](https://img.shields.io/badge/website-live-3dd68c?style=flat-square)](https://landjunge.github.io/tollgate/)
 [![GitHub release](https://img.shields.io/github/v/release/landjunge/tollgate?style=flat-square)](https://github.com/landjunge/tollgate/releases)
+[![GHCR](https://img.shields.io/badge/ghcr.io-landjunge%2Ftollgate-blue?style=flat-square&logo=docker&logoColor=white)](https://github.com/landjunge/tollgate/pkgs/container/tollgate)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 [![Discussions](https://img.shields.io/badge/discussions-open-6c8cff?style=flat-square)](https://github.com/landjunge/tollgate/discussions)
 [![Launch](https://img.shields.io/badge/launch_post-2026--08-e8a317?style=flat-square)](https://landjunge.github.io/tollgate/blog/launch.html)
@@ -45,11 +46,18 @@ You should experience:
 | **Result** | `tollgate certificate` scorecard + [dashboard](http://127.0.0.1:8787/dashboard) |
 
 ```bash
-# Docker variant
+# Docker variant (compose from repo)
 docker compose up -d --build
 docker compose exec tollgate tollgate demo --skip-chaos
 docker compose exec tollgate tollgate certificate
+
+# Or pull prebuilt image from GHCR
+docker pull ghcr.io/landjunge/tollgate:latest
+docker run --rm -p 8787:8787 -v "$PWD/data:/data" ghcr.io/landjunge/tollgate:latest
 ```
+
+> **Note:** First GHCR publish is private by default. Package settings → *Change visibility* → **Public**  
+> (one-time, irreversible): https://github.com/users/landjunge/packages/container/tollgate/settings
 
 **Stranger test:** [docs/TEN_MINUTE.md](docs/TEN_MINUTE.md)  
 **Full help:** [docs/HILFE.md](docs/HILFE.md) (DE) · [docs/USER_GUIDE.md](docs/USER_GUIDE.md) (EN) · [docs/FAQ.md](docs/FAQ.md)  

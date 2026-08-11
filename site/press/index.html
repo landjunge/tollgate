@@ -42,7 +42,12 @@
     <h2>Cold start</h2>
     <pre style="background:#0c0f14;padding:1rem;border:1px solid var(--line);font-family:var(--mono);font-size:0.85rem;color:var(--muted)">git clone https://github.com/landjunge/tollgate.git &amp;&amp; cd tollgate
 python3 -m venv .venv &amp;&amp; .venv/bin/pip install -e .
-./scripts/ten-minute.sh</pre>
+./scripts/ten-minute.sh
+
+# or GHCR
+docker pull ghcr.io/landjunge/tollgate:latest
+docker run --rm -p 8787:8787 -v &quot;$PWD/data:/data&quot; ghcr.io/landjunge/tollgate:latest</pre>
+    <p style="color:var(--muted);font-size:0.9rem">Package: <a href="https://github.com/users/landjunge/packages/container/package/tollgate">ghcr.io/landjunge/tollgate</a> · tags <code>latest</code>, <code>1.0.12</code></p>
   </main>
   <script src="../site.js"></script>
 </body>
