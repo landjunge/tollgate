@@ -1,4 +1,4 @@
-"""Key.txt / .env loading for Tollgate (no gnom dependency)."""
+"""Load API secrets from Key.txt and env files (no gnom dependency)."""
 
 from __future__ import annotations
 
