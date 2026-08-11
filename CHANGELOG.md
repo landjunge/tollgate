@@ -6,6 +6,10 @@ All notable releases of [landjunge/tollgate](https://github.com/landjunge/tollga
 
 **First stable community release** — Protect · Route · Prove.
 
+**Positioning lock:** *“My AI agent must never go out of control.”*  
+Tollgate is the **safety layer** between AI agents and the internet — not an API gateway.  
+Demo script: `docs/DEMO.md`.
+
 Self-hosted AI reliability & control plane: pre-admission hard stops, multi-consumer
 envelopes, health-aware failover, chaos/DR proof, and operator surfaces (CLI, HTTP,
 MCP, dashboard). Not another LLM catalog proxy.

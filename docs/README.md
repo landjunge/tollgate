@@ -6,9 +6,10 @@
 | Doc | Topic |
 |-----|--------|
 | [GETTING_STARTED.md](GETTING_STARTED.md) | **5-minute setup** |
+| [DEMO.md](DEMO.md) | **Killer demo — agent loop + DR proof** |
 | [MAP.md](MAP.md) | **Repo map — modules, HTTP, CLI, concepts** |
 | [VISION.md](VISION.md) | Product lock, multi-consumer |
-| [PRODUCT.md](PRODUCT.md) | Protect · Route · Prove positioning |
+| [PRODUCT.md](PRODUCT.md) | Safety layer for AI agents · Protect · Route · Prove |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 7 layers, circuits, taxonomy |
 | [COST_LIMITS.md](COST_LIMITS.md) | Google off, budgets, `/v1/config` |
 | [MCP.md](MCP.md) | stdio MCP + HTTP `/v1/*` |

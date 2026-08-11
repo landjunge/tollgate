@@ -2,50 +2,55 @@
 
 **Pay the toll — or don't call.** · **v1.0.0**
 
-> **AI Reliability & Control Plane** — Protect · Route · **Prove**.
+# “My AI agent must never go out of control.”
 
-Protects apps from **provider outages**, **runaway costs**, and **agent loops** — and **proves** failover works (chaos tests).  
-Not another LLM gateway.
+> **Tollgate is the safety layer between your AI agents and the internet.**
 
-```bash
-tollgate chaos test opencode_zen --requests 10   # DR proof
-tollgate resilience                              # AI Resilience Score
+**Tollgate protects AI agents in production.**  
+Control cost · Survive provider failures · **Prove** it works.
+
+Not an API gateway. Not a multi-LLM catalog.  
+**Protect · Route · Prove** — AI reliability & control plane.
+
+```text
+Your agent  →  Tollgate  →  OpenAI / Anthropic / Zen / …
+                  │
+         budgets · tool-loop stops · scopes · failover · freeze
 ```
 
-> As soon as you run **more than one** AI tool against paid keys, you need an instance that never puts secrets in agent memory and never spends more than you allowed — no matter which tool calls.
+### Two Aha moments
 
-**Feel it:** `http://127.0.0.1:8787/dashboard` · JSON: `GET /v1/control`  
-**5 minutes:** [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)  
-**Find code:** `tollgate search <query>` · [docs/MAP.md](docs/MAP.md) · [llms.txt](llms.txt)
+1. **Agent tool-loop** → `🛑 BLOCKED` (`max_tool_calls`) — invoice never happens  
+2. **Primary outage** → failover + chaos test → **“Your agent survived.”**
+
+**Demo script:** [docs/DEMO.md](docs/DEMO.md) · **5 minutes:** [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)  
+**Dashboard:** http://127.0.0.1:8787/dashboard · **Map:** [docs/MAP.md](docs/MAP.md)
 
 ```bash
 ./scripts/desk-ready.sh
-tollgate consumer-budget n8n --max-usd-day 2 --max-tool-calls 15 \
-  --allow-provider opencode_zen --allow-intent free_llm
-tollgate chaos test opencode_zen --requests 5
+# Protect one agent lane (support / n8n / coding agent)
+tollgate consumer-budget support-agent \
+  --max-usd-day 2 --max-usd-request 0.5 --max-tool-calls 20 \
+  --allow-intent free_llm --allow-op chat
+# Prove DR
+tollgate chaos test opencode_zen --requests 10
 tollgate resilience
-tollgate audit --event admit_deny   # who was stopped and why
-tollgate report                     # daily Protect·Route·Prove brief
-tollgate snapshot export -o desk.tgz  # portable desk migrate
-tollgate alert test                   # webhook probe (n8n / Telegram)
-tollgate freeze --reason "panic"      # global kill switch
-tollgate status                       # one-glance desk health
-tollgate circuits reset --all         # clear breakers
-tollgate search circuit breaker     # repo map / modules
+tollgate status
 ```
 
 ## Who it's for
 
 | Audience | Why |
 |----------|-----|
-| Solo builders with several local agents | Shared keys without bill-shock loops |
-| n8n power users | No native LLM budget gate in n8n |
-| MCP users (Cursor / Claude Desktop) | One admission plane, not N auth setups |
-| Agencies (with care) | Need real consumer secrets first — we have hashed keys |
+| **Teams running agents in production** | Cost, loops, outages, audit, kill switch |
+| **Agent-framework builders** | Sit in front of LangGraph / CrewAI / AutoGen / custom |
+| **n8n / automation** | Workflow agent-loops stop at the gate |
+| MCP / multi-tool desks | One admission plane; secrets never in agent memory |
 
 **Not competing for:** LiteLLM catalog width or Portkey cloud suite.  
 **Wedge:** *LiteLLM connects models. Helicone shows traffic. **Tollgate keeps agents in line.***  
-Self-hosted · MCP-native · pre-admission hard stops · USB-portable. Details: [docs/PRODUCT.md](docs/PRODUCT.md).
+Self-hosted · MCP-native · pre-admission hard stops · USB-portable.  
+Product lock: [docs/PRODUCT.md](docs/PRODUCT.md) · Demo: [docs/DEMO.md](docs/DEMO.md).
 
 ## vs LiteLLM / Portkey / Helicone
 

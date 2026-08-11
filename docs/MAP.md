@@ -82,6 +82,7 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | Concept | Path |
 |---------|------|
 | Protect · Route · Prove (product pillars) | `docs/PRODUCT.md` |
+| Killer demo — agent loop + DR proof | `docs/DEMO.md` |
 | Agent protection (loop / $ / RPM hard stops) | `src/tollgate/agent_guard.py` |
 | Consumer day envelopes | `src/tollgate/limits.py` |
 | L4 Admission (fail-closed) | `src/tollgate/gateway/admit.py` |
@@ -182,7 +183,7 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | `response_cache.py` | Operational response cache — NOT agent memory. |
 | `router.py` | Provider-based intelligent routing with limits + health-aware ranking. |
 | `schema.py` | Unified health schema — every provider status normalizes here. |
-| `secrets.py` | Key. |
+| `secrets.py` | Load API secrets from Key. |
 | `server_v1.py` | Standalone multi-consumer HTTP surface. |
 | `service.py` | KeysService — flagship facade: inventory, dashboard, policy, ops. |
 | `snapshot.py` | Desk snapshot export / import — portable migration without guessing paths. |
@@ -197,6 +198,7 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | [`docs/ANTHROPIC.md`](ANTHROPIC.md) | Anthropic-compatible API |
 | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) | Tollgate — Masterpiece Architecture |
 | [`docs/COST_LIMITS.md`](COST_LIMITS.md) | Cost limits (especially Google) |
+| [`docs/DEMO.md`](DEMO.md) | Demo: “My AI agent must never go out of control” |
 | [`docs/DESK.md`](DESK.md) | Desk runbook (Gnom + n8n + Tollgate) |
 | [`docs/GETTING_STARTED.md`](GETTING_STARTED.md) | Getting started in 5 minutes |
 | [`docs/KEYS_MODULE.md`](KEYS_MODULE.md) | Tollgate module map |

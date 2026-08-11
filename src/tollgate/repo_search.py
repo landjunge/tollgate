@@ -55,8 +55,15 @@ CONCEPTS: list[dict[str, Any]] = [
         "id": "protect-route-prove",
         "title": "Protect · Route · Prove (product pillars)",
         "path": "docs/PRODUCT.md",
-        "summary": "Product positioning vs LiteLLM/Portkey/Helicone.",
-        "keywords": "product protect route prove wedge reliability control plane",
+        "summary": "Safety layer for AI agents — not an API gateway catalog.",
+        "keywords": "product protect route prove wedge reliability control plane agent safety",
+    },
+    {
+        "id": "demo-killer",
+        "title": "Killer demo — agent loop + DR proof",
+        "path": "docs/DEMO.md",
+        "summary": "My AI agent must never go out of control; tool_call block + chaos survive.",
+        "keywords": "demo agent loop tool_calls max_tool_calls chaos prove aha support-agent",
     },
     {
         "id": "agent-protection",

@@ -1,12 +1,14 @@
 # Tollgate
 
-> AI Reliability & Control Plane — Protect · Route · Prove.
-> Self-hosted admission, budgets, agent-loop hard stops, health routing, chaos/DR proof.
+> Safety layer between AI agents and the internet — Protect · Route · Prove.
+> “My AI agent must never go out of control.”
+> Budgets, tool-loop hard stops, scopes, failover, chaos/DR proof, freeze, audit.
 > Not another LLM gateway catalog.
 
 ## Start here
 
 - [README](README.md)
+- [Demo (killer use case)](docs/DEMO.md)
 - [5-minute setup](docs/GETTING_STARTED.md)
 - [Product wedge](docs/PRODUCT.md)
 - [Repo map (searchable index)](docs/MAP.md)

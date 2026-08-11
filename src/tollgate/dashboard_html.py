@@ -63,7 +63,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <body>
 <header>
   <h1>Tollgate</h1>
-  <p id="promise">Protect · Route · Prove — AI reliability &amp; control plane</p>
+  <p id="promise">Safety layer for AI agents — Protect · Route · Prove · never out of control</p>
 </header>
 <main>
   <div class="headline" id="headline">Loading…</div>

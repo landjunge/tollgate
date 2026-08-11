@@ -1,6 +1,8 @@
 # Getting started in 5 minutes
 
-**Goal:** Tollgate running, one protected agent lane, dashboard open, optional DR proof.
+**Goal:** Tollgate running, one protected **agent** lane, dashboard open, optional DR proof.
+
+Killer story (full demo): **[DEMO.md](DEMO.md)** — *“My AI agent must never go out of control.”*
 
 ## 1. Start
 
@@ -34,31 +36,40 @@ tollgate doctor
 ## 3. Protect one agent (2 minutes)
 
 ```bash
-# Day + loop protection for n8n / coding agent
-tollgate consumer-budget n8n \
+# Named agent lane (killer demo: support-agent) — or use n8n
+tollgate consumer-budget support-agent \
   --max-usd-day 2 \
   --max-usd-hour 0.5 \
-  --max-usd-request 0.25 \
-  --max-requests-minute 30 \
-  --max-tokens-request 20000 \
-  --max-tool-calls 15
+  --max-usd-request 0.5 \
+  --max-requests-minute 50 \
+  --max-tool-calls 20 \
+  --allow-intent free_llm --allow-intent llm \
+  --allow-op chat
+
+# n8n lane (same idea)
+# tollgate consumer-budget n8n --max-usd-day 2 --max-tool-calls 15
 
 tollgate consumer-budget --list
 ```
 
-Agents send tool depth via invoke:
+Agents send **loop depth** via `tool_calls_est` (invoke or chat):
 
-```json
-POST /v1/invoke
-{
-  "provider": "opencode_zen",
-  "op": "chat",
-  "tool_calls_est": 12,
-  "arguments": { "message": "…" }
-}
+```bash
+# Over limit → hard deny (Aha #1 — agent never goes out of control)
+curl -s http://127.0.0.1:8787/v1/invoke \
+  -H 'Content-Type: application/json' \
+  -H 'X-Consumer-Key: support-agent' \
+  -d '{
+    "provider": "opencode_zen",
+    "op": "chat",
+    "tool_calls_est": 99,
+    "arguments": {"message": "hi"},
+    "agent_id": "support-agent"
+  }'
 ```
 
-If `tool_calls_est` &gt; `max_tool_calls` → **hard deny** (agent protection).
+If `tool_calls_est` > `max_tool_calls` → **hard deny** (agent protection).  
+Full two-beat demo (Protect + Prove): [DEMO.md](DEMO.md).
 
 ## 4. Point a client at Tollgate
 

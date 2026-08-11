@@ -529,11 +529,12 @@ def control_snapshot(*, root: Any = None) -> dict[str, Any]:
         "ok": True,
         "product": "Tollgate",
         "tagline": (
-            "Prove your AI app survives a provider outage — "
+            "Safety layer between AI agents and the internet — "
             "Protect · Route · Prove"
         ),
         "promise": (
-            "Prevents AI agents from becoming unreliable, expensive and uncontrollable."
+            "My AI agent must never go out of control: "
+            "stop runaway cost and tool loops, survive provider failures, prove DR."
         ),
         "pillars": ["protect", "route", "prove"],
         "day": usage.get("day"),
