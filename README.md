@@ -36,12 +36,21 @@ Steal ideas, not the stack — see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 ## Quick start
 
 ```bash
-cd tollgate
-python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
-./scripts/portable-setup.sh   # optional USB sibling WS-tollgate
-# put keys in $TOLLGATE_HOME/User/Key.txt  (see Key.txt.example)
-./scripts/run.sh
-# → http://127.0.0.1:8787/docs   ← OpenAPI SSoT for request shapes
+# A) Docker (lowest friction)
+docker compose up -d
+# data volume holds User/Key.txt — copy Key.txt.example in, then:
+# docker compose exec tollgate tollgate doctor
+
+# B) Local
+python3 -m venv .venv && .venv/bin/pip install -e .
+./scripts/portable-setup.sh          # optional USB
+# edit $TOLLGATE_HOME/User/Key.txt
+tollgate doctor                      # self-diagnose first
+./scripts/run.sh                     # → http://127.0.0.1:8787/docs
+```
+
+```bash
+tollgate suggest                     # ledger-based proposals (never auto-applies)
 ```
 
 ### Consumer auth (share with n8n / second host)

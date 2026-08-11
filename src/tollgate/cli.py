@@ -41,6 +41,15 @@ def main(argv: list[str] | None = None) -> None:
     risk.add_argument("action", choices=["list", "add", "remove"])
     risk.add_argument("provider", nargs="?", default="")
 
+    doc = sub.add_parser("doctor", help="Self-diagnose install/config (first step after setup)")
+    doc.add_argument("--live", action="store_true", help="include live provider diagnose")
+    doc.add_argument("--json", action="store_true", help="machine-readable output")
+
+    sub.add_parser(
+        "suggest",
+        help="Propose routing/budget tweaks from ledger (never auto-applies)",
+    )
+
     args = p.parse_args(argv)
 
     if args.cmd == "mcp" or (args.cmd is None and len(sys.argv) == 1):
@@ -54,12 +63,45 @@ def main(argv: list[str] | None = None) -> None:
 
         import uvicorn
 
+        from tollgate.app_config import load_config
+        from tollgate.config_validate import assert_config_or_raise
         from tollgate.paths import pin_data_home_env
 
         pin_data_home_env()
+        cfg = load_config(force=True)
+        strict = (os.environ.get("TOLLGATE_STRICT_CONFIG") or "").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+        try:
+            warns = assert_config_or_raise(cfg, strict=strict)
+            for w in warns:
+                print(f"[tollgate] config: {w}", file=sys.stderr)
+        except ValueError as e:
+            print(str(e), file=sys.stderr)
+            raise SystemExit(2) from e
         host = os.environ.get("HOST", "127.0.0.1")
         port = int(os.environ.get("PORT", "8787"))
         uvicorn.run("tollgate.server_v1:app", host=host, port=port, reload=False)
+        return
+
+    if args.cmd == "doctor":
+        from tollgate.doctor import format_doctor_text, run_doctor
+
+        report = run_doctor(live=bool(args.live))
+        if args.json:
+            print(json.dumps(report, indent=2, default=str))
+        else:
+            print(format_doctor_text(report))
+        raise SystemExit(0 if report.get("ok") else 1)
+
+    if args.cmd == "suggest":
+        from tollgate.paths import pin_data_home_env
+        from tollgate.suggest import routing_suggestions
+
+        pin_data_home_env()
+        print(json.dumps(routing_suggestions(), indent=2, default=str))
         return
 
     if args.cmd == "health":

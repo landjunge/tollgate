@@ -43,6 +43,8 @@ from tollgate.openai_compat import (
 
 def _bootstrap_env() -> None:
     try:
+        from tollgate.app_config import load_config
+        from tollgate.config_validate import assert_config_or_raise
         from tollgate.paths import data_home, pin_data_home_env, user_dir
         from tollgate.secrets import ensure_env_from_key_txt, load_keys, parse_key_file
 
@@ -55,6 +57,16 @@ def _bootstrap_env() -> None:
         if kp.is_file():
             for k, v in parse_key_file(kp.read_text(encoding="utf-8")).items():
                 os.environ.setdefault(k, v)
+        # Config validation at process start (strict via env)
+        cfg = load_config(force=True)
+        strict = (os.environ.get("TOLLGATE_STRICT_CONFIG") or "").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+        assert_config_or_raise(cfg, strict=strict)
+    except ValueError:
+        raise
     except Exception:  # noqa: BLE001
         pass
 

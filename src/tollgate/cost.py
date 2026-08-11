@@ -174,6 +174,21 @@ def check_cost_guard(
             )
             break
 
+    # Anomaly burn: ahead of linear day pace by factor (propose only via soft_warn)
+    if not soft_warn and max_g > 0 and used_global >= 0.05:
+        from datetime import datetime
+
+        hour = max(1, datetime.now().hour)
+        expected = max_g * (hour / 24.0)
+        factor = float(guard.get("anomaly_burn_factor") or 5.0)
+        if expected > 0 and used_global >= expected * factor:
+            soft_warn = True
+            soft_reason = (
+                f"anomaly burn: ${used_global:.4f} spent by hour {hour} "
+                f"(~{factor:.0f}x linear pace toward ${max_g:.2f}/day) — "
+                "check loops; not auto-changing config"
+            )
+
     return {
         "allowed": True,
         "reason": None,

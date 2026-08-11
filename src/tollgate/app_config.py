@@ -38,11 +38,13 @@ DEFAULT_CONFIG: dict[str, Any] = {
         # Soft pressure: fraction of day budget used → warn / webhook (not deny)
         "soft_warn_ratio": 0.8,
         "soft_warn_remaining_usd": 0.5,
+        "anomaly_burn_factor": 5.0,
         # Optional webhook (Telegram bot URL, n8n, Discord, …) on soft/hard events
         "alert_webhook_url": "",
         "notes": (
             "high_risk_providers are OFF until providers.<id>.enabled=true "
-            "with tight max_usd_day. Add azure_openai / anthropic / etc. as needed."
+            "with tight max_usd_day. Add azure_openai / anthropic / etc. as needed. "
+            "anomaly_burn_factor: soft_warn if spend ≫ linear day pace (no auto config change)."
         ),
     },
     "auto_update": {
@@ -231,6 +233,21 @@ def load_config(*, force: bool = False, root: Path | None = None) -> dict[str, A
                 )
             except Exception:  # noqa: BLE001
                 pass
+
+        # Soft validate (warnings only unless TOLLGATE_STRICT_CONFIG=1)
+        try:
+            from tollgate.config_validate import assert_config_or_raise
+
+            strict = (os.environ.get("TOLLGATE_STRICT_CONFIG") or "").strip().lower() in (
+                "1",
+                "true",
+                "yes",
+            )
+            assert_config_or_raise(cfg, strict=strict)
+        except ValueError:
+            raise
+        except Exception:  # noqa: BLE001
+            pass
 
         _CACHE = cfg
         _CACHE_MTIME = path.stat().st_mtime if path.is_file() else None
