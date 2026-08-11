@@ -25,13 +25,15 @@ Exit code 1 if errors (e.g. missing Key.txt, high-risk enabled without `$` cap).
 - Pydantic model: `config_validate.KeysAppConfig`
 - On `load_config` / `tollgate serve` / server bootstrap
 - `TOLLGATE_STRICT_CONFIG=1` → refuse start on semantic errors
+- **Old `keys_app.json` without a `circuits` block remains valid** — defaults apply (`jitter` 0.8–1.2, `cooldown_s` 30, `hard_cooldown_s` 300, threshold 5)
 
 ## Auto-maintenance (what is automatic)
 
 | Mechanism | Behavior |
 |-----------|----------|
 | Day ledger rollover | On next read/write if `day != today` — **no cron** |
-| Circuit half-open | Auto after jittered cooldown; canary success closes |
+| Circuit half-open | Auto after jittered cooldown (`circuits.jitter_min`–`jitter_max`); canary success closes |
+| Hard circuit open | `AUTH_DEAD` etc. elevates that circuit’s `cooldown_s` to at least `hard_cooldown_s` (default 300s) and **persists** it in `circuits.json`. Soft failures after recovery may still use the elevated cooldown until the row is cleared/reset — intentional (dead keys stay cold) |
 | Soft budget + anomaly burn | Soft warn + optional webhook — **does not change config** |
 | `tollgate suggest` | Proposes routing/spend tweaks — **human applies** |
 | Dependabot | Weekly pip PRs on GitHub |
