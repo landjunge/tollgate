@@ -84,6 +84,7 @@ On 402/429 denies, body may include `error.tollgate.protection` for IF nodes.
 | [`configs/n8n-budget-gate.workflow.json`](../configs/n8n-budget-gate.workflow.json) | Budget → IF allowed → chat |
 | [`configs/n8n-search.workflow.json`](../configs/n8n-search.workflow.json) | Brave search via invoke |
 | [`configs/n8n-route-invoke.workflow.json`](../configs/n8n-route-invoke.workflow.json) | route free_llm → invoke chat |
+| [`configs/n8n-webhook-alerts.workflow.json`](../configs/n8n-webhook-alerts.workflow.json) | Receive Protect/chaos webhooks |
 
 Import in n8n: **Workflows → Import from File**.  
 Docker: change `127.0.0.1` → `host.docker.internal`.

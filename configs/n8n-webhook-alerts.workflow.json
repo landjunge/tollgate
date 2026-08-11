@@ -1,0 +1,116 @@
+{
+  "name": "Tollgate webhook alerts",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tollgate-alerts",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-in",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "tollgate-alerts"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "sev",
+              "leftValue": "={{ $json.severity }}",
+              "rightValue": "error",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-error",
+      "name": "IF severity=error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "title",
+              "value": "=⛔ Tollgate {{ $json.event }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "body",
+              "value": "={{ $json.message }}\nprovider={{ $json.provider }} consumer={{ $json.consumer }} protection={{ $json.protection }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-error",
+      "name": "Format error alert",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [720, 200]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1",
+              "name": "title",
+              "value": "=Tollgate {{ $json.severity }}: {{ $json.event }}",
+              "type": "string"
+            },
+            {
+              "id": "b2",
+              "name": "body",
+              "value": "={{ $json.message }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-other",
+      "name": "Format other",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [720, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "IF severity=error", "type": "main", "index": 0 }]]
+    },
+    "IF severity=error": {
+      "main": [
+        [{ "node": "Format error alert", "type": "main", "index": 0 }],
+        [{ "node": "Format other", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "notes": "Point Tollgate cost_guard.alert_webhook_url (or TOLLGATE_ALERT_WEBHOOK) at this Webhook URL. Then: tollgate alert test"
+  },
+  "settings": { "executionOrder": "v1" }
+}

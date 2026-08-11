@@ -109,6 +109,21 @@ def main(argv: list[str] | None = None) -> None:
         help="Propose routing/budget tweaks from ledger (never auto-applies)",
     )
 
+    alrt = sub.add_parser(
+        "alert",
+        help="Webhook alerts: test delivery or list event catalog",
+    )
+    alrt.add_argument(
+        "action",
+        choices=["test", "events"],
+        help="test | events",
+    )
+    alrt.add_argument(
+        "--message",
+        default="tollgate alert test",
+        help="message for alert test",
+    )
+
     snap = sub.add_parser(
         "snapshot",
         help="Export/import desk ops state (portable USB migration)",
@@ -329,6 +344,18 @@ def main(argv: list[str] | None = None) -> None:
             print(f"wrote {out_path}", file=sys.stderr)
         print(text)
         return
+
+    if args.cmd == "alert":
+        from tollgate.alerts import event_catalog, test_webhook
+        from tollgate.paths import pin_data_home_env
+
+        pin_data_home_env()
+        if args.action == "events":
+            print(json.dumps(event_catalog(), indent=2, default=str))
+            return
+        out = test_webhook(message=args.message)
+        print(json.dumps(out, indent=2, default=str))
+        raise SystemExit(0 if out.get("ok") else 1)
 
     if args.cmd == "snapshot":
         from datetime import date

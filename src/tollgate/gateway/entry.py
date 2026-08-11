@@ -90,7 +90,11 @@ def gateway_call(
                     "agent_protection",
                     provider=provider,
                     message=reason,
-                    extra={"consumer": ctx.consumer_id(), "op": op},
+                    extra={
+                        "consumer": ctx.consumer_id(),
+                        "op": op,
+                        "protection": (decision.limits or {}).get("protection"),
+                    },
                 )
         except Exception:  # noqa: BLE001
             pass

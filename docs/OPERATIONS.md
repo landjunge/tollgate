@@ -37,6 +37,32 @@ One brief: spend, top burners, deny reasons, sick providers, resilience, last ch
 OpenAI/Anthropic denies include `error.tollgate` (`error_class`, `protection`, `wait_ms`)
 and headers `Retry-After`, `X-Tollgate-Error-Class`, `X-Tollgate-Protection`.
 
+## Webhook alerts (v0.3.4+)
+
+Structured JSON (`schema_version: 1`) to n8n / Telegram / Discord:
+
+```bash
+export TOLLGATE_ALERT_WEBHOOK=https://n8n.example/webhook/tollgate-alerts
+# or keys_app.json → cost_guard.alert_webhook_url
+
+tollgate alert events          # catalog
+tollgate alert test            # force probe
+curl -s http://127.0.0.1:8787/v1/alerts
+curl -s -X POST http://127.0.0.1:8787/v1/alerts/test   # admin when auth on
+```
+
+| Event | Severity | When |
+|-------|----------|------|
+| `soft_budget` | warn | soft pressure, still admitted |
+| `hard_deny` | error | admission deny |
+| `agent_protection` | error | loop / rpm / $ hard stop |
+| `high_risk_block` | error | high-risk locked |
+| `circuit_open` | warn | breaker open |
+| `chaos_*` | info/error | inject + DR result |
+| `webhook_test` | info | manual probe |
+
+Import: [`configs/n8n-webhook-alerts.workflow.json`](../configs/n8n-webhook-alerts.workflow.json).
+
 ## Metrics auth (v0.3+)
 
 | Mode | Behavior |

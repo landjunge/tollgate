@@ -178,6 +178,13 @@ CONCEPTS: list[dict[str, Any]] = [
         "keywords": "snapshot export import portable usb migrate backup desk",
     },
     {
+        "id": "alerts",
+        "title": "Structured webhook alerts",
+        "path": "src/tollgate/alerts.py",
+        "summary": "schema_version 1 events — soft_budget, agent_protection, chaos_dr_*.",
+        "keywords": "alert webhook n8n telegram soft_budget agent_protection chaos",
+    },
+    {
         "id": "consumers-auth",
         "title": "Consumer auth (id:secret)",
         "path": "src/tollgate/consumers.py",
@@ -293,6 +300,8 @@ HTTP_ROUTES: list[dict[str, str]] = [
     {"method": "GET", "path": "/v1/chaos", "summary": "Chaos inject status"},
     {"method": "GET", "path": "/v1/audit", "summary": "Query deny/usage audit trail"},
     {"method": "GET", "path": "/v1/report", "summary": "Daily operator report (json|md)"},
+    {"method": "GET", "path": "/v1/alerts", "summary": "Webhook event catalog"},
+    {"method": "POST", "path": "/v1/alerts/test", "summary": "Force webhook probe (admin)"},
     {"method": "GET", "path": "/dashboard", "summary": "HTML control plane"},
     {"method": "GET", "path": "/v1/providers", "summary": "Provider inventory"},
     {"method": "GET", "path": "/v1/budget", "summary": "Budget snapshot"},
@@ -336,6 +345,7 @@ CLI_COMMANDS: list[dict[str, str]] = [
     {"cmd": "audit", "summary": "Query audit trail — who was denied and why"},
     {"cmd": "report", "summary": "Daily operator report Protect·Route·Prove"},
     {"cmd": "snapshot", "summary": "Export/import desk ops state (USB migrate)"},
+    {"cmd": "alert", "summary": "Webhook test / event catalog"},
 ]
 
 

@@ -246,7 +246,18 @@ def start_chaos(
             }
             data["active"].append(row)
             _write(path, data)
-            return {"ok": True, "inject": row, "path": str(path)}
+    try:
+        from tollgate.alerts import maybe_alert
+
+        maybe_alert(
+            "chaos_started",
+            provider=pid,
+            message=f"chaos inject {pid} for {dur:.0f}s ({reason})",
+            extra={"duration_s": dur, "reason": reason},
+        )
+    except Exception:  # noqa: BLE001
+        pass
+    return {"ok": True, "inject": row, "path": str(path)}
 
 
 def stop_chaos(
@@ -285,6 +296,19 @@ def stop_chaos(
         for pid in stopped_providers:
             if pid:
                 recoveries.append(start_recovery(pid, root=root))
+    try:
+        from tollgate.alerts import maybe_alert
+
+        for pid in stopped_providers:
+            if pid:
+                maybe_alert(
+                    "chaos_stopped",
+                    provider=pid,
+                    message=f"chaos inject stopped on {pid}",
+                    extra={"gradual_recovery": start_gradual_recovery},
+                )
+    except Exception:  # noqa: BLE001
+        pass
     return {
         "ok": True,
         "stopped": len(stopped_providers),
@@ -476,6 +500,24 @@ def run_failover_test(
                 "failover_pct": report["automatic_failover_pct"],
             },
             root=root,
+        )
+    except Exception:  # noqa: BLE001
+        pass
+
+    try:
+        from tollgate.alerts import maybe_alert
+
+        maybe_alert(
+            "chaos_dr_survived" if report["survived"] else "chaos_dr_failed",
+            provider=pid,
+            message=str(report.get("message") or ""),
+            extra={
+                "successful": ok_n,
+                "failed": fail_n,
+                "survived": report["survived"],
+                "recovery_time_ms_best": report.get("recovery_time_ms_best"),
+            },
+            force=True,
         )
     except Exception:  # noqa: BLE001
         pass

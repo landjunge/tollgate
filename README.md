@@ -26,6 +26,7 @@ tollgate resilience
 tollgate audit --event admit_deny   # who was stopped and why
 tollgate report                     # daily Protect·Route·Prove brief
 tollgate snapshot export -o desk.tgz  # portable desk migrate
+tollgate alert test                   # webhook probe (n8n / Telegram)
 tollgate search circuit breaker     # repo map / modules
 ```
 
@@ -165,6 +166,7 @@ Portable/USB: [docs/PORTABLE.md](docs/PORTABLE.md).
 ## Docs & quality gates
 
 - **[MAP.md](docs/MAP.md)** — full module / HTTP / CLI index  
+- **[CHANGELOG.md](CHANGELOG.md)** — release history  
 - [OPENAI.md](docs/OPENAI.md) · [VISION.md](docs/VISION.md) · [ARCHITECTURE.md](docs/ARCHITECTURE.md) · [N8N.md](docs/N8N.md)  
 - [llms.txt](llms.txt) — machine-readable entry for agents
 

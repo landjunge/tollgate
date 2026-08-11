@@ -52,6 +52,7 @@ Repo example: [`configs/mcp-tollgate.example.json`](../configs/mcp-tollgate.exam
 | `keys_agent_protect_check` | Dry-run max_tool_calls / budgets for a consumer |
 | `keys_audit` | Query deny/usage audit trail (who/why) or summary |
 | `keys_report` | Daily Protect·Route·Prove operator brief (json/md) |
+| `keys_alert_test` | Webhook probe or event catalog |
 | `keys_diagnose` | Issues + actions |
 | `keys_status` | Inventory / one provider |
 | `keys_route` | Intent → provider + fallbacks |

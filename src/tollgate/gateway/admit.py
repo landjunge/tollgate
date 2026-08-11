@@ -98,7 +98,11 @@ def admit(
                     "high_risk_block",
                     provider=pid,
                     message=reason,
-                    extra={"op": op, "agent": ctx.agent_id},
+                    extra={
+                        "op": op,
+                        "agent": ctx.agent_id,
+                        "consumer": ctx.consumer_id(),
+                    },
                 )
             except Exception:  # noqa: BLE001
                 pass
@@ -110,7 +114,13 @@ def admit(
                     "hard_deny",
                     provider=pid,
                     message=reason,
-                    extra={"op": op, "agent": ctx.agent_id, "limits": lim},
+                    extra={
+                        "op": op,
+                        "agent": ctx.agent_id,
+                        "consumer": ctx.consumer_id(),
+                        "protection": (lim or {}).get("protection"),
+                        "limits": lim,
+                    },
                 )
             except Exception:  # noqa: BLE001
                 pass

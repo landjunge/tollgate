@@ -203,6 +203,31 @@ KEYS_MCP_TOOLS: list[dict[str, Any]] = [
         ),
     },
     {
+        "name": "keys_alert_test",
+        "description": (
+            "Force-send webhook_test to TOLLGATE_ALERT_WEBHOOK / "
+            "cost_guard.alert_webhook_url. Or list event catalog (action=events)."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["test", "events"],
+                    "default": "test",
+                },
+                "message": {"type": "string", "default": "tollgate alert test"},
+            },
+        },
+        "handler": lambda action="test", message="tollgate alert test", **_k: (
+            __import__("tollgate.alerts", fromlist=["event_catalog"]).event_catalog()
+            if str(action or "test") == "events"
+            else __import__("tollgate.alerts", fromlist=["test_webhook"]).test_webhook(
+                message=str(message or "tollgate alert test")
+            )
+        ),
+    },
+    {
         "name": "keys_report",
         "description": (
             "Daily operator report: Protect · Route · Prove evidence "

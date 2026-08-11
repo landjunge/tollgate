@@ -78,7 +78,7 @@ _bootstrap_env()
 
 app = FastAPI(
     title="Tollgate",
-    version="0.3.3",
+    version="0.3.4",
     description=(
         "Tollgate — AI reliability & control plane. "
         "Protect · Route · Prove (chaos failover tests). "
@@ -144,7 +144,7 @@ def health() -> dict[str, Any]:
         "ok": True,
         "service": "tollgate",
         "product": "Tollgate",
-        "version": "0.3.3",
+        "version": "0.3.4",
         "extractable": True,
         "multi_consumer": True,
         "portable": path_snapshot(),
@@ -155,6 +155,7 @@ def health() -> dict[str, Any]:
         "control": "/v1/control",
         "audit": "/v1/audit",
         "report": "/v1/report",
+        "alerts": "/v1/alerts",
         "dashboard": "/dashboard",
     }
 
@@ -360,6 +361,38 @@ def report_view(
             media_type="text/markdown; charset=utf-8",
         )
     out = build_report()
+    out["viewer"] = auth["consumer"]
+    return out
+
+
+@app.get("/v1/alerts")
+def alerts_catalog(
+    x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+    x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> dict[str, Any]:
+    """List webhook event types + config pointers (no secrets)."""
+    auth = _require(x_consumer_key, x_consumer_id, authorization=authorization)
+    from tollgate.alerts import event_catalog
+
+    out = event_catalog()
+    out["viewer"] = auth["consumer"]
+    return out
+
+
+@app.post("/v1/alerts/test")
+def alerts_test(
+    x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+    x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> dict[str, Any]:
+    """Force-send a webhook_test event (admin when auth mode)."""
+    auth = _require(
+        x_consumer_key, x_consumer_id, need_admin=True, authorization=authorization
+    )
+    from tollgate.alerts import test_webhook
+
+    out = test_webhook(message=f"probe from consumer {auth.get('consumer')}")
     out["viewer"] = auth["consumer"]
     return out
 

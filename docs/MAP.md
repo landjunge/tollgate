@@ -29,6 +29,8 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | `GET` | `/v1/chaos` | Chaos inject status |
 | `GET` | `/v1/audit` | Query deny/usage audit trail |
 | `GET` | `/v1/report` | Daily operator report (json|md) |
+| `GET` | `/v1/alerts` | Webhook event catalog |
+| `POST` | `/v1/alerts/test` | Force webhook probe (admin) |
 | `GET` | `/dashboard` | HTML control plane |
 | `GET` | `/v1/providers` | Provider inventory |
 | `GET` | `/v1/budget` | Budget snapshot |
@@ -65,6 +67,7 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | `tollgate audit` | Query audit trail — who was denied and why |
 | `tollgate report` | Daily operator report Protect·Route·Prove |
 | `tollgate snapshot` | Export/import desk ops state (USB migrate) |
+| `tollgate alert` | Webhook test / event catalog |
 
 ## Concepts → code
 
@@ -88,6 +91,7 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | Append-only audit trail + query | `src/tollgate/audit_log.py` |
 | Daily operator report | `src/tollgate/report.py` |
 | Desk snapshot export/import | `src/tollgate/snapshot.py` |
+| Structured webhook alerts | `src/tollgate/alerts.py` |
 | Consumer auth (id:secret) | `src/tollgate/consumers.py` |
 | Cost guard + high-risk providers | `src/tollgate/cost.py` |
 | keys_app.json config + validate | `src/tollgate/app_config.py` |
@@ -111,7 +115,7 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | `__init__.py` | Tollgate — multi-consumer API key admission + provider routing. |
 | `__main__.py` | python -m tollgate → MCP stdio server. |
 | `agent_guard.py` | Agent protection — stop runaway loops before they become invoices. |
-| `alerts.py` | Proactive budget alerts (webhook) — soft warn before hard deny. |
+| `alerts.py` | Proactive ops alerts (webhook) — soft warn, hard deny, circuit, chaos. |
 | `anthropic_compat.py` | Anthropic Messages API facade — drop-in for clients that speak Anthropic format. |
 | `app_config.py` | Keys mini-app configuration — user-editable, provider-based. |
 | `audit_log.py` | Append-only operational audit trail. |
