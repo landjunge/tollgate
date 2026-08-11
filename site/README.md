@@ -1,34 +1,35 @@
 # Tollgate product website
 
-**Product landing page** — not a classic OSS feature dump.
-
-Story in ~20 seconds: *agent → Tollgate → protect / route / prove*.
-
-| File | Role |
-|------|------|
-| `index.html` | EN landing (hero + animated demo core) |
-| `de.html` | DE landing (same structure) |
-| `docs.html` | Doc hub (secondary) |
-| `styles.css` / `site.js` | Control Room aesthetic + scene rotation |
-| `404.html` | Admission-denied |
-
-## Structure
-
-1. Hero — Protect your AI agents in production  
-2. **Live demo** — Protect → Route → Prove auto-rotate  
-3. Why — three cards only  
-4. Architecture — where Tollgate sits  
-5. Control Room mock  
-6. Stack + OpenAI drop-in  
-7. 5-minute quickstart  
-8. Prove highlight  
-9. Built for developers (tech list last)
+Static product landing (ops desk aesthetic) for GitHub Pages.
 
 **Live:** https://landjunge.github.io/tollgate/
 
+## SEO / Google indexing
+
+| Item | Location |
+|------|----------|
+| Title, description, keywords | `index.html`, `de.html`, `docs.html` |
+| robots `index,follow` + large previews | head meta |
+| Canonical + hreflang EN/DE | head links |
+| Open Graph + Twitter Card | head meta · image `assets/og.png` (1200×630) |
+| JSON-LD `SoftwareApplication` | index |
+| JSON-LD `FAQPage` | index + de |
+| JSON-LD `WebSite` / `CollectionPage` | index / docs |
+| `robots.txt` + `sitemap.xml` (hreflang + images) | site root |
+| Semantic HTML | main, section, article, nav |
+
+### Google Search Console
+
+1. Property: `https://landjunge.github.io/tollgate/`
+2. Submit sitemap: `https://landjunge.github.io/tollgate/sitemap.xml`
+3. Request indexing for `/` and `/de.html`
+
+## Local preview
+
 ```bash
 cd site && python3 -m http.server 8080
-# http://127.0.0.1:8080
 ```
 
-Deploy: push `main` → workflow Pages. First time: **Settings → Pages → GitHub Actions**.
+## Deploy
+
+Push to `main` → workflow Pages (`.github/workflows/pages.yml`).

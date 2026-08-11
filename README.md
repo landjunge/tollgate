@@ -6,7 +6,7 @@
 
 > **Tollgate is the safety layer between your AI agents and the internet.**
 
-**Website:** [landjunge.github.io/tollgate](https://landjunge.github.io/tollgate/) · [DE](https://landjunge.github.io/tollgate/de.html) · [Docs](https://landjunge.github.io/tollgate/docs.html)
+**Website:** [landjunge.github.io/tollgate](https://landjunge.github.io/tollgate/) · [DE](https://landjunge.github.io/tollgate/de.html) · [Docs](https://landjunge.github.io/tollgate/docs.html) · [Sitemap](https://landjunge.github.io/tollgate/sitemap.xml)
 
 **Protects AI agents in production** — not an API gateway, not a model catalog.
 

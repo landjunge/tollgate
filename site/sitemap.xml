@@ -1,18 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://landjunge.github.io/tollgate/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://landjunge.github.io/tollgate/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://landjunge.github.io/tollgate/de.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://landjunge.github.io/tollgate/"/>
+    <image:image>
+      <image:loc>https://landjunge.github.io/tollgate/assets/og.png</image:loc>
+      <image:title>Tollgate — Protect · Route · Prove</image:title>
+    </image:image>
     <changefreq>weekly</changefreq>
-    <priority>1</priority>
+    <priority>1.0</priority>
   </url>
   <url>
     <loc>https://landjunge.github.io/tollgate/de.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://landjunge.github.io/tollgate/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://landjunge.github.io/tollgate/de.html"/>
     <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
+    <priority>0.95</priority>
   </url>
   <url>
     <loc>https://landjunge.github.io/tollgate/docs.html</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://landjunge.github.io/tollgate/assets/og.png</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
   </url>
 </urlset>

@@ -1,4 +1,9 @@
+# Tollgate product site — full indexing
 User-agent: *
 Allow: /
 
+# Primary sitemap (Google Search Console)
 Sitemap: https://landjunge.github.io/tollgate/sitemap.xml
+
+# Host hint (GitHub Pages)
+Host: https://landjunge.github.io

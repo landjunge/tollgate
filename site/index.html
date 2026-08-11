@@ -3,16 +3,138 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Tollgate — Protect your AI agents in production</title>
-  <meta name="description" content="Tollgate is the admission gate for AI agents. Stop runaways. Survive provider outages. Prove failover works."/>
+
+  <!-- Primary SEO -->
+  <title>Tollgate — AI Agent Safety Layer | Protect · Route · Prove in Production</title>
+  <meta name="description" content="Tollgate is the safety layer between AI agents and the internet. Stop runaway tool loops, enforce budgets, failover when providers fail, and prove DR with chaos tests. OpenAI drop-in · MCP · n8n."/>
+  <meta name="keywords" content="Tollgate, AI agent safety, agent protection, tool loop protection, LLM budget control, AI failover, chaos test LLM, multi-provider routing, OpenAI compatible gateway, Anthropic proxy, MCP safety, n8n AI agent, circuit breaker LLM, AI reliability certificate, protect AI agents production"/>
+  <meta name="author" content="landjunge"/>
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"/>
+  <meta name="googlebot" content="index, follow"/>
   <meta name="theme-color" content="#07080a"/>
-  <meta property="og:title" content="Tollgate — Protect your AI agents in production"/>
-  <meta property="og:description" content="Control costs. Survive provider failures. Prove your AI infrastructure works."/>
-  <meta property="og:type" content="website"/>
-  <meta property="og:url" content="https://landjunge.github.io/tollgate/"/>
+  <meta name="application-name" content="Tollgate"/>
   <link rel="canonical" href="https://landjunge.github.io/tollgate/"/>
+  <link rel="alternate" hreflang="en" href="https://landjunge.github.io/tollgate/"/>
+  <link rel="alternate" hreflang="de" href="https://landjunge.github.io/tollgate/de.html"/>
+  <link rel="alternate" hreflang="x-default" href="https://landjunge.github.io/tollgate/"/>
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website"/>
+  <meta property="og:site_name" content="Tollgate"/>
+  <meta property="og:locale" content="en_US"/>
+  <meta property="og:locale:alternate" content="de_DE"/>
+  <meta property="og:url" content="https://landjunge.github.io/tollgate/"/>
+  <meta property="og:title" content="Tollgate — Protect your AI agents in production"/>
+  <meta property="og:description" content="Control costs. Survive provider failures. Prove your AI infrastructure works. Protect · Route · Prove."/>
+  <meta property="og:image" content="https://landjunge.github.io/tollgate/assets/og.png"/>
+  <meta property="og:image:width" content="1200"/>
+  <meta property="og:image:height" content="630"/>
+  <meta property="og:image:alt" content="Tollgate — Protect · Route · Prove admission gate for AI agents"/>
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="Tollgate — AI Agent Safety Layer"/>
+  <meta name="twitter:description" content="Stop runaways. Survive outages. Prove failover. OpenAI drop-in · MCP · n8n."/>
+  <meta name="twitter:image" content="https://landjunge.github.io/tollgate/assets/og.png"/>
+
   <link rel="icon" href="favicon.svg" type="image/svg+xml"/>
   <link rel="stylesheet" href="styles.css"/>
+
+  <!-- JSON-LD SoftwareApplication -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Tollgate",
+    "alternateName": ["Tollgate AI", "AI agent safety layer", "toolgate"],
+    "applicationCategory": "DeveloperApplication",
+    "applicationSubCategory": "AI agent safety and reliability control plane",
+    "operatingSystem": "macOS, Linux, Windows, Docker",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "description": "Safety layer between AI agents and the internet. Protect (budgets, tool-loop hard stops, freeze), Route (health-aware failover, circuits), Prove (chaos tests, resilience certificate).",
+    "url": "https://landjunge.github.io/tollgate/",
+    "downloadUrl": "https://github.com/landjunge/tollgate",
+    "codeRepository": "https://github.com/landjunge/tollgate",
+    "softwareVersion": "1.0.12",
+    "license": "https://github.com/landjunge/tollgate/blob/main/LICENSE",
+    "author": { "@type": "Person", "name": "landjunge", "url": "https://github.com/landjunge" },
+    "programmingLanguage": ["Python"],
+    "featureList": [
+      "Agent tool-loop hard deny (max_tool_calls)",
+      "Per-consumer budget envelopes",
+      "Provider failover and circuit breakers",
+      "Chaos / DR tests and resilience score",
+      "AI Reliability certificate scorecard",
+      "OpenAI-compatible drop-in API",
+      "Anthropic Messages drop-in",
+      "MCP and n8n integration",
+      "Global freeze kill switch",
+      "Audit trail and daily operator report"
+    ],
+    "screenshot": "https://landjunge.github.io/tollgate/assets/og.png",
+    "inLanguage": ["en", "de"],
+    "keywords": "AI agent safety, tool loop protection, LLM failover, chaos testing, OpenAI proxy, agent budgets"
+  }
+  </script>
+
+  <!-- JSON-LD WebSite -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Tollgate",
+    "url": "https://landjunge.github.io/tollgate/",
+    "inLanguage": ["en", "de"],
+    "description": "Product site for Tollgate — safety layer for AI agents in production.",
+    "publisher": {
+      "@type": "Person",
+      "name": "landjunge",
+      "url": "https://github.com/landjunge"
+    }
+  }
+  </script>
+
+  <!-- JSON-LD FAQPage -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is Tollgate?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Tollgate is the safety layer between your AI agents and the internet. It protects against runaway tool loops and cost explosions, routes around provider outages, and proves failover with chaos tests."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is Tollgate an LLM gateway like LiteLLM?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. LiteLLM connects models. Tollgate keeps agents in line with pre-admission hard denies, freeze, audit, and Prove (chaos + certificate). It is not a multi-provider catalog product."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I connect my OpenAI SDK to Tollgate?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Set OPENAI_BASE_URL=http://127.0.0.1:8787/v1 and OPENAI_API_KEY to your consumer lane label or id:secret. Optionally send tool_calls_est for loop protection."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does the Protect demo need API keys?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. The tool-loop block (max_tool_calls) works without provider keys. Real chat and full chaos/DR proof need keys in User/Key.txt."
+        }
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
   <header class="topbar">
@@ -34,8 +156,9 @@
         <a href="#sit">Sit</a>
         <a href="#desk">Desk</a>
         <a href="#start">Start</a>
+        <a href="#faq">FAQ</a>
         <a href="docs.html">Docs</a>
-        <a href="de.html" hreflang="de">DE</a>
+        <a href="de.html" hreflang="de" title="Deutsch">DE</a>
         <a href="https://github.com/landjunge/tollgate" target="_blank" rel="noopener">GitHub</a>
         <a class="cta" href="#start">Get in</a>
       </nav>
@@ -389,10 +512,47 @@ tollgate certificate</pre>
       </div>
     </section>
 
+    <!-- FAQ (crawlable — matches JSON-LD FAQPage) -->
+    <section class="sec shell" id="faq" aria-labelledby="faq-title">
+      <div class="sec-head reveal">
+        <span class="sec-num">06 / FAQ</span>
+        <div>
+          <h2 id="faq-title">Common questions</h2>
+          <p class="sec-lead">Short answers for humans and search engines.</p>
+        </div>
+      </div>
+      <div class="modes reveal">
+        <article class="mode p">
+          <div class="pillar">What</div>
+          <div>
+            <h3>What is Tollgate?</h3>
+            <p>The safety layer between AI agents and the internet: budgets, tool-loop hard stops, failover, chaos proof — not a model catalog.</p>
+          </div>
+          <div class="tags">Protect<br/>Route<br/>Prove</div>
+        </article>
+        <article class="mode r">
+          <div class="pillar">vs gateway</div>
+          <div>
+            <h3>Is it LiteLLM?</h3>
+            <p>No. LiteLLM connects models. Tollgate keeps agents in line and proves DR works.</p>
+          </div>
+          <div class="tags">hard deny<br/>chaos<br/>certificate</div>
+        </article>
+        <article class="mode v">
+          <div class="pillar">Keys</div>
+          <div>
+            <h3>Need API keys for the demo?</h3>
+            <p>Protect (tool-loop block) works without keys. Real chat and full chaos need <code>User/Key.txt</code>.</p>
+          </div>
+          <div class="tags">OpenAI<br/>MCP<br/>n8n</div>
+        </article>
+      </div>
+    </section>
+
     <!-- Dev last -->
     <section class="sec shell" id="dev">
       <div class="sec-head reveal">
-        <span class="sec-num">06 / GRIT</span>
+        <span class="sec-num">07 / GRIT</span>
         <div>
           <h2>Self-hosted. Open source. Honest.</h2>
           <p class="sec-lead">Not multi-tenant SaaS. A safety layer next to your agents.</p>

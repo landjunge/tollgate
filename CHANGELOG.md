@@ -2,6 +2,15 @@
 
 All notable releases of [landjunge/tollgate](https://github.com/landjunge/tollgate).
 
+## 1.0.13 — 2026-08-11
+
+### Website SEO / Google indexing
+- Full meta: keywords, robots, googlebot, canonical, hreflang EN/DE
+- Open Graph + Twitter cards · `assets/og.png` (1200×630)
+- JSON-LD: SoftwareApplication, WebSite, FAQPage (EN/DE), CollectionPage (docs)
+- Enhanced `sitemap.xml` (hreflang + image) · `robots.txt`
+- Visible FAQ section on landing for crawlable answers
+
 ## 1.0.12 — 2026-08-11
 
 ### Cold path / Prove friction
