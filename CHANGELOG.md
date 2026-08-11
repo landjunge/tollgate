@@ -2,6 +2,13 @@
 
 All notable releases of [landjunge/tollgate](https://github.com/landjunge/tollgate).
 
+## 0.3.5 — 2026-08-11
+
+### Added
+- Consumer scopes (L3): `allowed_providers` / `blocked_providers`, ops, intents
+- CLI: `tollgate consumer-budget … --allow-provider|intent|op --block-* --clear-scopes`
+- Enforced on admit, route, and chat paths (`protection: scope`)
+
 ## 0.3.4 — 2026-08-11
 
 ### Added

@@ -37,7 +37,7 @@ Google stays **off** until an admin unlocks a $ envelope.
 ```
 L1  Secret Vault        Key.txt / env handles — never in agent memory
 L2  Provider Specs      distill/*.json (auth, URLs, errors, ops) — data not code
-L3  Virtual Identity    agent scopes, request class, allowlists (future)
+L3  Virtual Identity    consumer scopes (allow/block provider·intent·op) + request class
 L4  Admission Control   soft/hard budget, dual-window, cost velocity, cost_guard
 L5  Router Policy       intent chain, sticky, failover, health scores
 L6  Transport Adapter   headers from L2; one HTTP path; error taxonomy

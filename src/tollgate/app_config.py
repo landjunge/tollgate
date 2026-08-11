@@ -91,7 +91,12 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "max_tool_calls": 25,
         },
         # Examples:
-        # "n8n": {"max_usd_day": 0.5, "max_requests_minute": 30, "max_usd_request": 0.25},
+        # "n8n": {
+        #   "max_usd_day": 0.5, "max_requests_minute": 30, "max_usd_request": 0.25,
+        #   "allowed_providers": ["opencode_zen", "brave"],
+        #   "allowed_intents": ["free_llm", "search"],
+        #   "blocked_providers": ["google"]
+        # },
         # "coding-agent": {
         #   "max_usd_day": 20, "max_usd_hour": 5, "max_usd_request": 0.5,
         #   "max_requests_minute": 30, "max_tokens_request": 20000, "max_tool_calls": 15

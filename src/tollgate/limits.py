@@ -10,12 +10,30 @@ from tollgate.cost import check_cost_guard
 from tollgate.usage_ledger import consumer_usage, provider_usage
 
 
+def _as_str_list(val: Any) -> list[str]:
+    """Normalize config list/string → lowercased unique tokens."""
+    if val is None or val is False:
+        return []
+    if isinstance(val, str):
+        parts = [p.strip().lower() for p in val.replace(";", ",").split(",")]
+        return [p for p in parts if p]
+    if isinstance(val, (list, tuple, set)):
+        out: list[str] = []
+        for x in val:
+            s = str(x or "").strip().lower()
+            if s and s not in out:
+                out.append(s)
+        return out
+    return []
+
+
 def consumer_envelope(consumer: str) -> dict[str, Any]:
     """
-    Resolve day + agent-protection caps for a consumer id.
+    Resolve day + agent-protection caps + scopes for a consumer id.
 
     Lookup order: consumer_envelopes.<id> → consumer_envelopes._default → empty.
     Values of 0 / missing mean unlimited at that dimension.
+    Empty scope lists mean unrestricted on that axis.
     """
     cfg = load_config()
     envelopes = cfg.get("consumer_envelopes") or {}
@@ -37,8 +55,27 @@ def consumer_envelope(consumer: str) -> dict[str, Any]:
         "max_requests_minute": int(block.get("max_requests_minute") or 0),
         "max_tokens_request": int(block.get("max_tokens_request") or 0),
         "max_tool_calls": int(block.get("max_tool_calls") or 0),
+        # L3 scopes (allow/block lists — empty allow = unrestricted)
+        "allowed_providers": _as_str_list(block.get("allowed_providers")),
+        "blocked_providers": _as_str_list(block.get("blocked_providers")),
+        "allowed_ops": _as_str_list(block.get("allowed_ops")),
+        "blocked_ops": _as_str_list(block.get("blocked_ops")),
+        "allowed_intents": _as_str_list(block.get("allowed_intents")),
+        "blocked_intents": _as_str_list(block.get("blocked_intents")),
         "consumer": cid,
     }
+
+
+def _scope_lists_active(env: dict[str, Any]) -> bool:
+    keys = (
+        "allowed_providers",
+        "blocked_providers",
+        "allowed_ops",
+        "blocked_ops",
+        "allowed_intents",
+        "blocked_intents",
+    )
+    return any(bool(env.get(k)) for k in keys)
 
 
 def _protection_active(env: dict[str, Any]) -> bool:
@@ -52,7 +89,92 @@ def _protection_active(env: dict[str, Any]) -> bool:
         "max_tokens_request",
         "max_tool_calls",
     )
-    return any(float(env.get(k) or 0) > 0 for k in keys)
+    return any(float(env.get(k) or 0) > 0 for k in keys) or _scope_lists_active(env)
+
+
+def check_consumer_scope(
+    consumer: str,
+    *,
+    provider: str = "",
+    op: str = "",
+    intent: str = "",
+) -> dict[str, Any]:
+    """
+    L3 consumer scopes — which providers / ops / intents a lane may use.
+
+    Rules (per axis): blocked_* always denies; if allowed_* non-empty, must match.
+    Empty lists on an axis = no restriction for that axis.
+    """
+    cid = (consumer or "").strip()[:64] or "anonymous"
+    env = consumer_envelope(cid)
+    pid = (provider or "").strip().lower()
+    op_n = (op or "").strip().lower()
+    intent_n = (intent or "").strip().lower()
+
+    def _deny(reason: str, *, field: str) -> dict[str, Any]:
+        return {
+            "allowed": False,
+            "reason": reason,
+            "consumer": cid,
+            "protection": "scope",
+            "scope_field": field,
+            "envelope": env,
+            "soft_warn": False,
+            "wait_ms": 0,
+        }
+
+    if pid:
+        blocked = env.get("blocked_providers") or []
+        allowed = env.get("allowed_providers") or []
+        if pid in blocked:
+            return _deny(
+                f"scope: consumer {cid} blocked_providers includes {pid}",
+                field="blocked_providers",
+            )
+        if allowed and pid not in allowed:
+            return _deny(
+                f"scope: consumer {cid} provider {pid} not in allowed_providers "
+                f"{allowed}",
+                field="allowed_providers",
+            )
+
+    if op_n:
+        blocked = env.get("blocked_ops") or []
+        allowed = env.get("allowed_ops") or []
+        if op_n in blocked:
+            return _deny(
+                f"scope: consumer {cid} blocked_ops includes {op_n}",
+                field="blocked_ops",
+            )
+        if allowed and op_n not in allowed:
+            return _deny(
+                f"scope: consumer {cid} op {op_n} not in allowed_ops {allowed}",
+                field="allowed_ops",
+            )
+
+    if intent_n:
+        blocked = env.get("blocked_intents") or []
+        allowed = env.get("allowed_intents") or []
+        if intent_n in blocked:
+            return _deny(
+                f"scope: consumer {cid} blocked_intents includes {intent_n}",
+                field="blocked_intents",
+            )
+        if allowed and intent_n not in allowed:
+            return _deny(
+                f"scope: consumer {cid} intent {intent_n} not in allowed_intents "
+                f"{allowed}",
+                field="allowed_intents",
+            )
+
+    return {
+        "allowed": True,
+        "reason": None,
+        "consumer": cid,
+        "envelope": env if _scope_lists_active(env) else None,
+        "soft_warn": False,
+        "wait_ms": 0,
+    }
 
 
 def check_consumer_limits(
@@ -350,6 +472,14 @@ def check_limits(
 
     # Per-consumer envelope first (lane isolation before provider spend)
     if (consumer or "").strip():
+        # L3 scopes before numeric budgets
+        sc = check_consumer_scope(
+            consumer,
+            provider=provider_id,
+            op=op,
+        )
+        if not sc.get("allowed"):
+            return sc
         cl = check_consumer_limits(
             consumer,
             tokens_est=tokens_est,

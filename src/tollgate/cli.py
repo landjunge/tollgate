@@ -75,6 +75,53 @@ def main(argv: list[str] | None = None) -> None:
     )
     cbud.add_argument("--max-tool-calls", type=int, default=None, dest="max_tool_calls")
     cbud.add_argument(
+        "--allow-provider",
+        action="append",
+        default=None,
+        dest="allow_providers",
+        help="L3 scope: allow provider (repeatable); replaces allowed_providers list",
+    )
+    cbud.add_argument(
+        "--block-provider",
+        action="append",
+        default=None,
+        dest="block_providers",
+        help="L3 scope: block provider (repeatable)",
+    )
+    cbud.add_argument(
+        "--allow-intent",
+        action="append",
+        default=None,
+        dest="allow_intents",
+        help="L3 scope: allow intent e.g. free_llm,search (repeatable)",
+    )
+    cbud.add_argument(
+        "--block-intent",
+        action="append",
+        default=None,
+        dest="block_intents",
+        help="L3 scope: block intent (repeatable)",
+    )
+    cbud.add_argument(
+        "--allow-op",
+        action="append",
+        default=None,
+        dest="allow_ops",
+        help="L3 scope: allow op e.g. chat,search (repeatable)",
+    )
+    cbud.add_argument(
+        "--block-op",
+        action="append",
+        default=None,
+        dest="block_ops",
+        help="L3 scope: block op (repeatable)",
+    )
+    cbud.add_argument(
+        "--clear-scopes",
+        action="store_true",
+        help="remove all allowed_*/blocked_* lists for this consumer",
+    )
+    cbud.add_argument(
         "--clear",
         action="store_true",
         help="remove envelope for this consumer (fall back to _default)",
@@ -580,13 +627,48 @@ def main(argv: list[str] | None = None) -> None:
             block["max_tokens_request"] = int(args.max_tokens_request)
         if args.max_tool_calls is not None:
             block["max_tool_calls"] = int(args.max_tool_calls)
+        # L3 scopes
+        if getattr(args, "clear_scopes", False):
+            for k in (
+                "allowed_providers",
+                "blocked_providers",
+                "allowed_ops",
+                "blocked_ops",
+                "allowed_intents",
+                "blocked_intents",
+            ):
+                block.pop(k, None)
+        if args.allow_providers is not None:
+            block["allowed_providers"] = [
+                str(x).strip().lower() for x in args.allow_providers if str(x).strip()
+            ]
+        if args.block_providers is not None:
+            block["blocked_providers"] = [
+                str(x).strip().lower() for x in args.block_providers if str(x).strip()
+            ]
+        if args.allow_intents is not None:
+            block["allowed_intents"] = [
+                str(x).strip().lower() for x in args.allow_intents if str(x).strip()
+            ]
+        if args.block_intents is not None:
+            block["blocked_intents"] = [
+                str(x).strip().lower() for x in args.block_intents if str(x).strip()
+            ]
+        if args.allow_ops is not None:
+            block["allowed_ops"] = [
+                str(x).strip().lower() for x in args.allow_ops if str(x).strip()
+            ]
+        if args.block_ops is not None:
+            block["blocked_ops"] = [
+                str(x).strip().lower() for x in args.block_ops if str(x).strip()
+            ]
         if not block:
             print(
                 json.dumps(
                     {
                         "ok": False,
                         "error": (
-                            "pass --max-usd-day / --max-usd-request / "
+                            "pass --max-usd-day / --allow-provider / "
                             "--max-requests-minute / … or --clear"
                         ),
                     }

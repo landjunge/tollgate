@@ -44,6 +44,24 @@ def routed_chat(
     else:
         msgs = list(messages or [])
 
+    # L3 consumer intent scope (before provider pick)
+    cid_hint = (consumer or agent_id or "").strip()
+    if cid_hint:
+        try:
+            from tollgate.limits import check_consumer_scope
+
+            sc = check_consumer_scope(cid_hint, intent=intent)
+            if not sc.get("allowed"):
+                return {
+                    "ok": False,
+                    "error": sc.get("reason") or "scope denied",
+                    "error_class": "POLICY_DENY",
+                    "protection": "scope",
+                    "consumer": cid_hint,
+                }
+        except Exception:  # noqa: BLE001
+            pass
+
     est = tokens_est
     if not est:
         est = max(64, sum(len(str(m.get("content") or "")) for m in msgs) // 4 + int(max_tokens or 0))

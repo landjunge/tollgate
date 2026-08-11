@@ -185,6 +185,13 @@ CONCEPTS: list[dict[str, Any]] = [
         "keywords": "alert webhook n8n telegram soft_budget agent_protection chaos",
     },
     {
+        "id": "consumer-scopes",
+        "title": "Consumer scopes (allow/block providers)",
+        "path": "src/tollgate/limits.py",
+        "summary": "allowed_providers/intents/ops + blocked_* per lane (L3 identity).",
+        "keywords": "scope allowlist blocklist allowed_providers intent op L3",
+    },
+    {
         "id": "consumers-auth",
         "title": "Consumer auth (id:secret)",
         "path": "src/tollgate/consumers.py",

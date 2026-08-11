@@ -146,6 +146,35 @@ tollgate consumer-budget coding-agent --max-usd-day 20 --max-tool-calls 15
 tollgate consumer-budget desk --max-usd-day 0
 ```
 
+### Consumer scopes (L3 — who may call what)
+
+Empty allow-list = unrestricted on that axis. Block lists always win.
+
+```json
+"consumer_envelopes": {
+  "n8n": {
+    "max_usd_day": 0.5,
+    "allowed_providers": ["opencode_zen", "brave"],
+    "blocked_providers": ["google"],
+    "allowed_intents": ["free_llm", "search"],
+    "allowed_ops": ["chat", "search", "status"]
+  }
+}
+```
+
+```bash
+tollgate consumer-budget n8n \
+  --max-usd-day 0.5 \
+  --allow-provider opencode_zen --allow-provider brave \
+  --block-provider google \
+  --allow-intent free_llm --allow-intent search \
+  --allow-op chat --allow-op search
+
+tollgate consumer-budget n8n --clear-scopes
+```
+
+Enforced on **admit** (provider + op), **route** / **chat** (intent). Deny reason includes `scope:` and `protection: scope`.
+
 ### Agent protection (loop / runaway stops)
 
 Same envelope block supports short-window hard stops:

@@ -92,6 +92,7 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | Daily operator report | `src/tollgate/report.py` |
 | Desk snapshot export/import | `src/tollgate/snapshot.py` |
 | Structured webhook alerts | `src/tollgate/alerts.py` |
+| Consumer scopes (allow/block providers) | `src/tollgate/limits.py` |
 | Consumer auth (id:secret) | `src/tollgate/consumers.py` |
 | Cost guard + high-risk providers | `src/tollgate/cost.py` |
 | keys_app.json config + validate | `src/tollgate/app_config.py` |

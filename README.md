@@ -20,7 +20,8 @@ tollgate resilience                              # AI Resilience Score
 
 ```bash
 ./scripts/desk-ready.sh
-tollgate consumer-budget n8n --max-usd-day 2 --max-tool-calls 15
+tollgate consumer-budget n8n --max-usd-day 2 --max-tool-calls 15 \
+  --allow-provider opencode_zen --allow-intent free_llm
 tollgate chaos test opencode_zen --requests 5
 tollgate resilience
 tollgate audit --event admit_deny   # who was stopped and why

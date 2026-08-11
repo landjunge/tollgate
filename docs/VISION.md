@@ -88,6 +88,7 @@ Agents ────┘         HTTP + MCP + OpenAI/Anthropic drop-ins
 | Operator report | daily Protect·Route·Prove brief + deny meta headers | **done (v0.3.2)** |
 | Snapshot + n8n v0.2 | portable export/import · tool_calls on chat · control ops | **done (v0.3.3)** |
 | Structured alerts | webhook schema v1 · chaos events · alert CLI | **done (v0.3.4)** |
+| Consumer scopes | allow/block providers · intents · ops per lane | **done (v0.3.5)** |
 | Enterprise | Teams, SSO/RBAC | later |
 
 ---

@@ -78,7 +78,7 @@ _bootstrap_env()
 
 app = FastAPI(
     title="Tollgate",
-    version="0.3.4",
+    version="0.3.5",
     description=(
         "Tollgate — AI reliability & control plane. "
         "Protect · Route · Prove (chaos failover tests). "
@@ -144,7 +144,7 @@ def health() -> dict[str, Any]:
         "ok": True,
         "service": "tollgate",
         "product": "Tollgate",
-        "version": "0.3.4",
+        "version": "0.3.5",
         "extractable": True,
         "multi_consumer": True,
         "portable": path_snapshot(),
@@ -471,6 +471,18 @@ def route(
     x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
 ) -> dict[str, Any]:
     auth = _require(x_consumer_key, x_consumer_id)
+    from tollgate.limits import check_consumer_scope
+
+    sc = check_consumer_scope(auth["consumer"], intent=body.intent)
+    if not sc.get("allowed"):
+        return {
+            "ok": False,
+            "error": sc.get("reason") or "scope denied",
+            "error_class": "POLICY_DENY",
+            "protection": "scope",
+            "consumer": auth["consumer"],
+            "intent": body.intent,
+        }
     out = get_keys_service().route(
         body.intent,
         tokens_est=body.tokens_est,
