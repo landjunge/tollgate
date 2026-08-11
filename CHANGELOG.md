@@ -2,6 +2,13 @@
 
 All notable releases of [landjunge/tollgate](https://github.com/landjunge/tollgate).
 
+## 1.0.9 — 2026-08-11
+
+### Product landing (not OSS brochure)
+- Rebuild `site/` as product story: hero → **animated Protect/Route/Prove demo** → why → architecture → dashboard mock → stack → quickstart → prove → dev details last
+- DE parity (`de.html`); no feature-catalog positioning
+- Copy: “Protect your AI agents in production.”
+
 ## 1.0.8 — 2026-08-11
 
 ### Product website (GitHub Pages)
