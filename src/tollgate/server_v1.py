@@ -53,7 +53,7 @@ app = FastAPI(
         "Tollgate — multi-consumer API admission + router. "
         "Budgets, circuits, distill-backed providers. "
         "Gnom, n8n, and other agents share this control plane. "
-        "Target repo: tollgate (extractable core lives here for now)."
+        "https://github.com/landjunge/tollgate"
     ),
 )
 

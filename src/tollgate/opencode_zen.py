@@ -14,7 +14,7 @@ BASE = "https://opencode.ai/zen/v1"
 _UA = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 "
-    "gnom-hub/keys-opencode-zen"
+    "tollgate/opencode-zen"
 )
 
 # Free models from official Zen docs (ids without opencode/ prefix for API)
@@ -75,25 +75,46 @@ def list_models() -> dict[str, Any]:
 
 
 def chat(
-    message: str,
+    message: str | list[dict[str, str]] = "hi",
     *,
     model: str = "deepseek-v4-flash-free",
-    max_tokens: int = 64,
+    max_tokens: int = 1024,
+    messages: list[dict[str, str]] | None = None,
+    temperature: float = 0.7,
+    **_kw: Any,
 ) -> dict[str, Any]:
-    """Minimal chat completions probe (free models cost $0)."""
+    """Chat completions (free *-free models cost $0). Accepts string or messages[]."""
     key = api_key()
     if not is_usable_api_key(key):
         return {"ok": False, "error": "OPENCODE_API_KEY missing"}
     mid = (model or "deepseek-v4-flash-free").removeprefix("opencode/")
+    if messages:
+        msgs = [
+            {"role": str(m.get("role") or "user"), "content": str(m.get("content") or "")[:16000]}
+            for m in messages
+            if isinstance(m, dict)
+        ]
+    elif isinstance(message, list):
+        msgs = [
+            {"role": str(m.get("role") or "user"), "content": str(m.get("content") or "")[:16000]}
+            for m in message
+            if isinstance(m, dict)
+        ]
+    else:
+        msgs = [{"role": "user", "content": str(message or "hi")[:8000]}]
+    if not msgs:
+        msgs = [{"role": "user", "content": "hi"}]
     r = http_json(
         "POST",
         f"{BASE}/chat/completions",
         headers=_headers(),
         body={
             "model": mid,
-            "messages": [{"role": "user", "content": str(message or "hi")[:500]}],
-            "max_tokens": max(1, min(512, int(max_tokens or 64))),
+            "messages": msgs,
+            "max_tokens": max(1, min(8192, int(max_tokens or 1024))),
+            "temperature": float(temperature),
         },
+        timeout=120.0,
     )
     if not r.get("ok"):
         return {
@@ -101,19 +122,24 @@ def chat(
             "error": r.get("error") or f"HTTP {r.get('status')}",
             "status": r.get("status"),
             "model": mid,
+            "provider": "opencode_zen",
         }
     data = r.get("data") if isinstance(r.get("data"), dict) else {}
     choices = data.get("choices") or []
     content = ""
     if choices and isinstance(choices[0], dict):
         msg = choices[0].get("message") or {}
-        content = str(msg.get("content") or msg.get("reasoning_content") or "")[:500]
+        content = str(msg.get("content") or msg.get("reasoning_content") or "")
+    usage = data.get("usage") if isinstance(data.get("usage"), dict) else {}
     return {
         "ok": True,
+        "provider": "opencode_zen",
         "model": data.get("model") or mid,
         "content": content,
-        "usage": data.get("usage"),
+        "usage": usage,
         "cost": data.get("cost"),
+        "prompt_tokens": int(usage.get("prompt_tokens") or 0),
+        "completion_tokens": int(usage.get("completion_tokens") or 0),
     }
 
 

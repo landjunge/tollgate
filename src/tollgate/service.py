@@ -74,17 +74,40 @@ _OPS: dict[str, dict[str, Callable[..., Any]]] = {
     "deepseek": {
         "status": lambda **kw: deepseek_mod.status(worker=False, **kw),
         "models": lambda **_kw: deepseek_mod.list_models(worker=False),
+        "chat": lambda messages="hi", model=None, max_tokens=1024, temperature=0.7, **kw: deepseek_mod.chat(
+            messages,
+            model=model,
+            max_tokens=int(max_tokens or 1024),
+            temperature=float(temperature or 0.7),
+            worker=False,
+            **kw,
+        ),
         "research": lambda **_kw: research_for("deepseek"),
     },
     "worker": {
         "status": lambda **kw: deepseek_mod.status(worker=True, **kw),
         "models": lambda **_kw: deepseek_mod.list_models(worker=True),
+        "chat": lambda messages="hi", model=None, max_tokens=1024, temperature=0.7, **kw: deepseek_mod.chat(
+            messages,
+            model=model,
+            max_tokens=int(max_tokens or 1024),
+            temperature=float(temperature or 0.7),
+            worker=True,
+            **kw,
+        ),
         "research": lambda **_kw: research_for("worker"),
     },
     "openrouter": {
         "status": lambda **kw: openrouter_mod.status(**kw),
         "credits": lambda **_kw: openrouter_mod.credits(),
         "models": lambda **_kw: openrouter_mod.models(),
+        "chat": lambda messages="hi", model="openrouter/free", max_tokens=1024, temperature=0.7, **kw: openrouter_mod.chat(
+            messages,
+            model=str(model or "openrouter/free"),
+            max_tokens=int(max_tokens or 1024),
+            temperature=float(temperature or 0.7),
+            **kw,
+        ),
         "research": lambda **_kw: research_for("openrouter"),
     },
     "nvidia": {
@@ -100,10 +123,12 @@ _OPS: dict[str, dict[str, Callable[..., Any]]] = {
     "opencode_zen": {
         "status": lambda **kw: zen_mod.status(**kw),
         "models": lambda **_kw: zen_mod.list_models(),
-        "chat": lambda message="hi", model="deepseek-v4-flash-free", max_tokens=64, **_kw: zen_mod.chat(
-            str(message or "hi"),
+        "chat": lambda message="hi", messages=None, model="deepseek-v4-flash-free", max_tokens=1024, temperature=0.7, **_kw: zen_mod.chat(
+            message if messages is None else messages,
             model=str(model or "deepseek-v4-flash-free"),
-            max_tokens=int(max_tokens or 64),
+            max_tokens=int(max_tokens or 1024),
+            messages=messages,
+            temperature=float(temperature or 0.7),
         ),
         "research": lambda **_kw: research_for("opencode_zen"),
     },
@@ -120,10 +145,8 @@ _OPS: dict[str, dict[str, Callable[..., Any]]] = {
 
 class KeysService:
     """
-    Flagship keys layer for Gnom-Hub.
-
-    inventory / dashboard / diagnose / preflight / recommend /
-    status / call / research / list_ops
+    Tollgate control plane: inventory / dashboard / diagnose / preflight /
+    recommend / status / call / research / list_ops / route.
     """
 
     def __init__(self) -> None:
@@ -474,9 +497,12 @@ class KeysService:
         skip_limit = bool(kwargs.pop("_skip_limit", False))
         tokens_est = int(kwargs.pop("tokens_est", 0) or 0)
         chars_est = int(kwargs.pop("chars_est", 0) or 0)
-        # estimate chars from message/query for TTS/search
+        # estimate chars/tokens from message/query/messages for chat/search
         if not chars_est and oname in ("chat", "search", "budget"):
             raw = str(kwargs.get("message") or kwargs.get("query") or "")
+            msgs = kwargs.get("messages")
+            if not raw and isinstance(msgs, list):
+                raw = " ".join(str(m.get("content") or "") for m in msgs if isinstance(m, dict))
             if oname == "budget":
                 chars_est = int(kwargs.get("cost") or 0)
             elif raw:

@@ -46,6 +46,70 @@ def list_models(*, worker: bool = False) -> dict[str, Any]:
     }
 
 
+def chat(
+    messages: list[dict[str, str]] | str = "hi",
+    *,
+    model: str | None = None,
+    max_tokens: int = 1024,
+    temperature: float = 0.7,
+    worker: bool = False,
+    **_kw: Any,
+) -> dict[str, Any]:
+    """OpenAI-compatible chat/completions (system + worker keys)."""
+    key = api_key(worker=worker)
+    if not is_usable_api_key(key):
+        env_name = "WORKER_API_KEY" if worker else "DEEPSEEK_API_KEY"
+        return {"ok": False, "error": f"{env_name} missing"}
+    if isinstance(messages, str):
+        msgs: list[dict[str, str]] = [{"role": "user", "content": messages[:8000]}]
+    else:
+        msgs = [
+            {"role": str(m.get("role") or "user"), "content": str(m.get("content") or "")[:16000]}
+            for m in (messages or [])
+            if isinstance(m, dict)
+        ]
+        if not msgs:
+            msgs = [{"role": "user", "content": "hi"}]
+    mid = (model or default_model() or "deepseek-v4-flash").strip()
+    r = http_json(
+        "POST",
+        f"{BASE}/chat/completions",
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+        body={
+            "model": mid,
+            "messages": msgs,
+            "stream": False,
+            "temperature": float(temperature),
+            "max_tokens": max(1, min(128_000, int(max_tokens or 1024))),
+        },
+        timeout=120.0,
+    )
+    if not r.get("ok"):
+        return {
+            "ok": False,
+            "error": r.get("error") or f"HTTP {r.get('status')}",
+            "status": r.get("status"),
+            "model": mid,
+            "provider": "worker" if worker else "deepseek",
+        }
+    data = r.get("data") if isinstance(r.get("data"), dict) else {}
+    choices = data.get("choices") or []
+    content = ""
+    if choices and isinstance(choices[0], dict):
+        msg = choices[0].get("message") or {}
+        content = str(msg.get("content") or msg.get("reasoning_content") or "")
+    usage = data.get("usage") if isinstance(data.get("usage"), dict) else {}
+    return {
+        "ok": True,
+        "provider": "worker" if worker else "deepseek",
+        "model": data.get("model") or mid,
+        "content": content,
+        "usage": usage,
+        "prompt_tokens": int(usage.get("prompt_tokens") or 0),
+        "completion_tokens": int(usage.get("completion_tokens") or 0),
+    }
+
+
 def status(*, live: bool = False, worker: bool = False) -> dict[str, Any]:
     pid = "worker" if worker else "deepseek"
     key = api_key(worker=worker)

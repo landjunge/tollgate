@@ -62,5 +62,13 @@ See `configs/mcp-tollgate.example.json` and `docs/MCP.md`.
 
 ## Relation to Gnom-Hub
 
-Gnom is a **client**. This repo is the **product**.  
-Legacy code may still live briefly under `gnom-hub-v1/src/gnom_hub/keys` until Gnom depends on `tollgate` as a package.
+Gnom is a **client**. This repo is the **product**.
+
+```python
+from tollgate import routed_chat, gateway_search, get_keys_service
+
+routed_chat("hello", intent="free_llm", agent_id="gnom")
+gateway_search("brave through tollgate")
+```
+
+Gnom installs Tollgate via git dependency and routes Brave / budgets / free LLM through this gateway.

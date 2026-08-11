@@ -182,8 +182,7 @@ def main() -> None:
     except Exception:
         pass
 
-    sys.stderr.write(f"[{SERVER_NAME}] MCP stdio server ready
-")
+    sys.stderr.write(f"[{SERVER_NAME}] MCP stdio server ready\n")
     sys.stderr.flush()
 
     while True:

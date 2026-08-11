@@ -108,6 +108,81 @@ def models(*, free_only_filter: bool | None = None) -> dict[str, Any]:
     }
 
 
+def chat(
+    messages: list[dict[str, str]] | str = "hi",
+    *,
+    model: str = "openrouter/free",
+    max_tokens: int = 1024,
+    temperature: float = 0.7,
+    **_kw: Any,
+) -> dict[str, Any]:
+    """OpenRouter chat/completions (prefer :free models when free_only)."""
+    name, key = resolve_key()
+    if not key:
+        return {"ok": False, "error": "no OpenRouter key in env chain"}
+    if isinstance(messages, str):
+        msgs: list[dict[str, str]] = [{"role": "user", "content": messages[:8000]}]
+    else:
+        msgs = [
+            {"role": str(m.get("role") or "user"), "content": str(m.get("content") or "")[:16000]}
+            for m in (messages or [])
+            if isinstance(m, dict)
+        ]
+        if not msgs:
+            msgs = [{"role": "user", "content": "hi"}]
+    mid = (model or "openrouter/free").strip()
+    if free_only() and ":" in mid and not mid.endswith(":free") and "free" not in mid.lower():
+        return {
+            "ok": False,
+            "error": f"OPENROUTER_FREE_ONLY blocks paid model {mid}",
+            "model": mid,
+        }
+    r = http_json(
+        "POST",
+        f"{BASE}/chat/completions",
+        headers={
+            "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://github.com/landjunge/tollgate",
+            "X-Title": "Tollgate",
+        },
+        body={
+            "model": mid,
+            "messages": msgs,
+            "stream": False,
+            "temperature": float(temperature),
+            "max_tokens": max(1, min(128_000, int(max_tokens or 1024))),
+        },
+        timeout=120.0,
+    )
+    if not r.get("ok"):
+        return {
+            "ok": False,
+            "error": r.get("error") or f"HTTP {r.get('status')}",
+            "status": r.get("status"),
+            "model": mid,
+            "provider": "openrouter",
+            "env": name,
+        }
+    data = r.get("data") if isinstance(r.get("data"), dict) else {}
+    choices = data.get("choices") or []
+    content = ""
+    if choices and isinstance(choices[0], dict):
+        msg = choices[0].get("message") or {}
+        content = str(msg.get("content") or "")
+    usage = data.get("usage") if isinstance(data.get("usage"), dict) else {}
+    return {
+        "ok": True,
+        "provider": "openrouter",
+        "env": name,
+        "model": data.get("model") or mid,
+        "content": content,
+        "usage": usage,
+        "prompt_tokens": int(usage.get("prompt_tokens") or 0),
+        "completion_tokens": int(usage.get("completion_tokens") or 0),
+    }
+
+
 def status(*, live: bool = False) -> dict[str, Any]:
     name, key = resolve_key()
     masked = {
