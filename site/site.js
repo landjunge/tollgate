@@ -1,6 +1,5 @@
-/* Tollgate product landing — copy + demo */
+/* Tollgate — admission desk */
 (function () {
-  // Reveal on scroll
   const reveals = document.querySelectorAll(".reveal");
   if (reveals.length && "IntersectionObserver" in window) {
     const io = new IntersectionObserver(
@@ -12,7 +11,7 @@
           }
         });
       },
-      { threshold: 0.12, rootMargin: "0px 0px -40px 0px" }
+      { threshold: 0.1, rootMargin: "0px 0px -30px 0px" }
     );
     reveals.forEach((el) => io.observe(el));
   } else {
@@ -21,6 +20,18 @@
 
   const y = document.getElementById("year");
   if (y) y.textContent = String(new Date().getFullYear());
+
+  // UTC clock on console
+  const clock = document.getElementById("console-clock");
+  if (clock) {
+    const tick = () => {
+      const d = new Date();
+      clock.textContent =
+        d.toISOString().slice(11, 19) + "Z";
+    };
+    tick();
+    setInterval(tick, 1000);
+  }
 
   // Docs filter
   const input = document.getElementById("doc-filter");
@@ -35,7 +46,6 @@
     });
   }
 
-  // ── Toast ──
   let toastEl = null;
   function toast(msg, ok) {
     if (!toastEl) {
@@ -48,13 +58,11 @@
     toastEl.classList.toggle("err", !ok);
     toastEl.classList.add("show");
     clearTimeout(toastEl._t);
-    toastEl._t = setTimeout(() => toastEl.classList.remove("show"), 1800);
+    toastEl._t = setTimeout(() => toastEl.classList.remove("show"), 1700);
   }
 
-  // ── Clipboard with fallbacks ──
   function plainFrom(el) {
     if (!el) return "";
-    // prefer textContent of pre; strip zero-width
     return (el.innerText || el.textContent || "").replace(/\u00a0/g, " ").trim();
   }
 
@@ -84,9 +92,7 @@
       try {
         await navigator.clipboard.writeText(text);
         return true;
-      } catch (_) {
-        /* fall through */
-      }
+      } catch (_) {}
     }
     return copyFallback(text);
   }
@@ -100,7 +106,6 @@
     sel.addRange(range);
   }
 
-  // Wire all [data-copy] buttons
   document.querySelectorAll("[data-copy]").forEach((btn) => {
     btn.addEventListener("click", async (e) => {
       e.preventDefault();
@@ -110,56 +115,48 @@
       const text =
         (el ? plainFrom(el) : "") ||
         btn.getAttribute("data-text") ||
-        btn.getAttribute("data-href") ||
         "";
       if (el) selectElementText(el);
       const ok = await copyText(text);
       const prev = btn.getAttribute("data-label") || btn.textContent;
       btn.setAttribute("data-label", prev);
-      btn.textContent = ok ? "Copied ✓" : "Select & ⌘C";
+      btn.textContent = ok ? "Copied" : "Select+C";
       btn.classList.toggle("copied", ok);
-      toast(ok ? "Copied to clipboard" : "Text selected — press ⌘C / Ctrl+C", ok);
+      toast(ok ? "Copied" : "Selected — press ⌘C / Ctrl+C", ok);
       setTimeout(() => {
         btn.textContent = prev;
         btn.classList.remove("copied");
-      }, 1600);
+      }, 1500);
     });
   });
 
-  // Wire [data-copy-href] — copy a URL string
   document.querySelectorAll("[data-copy-href]").forEach((btn) => {
     btn.addEventListener("click", async (e) => {
       e.preventDefault();
-      const href = btn.getAttribute("data-copy-href") || btn.getAttribute("href") || "";
+      const href =
+        btn.getAttribute("data-copy-href") || btn.getAttribute("href") || "";
       const ok = await copyText(href);
-      toast(ok ? "Link copied" : "Copy failed — select the URL", ok);
+      toast(ok ? "Link copied" : "Copy failed", ok);
     });
   });
 
-  // Click pre → select all (easy manual copy)
-  document.querySelectorAll("pre.copyable, .code-block pre").forEach((pre) => {
+  document.querySelectorAll("pre.copyable, .term pre").forEach((pre) => {
     pre.setAttribute("tabindex", "0");
-    pre.title = "Click to select — then ⌘C / Ctrl+C";
+    pre.title = "Click to select — ⌘C / Ctrl+C";
     pre.addEventListener("click", () => selectElementText(pre));
-    pre.addEventListener("keydown", (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "a") {
-        e.preventDefault();
-        selectElementText(pre);
-      }
-    });
   });
 
-  // ── Live demo: Protect → Route → Prove ──
+  // Demo rotation
   const stage = document.getElementById("demo-stage");
   if (!stage) return;
 
   const scenes = ["protect", "route", "prove"];
-  const buttons = stage.querySelectorAll(".demo-tabs button");
+  const buttons = stage.querySelectorAll(".tabs button");
   const panels = stage.querySelectorAll(".scene");
-  const progress = stage.querySelector(".demo-progress");
+  const progress = stage.querySelector(".progress");
   let idx = 0;
   let timer = null;
-  const INTERVAL = 5500;
+  const INTERVAL = 5600;
   let paused = false;
 
   function show(i) {
@@ -174,7 +171,7 @@
       const on = p.getAttribute("data-scene") === name;
       p.classList.toggle("active", on);
       if (on) {
-        const bar = p.querySelector(".bar > i");
+        const bar = p.querySelector(".meter > i");
         if (bar) {
           bar.style.width = "0";
           void bar.offsetWidth;
@@ -192,14 +189,12 @@
   function next() {
     show(idx + 1);
   }
-
   function start() {
     stop();
     if (paused) return;
     progress && progress.classList.add("running");
     timer = setInterval(next, INTERVAL);
   }
-
   function stop() {
     if (timer) clearInterval(timer);
     timer = null;

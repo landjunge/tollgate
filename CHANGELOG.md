@@ -2,6 +2,15 @@
 
 All notable releases of [landjunge/tollgate](https://github.com/landjunge/tollgate).
 
+## 1.0.10 — 2026-08-11
+
+### Site redesign — ops desk, not SaaS template
+- Full visual rewrite: amber/CRT night-shift desk, IBM Plex, sharp edges
+- Hero + admission console side-by-side (Protect/Route/Prove is the product)
+- Failure-mode rows instead of emoji feature cards
+- SVG architecture schematic; Control Room as instrument panel
+- Keep copy UX (clipboard + fallback + toast)
+
 ## 1.0.9 — 2026-08-11
 
 ### Product landing (not OSS brochure)

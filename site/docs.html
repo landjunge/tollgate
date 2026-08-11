@@ -3,149 +3,73 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Tollgate Docs — Handbooks &amp; guides</title>
-  <meta name="description" content="Tollgate documentation index: help, user guide, FAQ, integrations, architecture."/>
-  <meta name="theme-color" content="#0a0c10"/>
+  <title>Tollgate Docs</title>
+  <meta name="theme-color" content="#07080a"/>
   <link rel="canonical" href="https://landjunge.github.io/tollgate/docs.html"/>
   <link rel="icon" href="favicon.svg" type="image/svg+xml"/>
   <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
-  <header class="nav">
-    <div class="nav-inner">
+  <header class="topbar">
+    <div class="topbar-inner">
       <a class="brand" href="index.html">
-        <span class="logo" aria-hidden="true">T</span>
+        <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true">
+          <rect x="1" y="1" width="30" height="30" fill="none" stroke="#e8a317" stroke-width="2"/>
+          <path d="M8 16h11M19 11l5 5-5 5" stroke="#e8a317" stroke-width="2" fill="none"/>
+          <circle cx="10" cy="16" r="2" fill="#5dff9a"/>
+        </svg>
         Tollgate
       </a>
-      <nav class="nav-links">
+      <div class="sys"><span class="live"><i></i> Docs</span></div>
+      <nav class="nav-right">
         <a href="index.html">Home</a>
         <a href="de.html">DE</a>
-        <a class="btn" href="https://github.com/landjunge/tollgate" target="_blank" rel="noopener">GitHub</a>
+        <a class="cta" href="https://github.com/landjunge/tollgate" target="_blank" rel="noopener">GitHub</a>
       </nav>
     </div>
   </header>
 
-  <main class="wrap">
+  <main class="shell">
     <div class="docs-hero">
-      <p class="section-label">Documentation</p>
-      <h1>Handbooks, guides &amp; ops</h1>
-      <p class="section-lead" style="margin-bottom:0">
-        Also offline: <code>tollgate help</code> · <code>tollgate search &lt;query&gt;</code>
-      </p>
-      <input class="search-box" id="doc-filter" type="search" placeholder="Filter docs…" autocomplete="off"/>
+      <p class="kicker">Documentation</p>
+      <h1>Handbooks &amp; ops</h1>
+      <p class="sec-lead" style="margin:0">Also offline: <code>tollgate help</code> · <code>tollgate search</code></p>
+      <input class="search-box" id="doc-filter" type="search" placeholder="Filter…" autocomplete="off"/>
     </div>
 
-    <p class="section-label">Start here</p>
-    <div class="grid-3" style="margin-bottom:2rem">
-      <a class="doc-link" data-doc="ten minute cold start stranger" href="https://github.com/landjunge/tollgate/blob/main/docs/TEN_MINUTE.md" target="_blank" rel="noopener">
-        <strong>10-minute path ↗</strong>
-        <span>Cold customer test</span>
-      </a>
-      <a class="doc-link" data-doc="hilfe deutsch handbuch german help" href="https://github.com/landjunge/tollgate/blob/main/docs/HILFE.md" target="_blank" rel="noopener">
-        <strong>Hilfe (DE)</strong>
-        <span>Vollständiges Handbuch</span>
-      </a>
-      <a class="doc-link" data-doc="user guide english handbook" href="https://github.com/landjunge/tollgate/blob/main/docs/USER_GUIDE.md" target="_blank" rel="noopener">
-        <strong>User Guide (EN)</strong>
-        <span>Full English handbook</span>
-      </a>
-      <a class="doc-link" data-doc="faq questions blocked" href="https://github.com/landjunge/tollgate/blob/main/docs/FAQ.md" target="_blank" rel="noopener">
-        <strong>FAQ</strong>
-        <span>Common questions</span>
-      </a>
-      <a class="doc-link" data-doc="demo killer protect prove" href="https://github.com/landjunge/tollgate/blob/main/docs/DEMO.md" target="_blank" rel="noopener">
-        <strong>Demo script</strong>
-        <span>Protect + Prove pitch</span>
-      </a>
-      <a class="doc-link" data-doc="product positioning wedge" href="https://github.com/landjunge/tollgate/blob/main/docs/PRODUCT.md" target="_blank" rel="noopener">
-        <strong>Product</strong>
-        <span>Positioning &amp; wedge</span>
-      </a>
+    <p class="sec-label">Start</p>
+    <div class="doc-grid">
+      <a class="doc-link" data-doc="ten minute" href="https://github.com/landjunge/tollgate/blob/main/docs/TEN_MINUTE.md" target="_blank" rel="noopener"><strong>10-minute path ↗</strong><span>Cold start</span></a>
+      <a class="doc-link" data-doc="hilfe deutsch" href="https://github.com/landjunge/tollgate/blob/main/docs/HILFE.md" target="_blank" rel="noopener"><strong>Hilfe (DE) ↗</strong><span>Volles Handbuch</span></a>
+      <a class="doc-link" data-doc="user guide english" href="https://github.com/landjunge/tollgate/blob/main/docs/USER_GUIDE.md" target="_blank" rel="noopener"><strong>User Guide ↗</strong><span>English handbook</span></a>
+      <a class="doc-link" data-doc="faq" href="https://github.com/landjunge/tollgate/blob/main/docs/FAQ.md" target="_blank" rel="noopener"><strong>FAQ ↗</strong><span>Common questions</span></a>
+      <a class="doc-link" data-doc="demo" href="https://github.com/landjunge/tollgate/blob/main/docs/DEMO.md" target="_blank" rel="noopener"><strong>Demo ↗</strong><span>Protect + Prove</span></a>
+      <a class="doc-link" data-doc="product" href="https://github.com/landjunge/tollgate/blob/main/docs/PRODUCT.md" target="_blank" rel="noopener"><strong>Product ↗</strong><span>Positioning</span></a>
     </div>
 
-    <p class="section-label">Integrations</p>
-    <div class="grid-3" style="margin-bottom:2rem">
-      <a class="doc-link" data-doc="openai drop-in base_url chat completions" href="https://github.com/landjunge/tollgate/blob/main/docs/OPENAI.md" target="_blank" rel="noopener">
-        <strong>OpenAI drop-in</strong>
-        <span>BASE_URL → Tollgate</span>
-      </a>
-      <a class="doc-link" data-doc="anthropic messages" href="https://github.com/landjunge/tollgate/blob/main/docs/ANTHROPIC.md" target="_blank" rel="noopener">
-        <strong>Anthropic</strong>
-        <span>Messages API</span>
-      </a>
-      <a class="doc-link" data-doc="n8n automation node" href="https://github.com/landjunge/tollgate/blob/main/docs/N8N.md" target="_blank" rel="noopener">
-        <strong>n8n</strong>
-        <span>Workflows as consumers</span>
-      </a>
-      <a class="doc-link" data-doc="mcp cursor claude desktop" href="https://github.com/landjunge/tollgate/blob/main/docs/MCP.md" target="_blank" rel="noopener">
-        <strong>MCP</strong>
-        <span>stdio tools</span>
-      </a>
-      <a class="doc-link" data-doc="cost limits budgets google high risk" href="https://github.com/landjunge/tollgate/blob/main/docs/COST_LIMITS.md" target="_blank" rel="noopener">
-        <strong>Cost limits</strong>
-        <span>Envelopes &amp; high-risk</span>
-      </a>
-      <a class="doc-link" data-doc="getting started setup" href="https://github.com/landjunge/tollgate/blob/main/docs/GETTING_STARTED.md" target="_blank" rel="noopener">
-        <strong>Getting started</strong>
-        <span>Setup detail</span>
-      </a>
+    <p class="sec-label">Integrations</p>
+    <div class="doc-grid">
+      <a class="doc-link" data-doc="openai" href="https://github.com/landjunge/tollgate/blob/main/docs/OPENAI.md" target="_blank" rel="noopener"><strong>OpenAI ↗</strong><span>Drop-in base_url</span></a>
+      <a class="doc-link" data-doc="anthropic" href="https://github.com/landjunge/tollgate/blob/main/docs/ANTHROPIC.md" target="_blank" rel="noopener"><strong>Anthropic ↗</strong><span>Messages</span></a>
+      <a class="doc-link" data-doc="n8n" href="https://github.com/landjunge/tollgate/blob/main/docs/N8N.md" target="_blank" rel="noopener"><strong>n8n ↗</strong><span>Consumers</span></a>
+      <a class="doc-link" data-doc="mcp" href="https://github.com/landjunge/tollgate/blob/main/docs/MCP.md" target="_blank" rel="noopener"><strong>MCP ↗</strong><span>stdio</span></a>
+      <a class="doc-link" data-doc="cost" href="https://github.com/landjunge/tollgate/blob/main/docs/COST_LIMITS.md" target="_blank" rel="noopener"><strong>Cost limits ↗</strong><span>Envelopes</span></a>
+      <a class="doc-link" data-doc="ops" href="https://github.com/landjunge/tollgate/blob/main/docs/OPERATIONS.md" target="_blank" rel="noopener"><strong>Operations ↗</strong><span>Deploy</span></a>
     </div>
 
-    <p class="section-label">Deep &amp; ops</p>
-    <div class="grid-3" style="margin-bottom:2rem">
-      <a class="doc-link" data-doc="architecture layers" href="https://github.com/landjunge/tollgate/blob/main/docs/ARCHITECTURE.md" target="_blank" rel="noopener">
-        <strong>Architecture</strong>
-        <span>Layers &amp; taxonomy</span>
-      </a>
-      <a class="doc-link" data-doc="operations deploy doctor" href="https://github.com/landjunge/tollgate/blob/main/docs/OPERATIONS.md" target="_blank" rel="noopener">
-        <strong>Operations</strong>
-        <span>Deploy &amp; doctor</span>
-      </a>
-      <a class="doc-link" data-doc="portable usb snapshot" href="https://github.com/landjunge/tollgate/blob/main/docs/PORTABLE.md" target="_blank" rel="noopener">
-        <strong>Portable</strong>
-        <span>USB / migration</span>
-      </a>
-      <a class="doc-link" data-doc="stability multi-worker" href="https://github.com/landjunge/tollgate/blob/main/docs/STABILITY.md" target="_blank" rel="noopener">
-        <strong>Stability</strong>
-        <span>Workers &amp; schema</span>
-      </a>
-      <a class="doc-link" data-doc="map code index modules search" href="https://github.com/landjunge/tollgate/blob/main/docs/MAP.md" target="_blank" rel="noopener">
-        <strong>Repo map</strong>
-        <span>Code &amp; HTTP index</span>
-      </a>
-      <a class="doc-link" data-doc="changelog releases" href="https://github.com/landjunge/tollgate/blob/main/CHANGELOG.md" target="_blank" rel="noopener">
-        <strong>Changelog</strong>
-        <span>Releases</span>
-      </a>
-    </div>
-
-    <div class="card" style="margin-bottom:3rem">
-      <h3 style="margin-top:0">Local Control Room</h3>
-      <p class="muted" style="margin:0 0 0.75rem;color:var(--muted)">After <code>tollgate serve</code>:</p>
-      <p style="margin:0">
-        <a class="link-plain" href="http://127.0.0.1:8787/dashboard" target="_blank" rel="noopener">http://127.0.0.1:8787/dashboard</a>
-        <button type="button" class="btn sm ghost" data-copy-href="http://127.0.0.1:8787/dashboard">Copy</button>
-        ·
-        <a class="link-plain" href="http://127.0.0.1:8787/docs" target="_blank" rel="noopener">http://127.0.0.1:8787/docs</a>
-        <button type="button" class="btn sm ghost" data-copy-href="http://127.0.0.1:8787/docs">Copy</button>
-      </p>
-      <p style="margin:0.85rem 0 0;color:var(--muted);font-size:0.9rem">
-        Repo:
-        <a class="link-plain" href="https://github.com/landjunge/tollgate" target="_blank" rel="noopener">https://github.com/landjunge/tollgate</a>
-        <button type="button" class="btn sm ghost" data-copy-href="https://github.com/landjunge/tollgate">Copy</button>
-      </p>
+    <p class="sec-label">Deep</p>
+    <div class="doc-grid" style="margin-bottom:2.5rem">
+      <a class="doc-link" data-doc="architecture" href="https://github.com/landjunge/tollgate/blob/main/docs/ARCHITECTURE.md" target="_blank" rel="noopener"><strong>Architecture ↗</strong><span>Layers</span></a>
+      <a class="doc-link" data-doc="map" href="https://github.com/landjunge/tollgate/blob/main/docs/MAP.md" target="_blank" rel="noopener"><strong>Map ↗</strong><span>Code index</span></a>
+      <a class="doc-link" data-doc="changelog" href="https://github.com/landjunge/tollgate/blob/main/CHANGELOG.md" target="_blank" rel="noopener"><strong>Changelog ↗</strong><span>Releases</span></a>
     </div>
   </main>
 
-  <footer>
-    <div class="wrap footer-inner">
-      <div>
-        <strong>Tollgate</strong>
-        <div class="tagline">Pay the toll — or don't call.</div>
-      </div>
-      <div class="footer-links">
+  <footer class="foot shell">
+    <div class="foot-inner">
+      <div><strong>Tollgate</strong><div class="tag">Pay the toll — or don’t call.</div></div>
+      <div class="foot-links">
         <a href="index.html">Home</a>
-        <a href="de.html">Deutsch</a>
         <a href="https://github.com/landjunge/tollgate" target="_blank" rel="noopener">GitHub</a>
       </div>
     </div>
