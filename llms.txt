@@ -8,6 +8,7 @@
 ## Start here
 
 - Website: https://landjunge.github.io/tollgate/ (source: `site/`)
+- Ecosystem (with Gnom-Hub): https://landjunge.github.io/tollgate/ecosystem.html
 - [README](README.md) — 10-minute path first
 - [Help DE](docs/HILFE.md) · [User Guide EN](docs/USER_GUIDE.md) · [FAQ](docs/FAQ.md)
 - CLI: `tollgate help` · `tollgate help env` · `tollgate help faq`
@@ -15,6 +16,12 @@
 - [Demo (killer use case)](docs/DEMO.md)
 - [Product wedge](docs/PRODUCT.md)
 - [Repo map](docs/MAP.md)
+- [Share / social drafts](docs/SOCIAL_POSTS.md)
+
+## Related
+
+- Gnom-Hub (local multi-agent desk): https://github.com/landjunge/gnom-hub-v1
+  Site: https://landjunge.github.io/gnom-hub-v1/
 
 ## Find anything
 
