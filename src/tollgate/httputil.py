@@ -140,3 +140,101 @@ def http_json(
             "error": str(e),
             "rate": {},
         }
+
+
+def iter_sse_json(
+    method: str,
+    url: str,
+    *,
+    headers: dict[str, str] | None = None,
+    body: dict[str, Any] | None = None,
+    timeout: float = 120.0,
+):
+    """
+    Stream an SSE HTTP response; yield parsed events.
+
+    Yields dicts::
+
+        {"ok": True, "data": <json dict from data: line>}
+        {"ok": True, "done": True}          # upstream sent [DONE]
+        {"ok": False, "error": str, "status": int|None}
+
+    Never raises for network/HTTP errors (yields one error event).
+    """
+    data = None if body is None else json.dumps(body).encode("utf-8")
+    hdrs = dict(headers or {})
+    if body is not None:
+        hdrs.setdefault("Content-Type", "application/json")
+    hdrs.setdefault("Accept", "text/event-stream")
+    hdrs.setdefault(
+        "User-Agent",
+        "Mozilla/5.0 (compatible; Tollgate/0.1; +https://github.com/landjunge/tollgate)",
+    )
+    req = urllib.request.Request(url, data=data, headers=hdrs, method=method.upper())
+    try:
+        resp = urllib.request.urlopen(req, timeout=timeout)
+    except urllib.error.HTTPError as e:
+        try:
+            raw = e.read().decode("utf-8", errors="replace")
+            try:
+                parsed = json.loads(raw) if raw else {}
+            except json.JSONDecodeError:
+                parsed = {"raw": raw[:400]}
+        except Exception:  # noqa: BLE001
+            parsed = {}
+            raw = str(e)
+        err_msg = None
+        if isinstance(parsed, dict):
+            if isinstance(parsed.get("error"), dict):
+                err_msg = parsed["error"].get("message") or str(parsed["error"])
+            elif parsed.get("detail"):
+                err_msg = str(parsed.get("detail"))[:300]
+        if not err_msg:
+            err_msg = f"HTTP {e.code}: {(raw[:200] if isinstance(raw, str) else str(e))}"
+        yield {
+            "ok": False,
+            "status": e.code,
+            "error": err_msg,
+            "data": parsed,
+            "rate": parse_rate_headers(getattr(e, "headers", None)),
+        }
+        return
+    except Exception as e:  # noqa: BLE001
+        yield {"ok": False, "status": None, "error": str(e), "data": None, "rate": {}}
+        return
+
+    buf = ""
+    try:
+        while True:
+            chunk = resp.read(1024)
+            if not chunk:
+                break
+            if isinstance(chunk, bytes):
+                buf += chunk.decode("utf-8", errors="replace")
+            else:
+                buf += str(chunk)
+            while "\n" in buf:
+                line, buf = buf.split("\n", 1)
+                line = line.rstrip("\r")
+                if not line or line.startswith(":"):
+                    continue
+                if not line.startswith("data:"):
+                    continue
+                payload = line[5:].lstrip()
+                if payload == "[DONE]":
+                    yield {"ok": True, "done": True}
+                    return
+                try:
+                    obj = json.loads(payload)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(obj, dict):
+                    yield {"ok": True, "data": obj}
+    except Exception as e:  # noqa: BLE001
+        yield {"ok": False, "status": None, "error": str(e), "data": None}
+    finally:
+        try:
+            resp.close()
+        except Exception:  # noqa: BLE001
+            pass
+    yield {"ok": True, "done": True}

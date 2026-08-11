@@ -36,7 +36,6 @@ from tollgate.openai_compat import (
     openai_error,
     parse_bearer,
     resolve_intent,
-    stream_sse_chunks,
     to_openai_completion,
 )
 
@@ -75,7 +74,7 @@ _bootstrap_env()
 
 app = FastAPI(
     title="Tollgate",
-    version="0.1.5",
+    version="0.1.6",
     description=(
         "Tollgate — multi-consumer API admission + router. "
         "OpenAI-compatible /v1/chat/completions drop-in. "
@@ -134,7 +133,7 @@ def health() -> dict[str, Any]:
         "ok": True,
         "service": "tollgate",
         "product": "Tollgate",
-        "version": "0.1.5",
+        "version": "0.1.6",
         "extractable": True,
         "multi_consumer": True,
         "portable": path_snapshot(),
@@ -368,7 +367,9 @@ def openai_chat_completions(
         export OPENAI_BASE_URL=http://127.0.0.1:8787/v1
         export OPENAI_API_KEY=n8n:secret   # or any label in open mode
 
-    ``stream: true`` returns SSE (synthetic chunks from full completion today).
+    ``stream: true`` returns SSE — real upstream token stream when the provider
+    supports it (deepseek / worker / opencode_zen / openrouter); otherwise
+    synthetic chunks from a full completion.
     """
     auth = _require(x_consumer_key, x_consumer_id, authorization=authorization)
     consumer = auth["consumer"]
@@ -393,14 +394,47 @@ def openai_chat_completions(
         mid = ""  # let router choose
     rclass = (body.request_class or "interactive").strip() or "interactive"
     agent = (body.user or f"openai:{consumer}")[:64]
+    max_tok = int(body.max_tokens or 1024)
+    temp = float(body.temperature if body.temperature is not None else 0.7)
+
+    if body.stream:
+        from tollgate.chat_stream import start_chat_stream
+
+        started = start_chat_stream(
+            msgs,
+            intent=intent or "llm",
+            model=mid,
+            provider=provider,
+            max_tokens=max_tok,
+            temperature=temp,
+            agent_id=agent,
+            consumer=consumer,
+            request_class=rclass,
+            prefer_free=prefer_free,
+            requested_model=body.model or "tollgate",
+        )
+        if not started.get("ok"):
+            err, code = map_tollgate_error(started)
+            return JSONResponse(err, status_code=code)
+        headers = {
+            "Cache-Control": "no-cache",
+            "X-Tollgate-Consumer": consumer,
+            "X-Tollgate-Stream": str(started.get("mode") or "upstream"),
+            "X-Tollgate-Provider": str(started.get("provider") or ""),
+        }
+        return StreamingResponse(
+            started["stream"],
+            media_type="text/event-stream",
+            headers=headers,
+        )
 
     result = routed_chat(
         msgs,
         intent=intent or "llm",
         model=mid,
         provider=provider,
-        max_tokens=int(body.max_tokens or 1024),
-        temperature=float(body.temperature if body.temperature is not None else 0.7),
+        max_tokens=max_tok,
+        temperature=temp,
         agent_id=agent,
         consumer=consumer,
         request_class=rclass,
@@ -411,17 +445,7 @@ def openai_chat_completions(
         err, code = map_tollgate_error(result)
         return JSONResponse(err, status_code=code)
 
-    completion = to_openai_completion(result, model=body.model or "tollgate", consumer=consumer)
-    if body.stream:
-        return StreamingResponse(
-            stream_sse_chunks(completion),
-            media_type="text/event-stream",
-            headers={
-                "Cache-Control": "no-cache",
-                "X-Tollgate-Consumer": consumer,
-            },
-        )
-    return completion
+    return to_openai_completion(result, model=body.model or "tollgate", consumer=consumer)
 
 
 @app.get("/")

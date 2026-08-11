@@ -65,8 +65,14 @@ Optional body fields (Tollgate-only, SDKs ignore extras):
 
 ## Streaming
 
-`stream: true` returns **SSE** (`text/event-stream`).  
-Today chunks are synthesized from the full completion (compatible with most clients). Real token streaming per provider can replace this later without changing the URL.
+`stream: true` returns **SSE** (`text/event-stream`).
+
+| Mode | When | Header |
+|------|------|--------|
+| **upstream** | Provider speaks OpenAI `stream:true` (`deepseek`, `worker`, `opencode_zen`, `openrouter`) | `X-Tollgate-Stream: upstream` |
+| **synthetic** | Other providers, or `TOLLGATE_STREAM_SYNTHETIC=1` | `X-Tollgate-Stream: synthetic` |
+
+Upstream mode admits first, then proxies token deltas, then meters usage (ledger + consumer envelope). Synthetic mode still runs a full completion and chunk-splits it for clients that only need `stream: true` compatibility.
 
 ## Auth
 

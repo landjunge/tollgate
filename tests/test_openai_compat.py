@@ -72,14 +72,20 @@ def test_chat_completions_shape(client):
 
 
 def test_chat_stream_sse(client):
+    """Synthetic fallback path when force_synthetic or non-stream provider."""
     fake = {
         "ok": True,
-        "content": "hello stream world",
-        "model": "x",
-        "prompt_tokens": 1,
-        "completion_tokens": 2,
+        "mode": "synthetic",
+        "provider": "opencode_zen",
+        "stream": iter(
+            [
+                'data: {"id":"c1","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"role":"assistant"}}]}\n\n',
+                'data: {"id":"c1","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"hi"}}]}\n\n',
+                "data: [DONE]\n\n",
+            ]
+        ),
     }
-    with patch("tollgate.server_v1.routed_chat", return_value=fake):
+    with patch("tollgate.chat_stream.start_chat_stream", return_value=fake):
         r = client.post(
             "/v1/chat/completions",
             headers={"X-Consumer-Key": "n8n"},
@@ -94,6 +100,81 @@ def test_chat_stream_sse(client):
     text = r.text
     assert "data: " in text
     assert "[DONE]" in text
+    assert r.headers.get("X-Tollgate-Stream") == "synthetic"
+
+
+def test_upstream_stream_chunks(monkeypatch, tmp_path):
+    """Real stream path: admit + mocked upstream SSE → client SSE + ledger."""
+    monkeypatch.setenv("TOLLGATE_HOME", str(tmp_path))
+    monkeypatch.delenv("TOLLGATE_STREAM_SYNTHETIC", raising=False)
+    (tmp_path / "User").mkdir(parents=True)
+
+    from tollgate.app_config import load_config, save_config
+
+    cfg = load_config(force=True)
+    # ensure deepseek enabled for admit
+    provs = dict(cfg.get("providers") or {})
+    provs["deepseek"] = dict(provs.get("deepseek") or {}, enabled=True)
+    cfg["providers"] = provs
+    save_config(cfg)
+
+    events = [
+        {
+            "ok": True,
+            "data": {
+                "id": "up1",
+                "choices": [{"index": 0, "delta": {"content": "Hel"}, "finish_reason": None}],
+            },
+        },
+        {
+            "ok": True,
+            "data": {
+                "id": "up1",
+                "choices": [{"index": 0, "delta": {"content": "lo"}, "finish_reason": None}],
+            },
+        },
+        {
+            "ok": True,
+            "data": {
+                "id": "up1",
+                "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+                "usage": {"prompt_tokens": 5, "completion_tokens": 2},
+            },
+        },
+        {"ok": True, "done": True},
+    ]
+
+    with patch("tollgate.chat_stream.can_upstream_stream", return_value=True), patch(
+        "tollgate.chat_stream._build_upstream",
+        return_value={
+            "url": "https://example.test/v1/chat/completions",
+            "headers": {"Authorization": "Bearer x"},
+            "body": {"model": "deepseek-v4-flash", "stream": True},
+            "model": "deepseek-v4-flash",
+        },
+    ), patch("tollgate.httputil.iter_sse_json", return_value=iter(events)):
+        from tollgate.chat_stream import start_chat_stream
+
+        started = start_chat_stream(
+            [{"role": "user", "content": "hi"}],
+            provider="deepseek",
+            model="deepseek-v4-flash",
+            consumer="n8n",
+            agent_id="n8n",
+        )
+        assert started["ok"] is True
+        assert started["mode"] == "upstream"
+        text = "".join(started["stream"])
+    assert "Hel" in text
+    assert "lo" in text
+    assert "[DONE]" in text
+    assert "stream_mode" in text or "upstream" in text
+
+    from tollgate.usage_ledger import consumer_usage
+
+    cu = consumer_usage("n8n")
+    assert cu["calls"] >= 1
+    assert cu["tokens"] >= 5
 
 
 def test_chat_budget_maps_402(client):

@@ -100,7 +100,7 @@ curl -s localhost:8787/metrics | head   # Prometheus
 
 → [docs/OPENAI.md](docs/OPENAI.md)
 
-Review-Liste: **OpenAI ✅ · Docker ✅ · Webhooks ✅ · Prometheus ✅ · Consumer envelopes ✅** · Anthropic/n8n-Node/LiteLLM-Import → on demand.
+Review-Liste: **OpenAI ✅ · Stream (upstream) ✅ · Docker ✅ · Webhooks ✅ · Prometheus ✅ · Consumer envelopes ✅** · Anthropic/n8n-Node → on demand.
 
 ## HTTP native (kurz)
 

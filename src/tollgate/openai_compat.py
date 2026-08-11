@@ -147,9 +147,10 @@ def to_openai_completion(
 
 def stream_sse_chunks(completion: dict[str, Any]) -> Iterator[str]:
     """
-    Synthetic SSE stream from a full completion (many clients need stream=true).
+    Synthetic SSE stream from a full completion (fallback).
 
-    Real token streaming can replace this later per-provider.
+    Prefer real upstream streaming via ``chat_stream.start_chat_stream`` when
+    the provider supports OpenAI ``stream: true``.
     """
     cid = completion.get("id") or f"chatcmpl-{uuid.uuid4().hex[:24]}"
     model = completion.get("model") or "tollgate"
