@@ -164,6 +164,13 @@ CONCEPTS: list[dict[str, Any]] = [
         "keywords": "audit audit.jsonl append-only compliance deny admit_deny query who why",
     },
     {
+        "id": "daily-report",
+        "title": "Daily operator report",
+        "path": "src/tollgate/report.py",
+        "summary": "tollgate report · GET /v1/report — Protect/Route/Prove brief for CTOs.",
+        "keywords": "report daily operator status brief markdown analytics prove",
+    },
+    {
         "id": "consumers-auth",
         "title": "Consumer auth (id:secret)",
         "path": "src/tollgate/consumers.py",
@@ -278,6 +285,7 @@ HTTP_ROUTES: list[dict[str, str]] = [
     {"method": "GET", "path": "/v1/resilience", "summary": "Resilience score"},
     {"method": "GET", "path": "/v1/chaos", "summary": "Chaos inject status"},
     {"method": "GET", "path": "/v1/audit", "summary": "Query deny/usage audit trail"},
+    {"method": "GET", "path": "/v1/report", "summary": "Daily operator report (json|md)"},
     {"method": "GET", "path": "/dashboard", "summary": "HTML control plane"},
     {"method": "GET", "path": "/v1/providers", "summary": "Provider inventory"},
     {"method": "GET", "path": "/v1/budget", "summary": "Budget snapshot"},
@@ -319,6 +327,7 @@ CLI_COMMANDS: list[dict[str, str]] = [
     {"cmd": "suggest", "summary": "Ledger-based config proposals"},
     {"cmd": "search", "summary": "Search repo modules / docs / routes"},
     {"cmd": "audit", "summary": "Query audit trail — who was denied and why"},
+    {"cmd": "report", "summary": "Daily operator report Protect·Route·Prove"},
 ]
 
 

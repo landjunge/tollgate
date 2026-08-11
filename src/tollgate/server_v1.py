@@ -78,7 +78,7 @@ _bootstrap_env()
 
 app = FastAPI(
     title="Tollgate",
-    version="0.3.1",
+    version="0.3.2",
     description=(
         "Tollgate — AI reliability & control plane. "
         "Protect · Route · Prove (chaos failover tests). "
@@ -144,7 +144,7 @@ def health() -> dict[str, Any]:
         "ok": True,
         "service": "tollgate",
         "product": "Tollgate",
-        "version": "0.3.1",
+        "version": "0.3.2",
         "extractable": True,
         "multi_consumer": True,
         "portable": path_snapshot(),
@@ -154,6 +154,7 @@ def health() -> dict[str, Any]:
         "metrics": "/metrics",
         "control": "/v1/control",
         "audit": "/v1/audit",
+        "report": "/v1/report",
         "dashboard": "/dashboard",
     }
 
@@ -333,6 +334,32 @@ def audit_view(
             consumer=consumer,
             provider=provider,
         )
+    out["viewer"] = auth["consumer"]
+    return out
+
+
+@app.get("/v1/report")
+def report_view(
+    format: str = Query("json", description="json | md"),
+    x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+    x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> Any:
+    """
+    Daily operator report — Protect · Route · Prove evidence in one response.
+
+    ``format=md`` returns text/markdown for Slack/status notes.
+    """
+    auth = _require(x_consumer_key, x_consumer_id, authorization=authorization)
+    from tollgate.report import build_report, format_report_markdown
+
+    fmt = (format or "json").strip().lower()
+    if fmt in ("md", "markdown", "text"):
+        return PlainTextResponse(
+            format_report_markdown(),
+            media_type="text/markdown; charset=utf-8",
+        )
+    out = build_report()
     out["viewer"] = auth["consumer"]
     return out
 
@@ -627,8 +654,8 @@ def openai_chat_completions(
             requested_model=body.model or "tollgate",
         )
         if not started.get("ok"):
-            err, code = map_tollgate_error(started)
-            return JSONResponse(err, status_code=code)
+            err, code, hdrs = map_tollgate_error(started)
+            return JSONResponse(err, status_code=code, headers=hdrs or None)
         headers = {
             "Cache-Control": "no-cache",
             "X-Tollgate-Consumer": consumer,
@@ -655,8 +682,8 @@ def openai_chat_completions(
     )
 
     if not result.get("ok"):
-        err, code = map_tollgate_error(result)
-        return JSONResponse(err, status_code=code)
+        err, code, hdrs = map_tollgate_error(result)
+        return JSONResponse(err, status_code=code, headers=hdrs or None)
 
     return to_openai_completion(
         result,
@@ -775,8 +802,8 @@ def anthropic_messages(
             requested_model=body.model or "tollgate",
         )
         if not started.get("ok"):
-            err, code = map_anthropic_error(started)
-            return JSONResponse(err, status_code=code)
+            err, code, hdrs = map_anthropic_error(started)
+            return JSONResponse(err, status_code=code, headers=hdrs or None)
         headers = {
             "Cache-Control": "no-cache",
             "X-Tollgate-Consumer": consumer,
@@ -812,8 +839,8 @@ def anthropic_messages(
         prefer_free=prefer_free,
     )
     if not result.get("ok"):
-        err, code = map_anthropic_error(result)
-        return JSONResponse(err, status_code=code)
+        err, code, hdrs = map_anthropic_error(result)
+        return JSONResponse(err, status_code=code, headers=hdrs or None)
     return to_anthropic_message(
         result,
         model=str(result.get("model") or body.model or "tollgate"),

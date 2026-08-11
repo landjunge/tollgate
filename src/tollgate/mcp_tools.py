@@ -203,6 +203,34 @@ KEYS_MCP_TOOLS: list[dict[str, Any]] = [
         ),
     },
     {
+        "name": "keys_report",
+        "description": (
+            "Daily operator report: Protect · Route · Prove evidence "
+            "(spend, denies, resilience, last chaos). format=md|json."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "format": {
+                    "type": "string",
+                    "enum": ["json", "md", "markdown"],
+                    "default": "json",
+                },
+            },
+        },
+        "handler": lambda format="json", **_k: (
+            {
+                "ok": True,
+                "format": "md",
+                "markdown": __import__(
+                    "tollgate.report", fromlist=["format_report_markdown"]
+                ).format_report_markdown(),
+            }
+            if str(format or "json").lower() in ("md", "markdown", "text")
+            else __import__("tollgate.report", fromlist=["build_report"]).build_report()
+        ),
+    },
+    {
         "name": "keys_audit",
         "description": (
             "Query audit trail: admit denies, usage events. "

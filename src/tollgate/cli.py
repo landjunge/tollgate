@@ -109,6 +109,24 @@ def main(argv: list[str] | None = None) -> None:
         help="Propose routing/budget tweaks from ledger (never auto-applies)",
     )
 
+    rep = sub.add_parser(
+        "report",
+        help="Daily operator report — Protect · Route · Prove evidence",
+    )
+    rep.add_argument(
+        "--format",
+        choices=["json", "md", "markdown"],
+        default="md",
+        dest="report_format",
+        help="md (default) or json",
+    )
+    rep.add_argument(
+        "-o",
+        "--output",
+        default="",
+        help="write to file (optional)",
+    )
+
     aud = sub.add_parser(
         "audit",
         help="Query audit trail — who was denied and why (ops only)",
@@ -249,6 +267,25 @@ def main(argv: list[str] | None = None) -> None:
         if args.json or True:
             # always JSON for machine + human-friendly structure
             print(json.dumps(out, indent=2, default=str))
+        return
+
+    if args.cmd == "report":
+        from pathlib import Path
+
+        from tollgate.paths import pin_data_home_env
+        from tollgate.report import build_report, format_report_markdown
+
+        pin_data_home_env()
+        fmt = (args.report_format or "md").lower()
+        if fmt in ("md", "markdown"):
+            text = format_report_markdown()
+        else:
+            text = json.dumps(build_report(), indent=2, default=str)
+        out_path = (args.output or "").strip()
+        if out_path:
+            Path(out_path).expanduser().write_text(text + ("" if text.endswith("\n") else "\n"), encoding="utf-8")
+            print(f"wrote {out_path}", file=sys.stderr)
+        print(text)
         return
 
     if args.cmd == "health":

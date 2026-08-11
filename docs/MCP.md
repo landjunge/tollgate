@@ -51,6 +51,7 @@ Repo example: [`configs/mcp-tollgate.example.json`](../configs/mcp-tollgate.exam
 | `keys_chaos_status` | Chaos injects + last DR report |
 | `keys_agent_protect_check` | Dry-run max_tool_calls / budgets for a consumer |
 | `keys_audit` | Query deny/usage audit trail (who/why) or summary |
+| `keys_report` | Daily Protect·Route·Prove operator brief (json/md) |
 | `keys_diagnose` | Issues + actions |
 | `keys_status` | Inventory / one provider |
 | `keys_route` | Intent → provider + fallbacks |

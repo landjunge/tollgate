@@ -102,9 +102,15 @@ Policy: required_fallbacks=2 met · last recovery within 5s
 
 ## What we already ship
 
-- Protect: consumer envelopes + agent_guard  
+- Protect: consumer envelopes + agent_guard + **audit query** + deny meta (`error.tollgate`)  
 - Route: health-aware ranking + execute failover  
-- Prove: `chaos` + `resilience` + **dashboard ring/DR panel/history** + **doctor policy checks**  
+- Prove: `chaos` + `resilience` + **dashboard** + **doctor** + **`tollgate report`** daily brief  
+
+```bash
+tollgate report                 # markdown for Slack / status
+tollgate report --format json
+curl -s 'http://127.0.0.1:8787/v1/report?format=md'
+```
 
 ## What we refuse
 

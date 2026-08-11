@@ -28,6 +28,7 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | `GET` | `/v1/resilience` | Resilience score |
 | `GET` | `/v1/chaos` | Chaos inject status |
 | `GET` | `/v1/audit` | Query deny/usage audit trail |
+| `GET` | `/v1/report` | Daily operator report (json|md) |
 | `GET` | `/dashboard` | HTML control plane |
 | `GET` | `/v1/providers` | Provider inventory |
 | `GET` | `/v1/budget` | Budget snapshot |
@@ -62,6 +63,7 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | `tollgate suggest` | Ledger-based config proposals |
 | `tollgate search` | Search repo modules / docs / routes |
 | `tollgate audit` | Query audit trail — who was denied and why |
+| `tollgate report` | Daily operator report Protect·Route·Prove |
 
 ## Concepts → code
 
@@ -83,6 +85,7 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | Provider distill JSON (SSoT) | `src/tollgate/distill/` |
 | Usage ledger (fail-closed) | `src/tollgate/usage_ledger.py` |
 | Append-only audit trail + query | `src/tollgate/audit_log.py` |
+| Daily operator report | `src/tollgate/report.py` |
 | Consumer auth (id:secret) | `src/tollgate/consumers.py` |
 | Cost guard + high-risk providers | `src/tollgate/cost.py` |
 | keys_app.json config + validate | `src/tollgate/app_config.py` |
@@ -156,6 +159,7 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | `redact.py` | Strip secrets from error strings before ledger / circuits / logs. |
 | `registry.py` | Minimal ToolSpec for optional registry registration (MCP / host apps). |
 | `repo_search.py` | Repo search — make Tollgate source/docs findable without guessing paths. |
+| `report.py` | Daily operator report — one pane for Protect · Route · Prove evidence. |
 | `research_notes.py` | Provider research — **thin facade over distill/**. |
 | `resilience.py` | AI Resilience Score — continuous readiness, not just 'we have circuit breakers'. |
 | `response_cache.py` | Operational response cache — NOT agent memory. |

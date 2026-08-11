@@ -50,6 +50,7 @@ Agents ────┘         HTTP + MCP + OpenAI/Anthropic drop-ins
 | `GET  /v1/budget` | remaining calls/tokens/usd + consumer envelope |
 | `GET  /v1/control` | **health · consumer burn · headline** (product pane) |
 | `GET  /v1/audit` | **who was denied and why** (append-only trail query) |
+| `GET  /v1/report` | **daily operator brief** (json \| markdown) |
 | `GET  /v1/health` | liveness + circuits |
 | `GET  /v1/providers` | inventory grades (masked) |
 | `POST /v1/chat/completions` | OpenAI drop-in |
@@ -84,6 +85,7 @@ Agents ────┘         HTTP + MCP + OpenAI/Anthropic drop-ins
 | Prove (chaos + score) | DR tests + Resilience Score | **done (v0.2.4–0.2.6)** |
 | Safe defaults | Protect-on `_default`, metrics auth, circuit jitter | **done (v0.3.0)** |
 | Audit query | who/why denied — CLI · HTTP · dashboard · MCP | **done (v0.3.1)** |
+| Operator report | daily Protect·Route·Prove brief + deny meta headers | **done (v0.3.2)** |
 | Enterprise | Teams, SSO/RBAC | later |
 
 ---

@@ -87,14 +87,18 @@ def anthropic_error(
     }, status
 
 
-def map_anthropic_error(result: dict[str, Any]) -> tuple[dict[str, Any], int]:
-    """Map Tollgate deny/errors → Anthropic error shape + HTTP status."""
-    body, code = map_tollgate_error(result)
+def map_anthropic_error(
+    result: dict[str, Any],
+) -> tuple[dict[str, Any], int, dict[str, str]]:
+    """Map Tollgate deny/errors → Anthropic error shape + HTTP status + headers."""
+    body, code, headers = map_tollgate_error(result)
     msg = ""
     err_type = "api_error"
+    tg_meta = None
     if isinstance(body.get("error"), dict):
         msg = str(body["error"].get("message") or "")
         ot = str(body["error"].get("type") or "")
+        tg_meta = body["error"].get("tollgate")
         if ot == "invalid_request_error":
             err_type = "authentication_error" if code == 401 else "invalid_request_error"
         elif ot == "rate_limit_error":
@@ -107,7 +111,10 @@ def map_anthropic_error(result: dict[str, Any]) -> tuple[dict[str, Any], int]:
         msg = str(result.get("error") or "request failed")
     if code == 402:
         err_type = "invalid_request_error"
-    return anthropic_error(msg, status=code, err_type=err_type)
+    out, status = anthropic_error(msg, status=code, err_type=err_type)
+    if tg_meta and isinstance(out.get("error"), dict):
+        out["error"]["tollgate"] = tg_meta
+    return out, status, headers
 
 
 def to_anthropic_message(

@@ -101,10 +101,11 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     <button onclick="load()">Refresh</button>
     · <a href="/docs">API</a>
     · <a href="/v1/control">JSON</a>
+    · <a href="/v1/report?format=md">Report</a>
     · <a href="/v1/resilience">Resilience</a>
     · <a href="/v1/chaos">Chaos</a>
   </p>
-  <p class="promise">CLI: <code>tollgate audit --event admit_deny</code> · <code>tollgate chaos test opencode_zen --requests 5</code> · <code>tollgate resilience</code></p>
+  <p class="promise">CLI: <code>tollgate report</code> · <code>tollgate audit --event admit_deny</code> · <code>tollgate chaos test opencode_zen</code></p>
 </main>
 <script>
 function cls(s){ if(!s) return ''; if(['healthy','ok','idle'].includes(s)) return 'ok'; if(['warn','likely_over','degraded','half_open'].includes(s)) return 'warn'; return 'bad'; }

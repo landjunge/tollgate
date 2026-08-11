@@ -24,6 +24,7 @@ tollgate consumer-budget n8n --max-usd-day 2 --max-tool-calls 15
 tollgate chaos test opencode_zen --requests 5
 tollgate resilience
 tollgate audit --event admit_deny   # who was stopped and why
+tollgate report                     # daily Protect·Route·Prove brief
 tollgate search circuit breaker     # repo map / modules
 ```
 

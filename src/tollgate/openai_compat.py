@@ -69,8 +69,9 @@ def openai_error(
     status: int = 400,
     err_type: str = "invalid_request_error",
     code: str | None = None,
+    tollgate: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], int]:
-    body = {
+    body: dict[str, Any] = {
         "error": {
             "message": message,
             "type": err_type,
@@ -78,22 +79,120 @@ def openai_error(
             "code": code,
         }
     }
+    if tollgate:
+        body["error"]["tollgate"] = tollgate
     return body, status
 
 
-def map_tollgate_error(result: dict[str, Any]) -> tuple[dict[str, Any], int]:
+def _tollgate_error_meta(result: dict[str, Any]) -> dict[str, Any]:
+    """Ops metadata for clients (no secrets) — protection field, wait, class."""
+    admit = result.get("admit") if isinstance(result.get("admit"), dict) else {}
+    limits = admit.get("limits") if isinstance(admit.get("limits"), dict) else {}
+    if not limits and isinstance(result.get("limits"), dict):
+        limits = result["limits"]
+    wait_ms = int(
+        limits.get("wait_ms")
+        or result.get("wait_ms")
+        or 0
+    )
+    meta: dict[str, Any] = {
+        "error_class": str(
+            result.get("error_class") or admit.get("code") or ""
+        )
+        or None,
+        "protection": limits.get("protection") or result.get("protection"),
+        "provider": result.get("provider") or admit.get("provider"),
+        "consumer": (
+            (admit.get("context") or {}).get("consumer")
+            if isinstance(admit.get("context"), dict)
+            else result.get("consumer")
+        ),
+        "wait_ms": wait_ms if wait_ms > 0 else None,
+        "retry_after_s": max(1, int(wait_ms / 1000)) if wait_ms > 0 else None,
+    }
+    # drop Nones for compact payloads
+    return {k: v for k, v in meta.items() if v is not None and v != ""}
+
+
+def map_tollgate_error(
+    result: dict[str, Any],
+) -> tuple[dict[str, Any], int, dict[str, str]]:
+    """
+    Map Tollgate deny/upstream failure → OpenAI-shaped error + HTTP status + headers.
+
+    Returns ``(body, status_code, headers)``. Headers may include ``Retry-After``.
+    """
     err = str(result.get("error") or "request failed")
     ec = str(result.get("error_class") or result.get("admit", {}).get("code") or "")
     low = err.lower()
-    if "auth" in low or ec in ("AUTH_DEAD", "POLICY_DENY") and "key" in low:
-        return openai_error(err, status=401, err_type="invalid_request_error", code="invalid_api_key")
-    if "rate" in low or ec == "RATE_LIMIT" or "429" in low:
-        return openai_error(err, status=429, err_type="rate_limit_error", code="rate_limit_exceeded")
-    if "budget" in low or "limit" in low or ec in ("BUDGET_HARD", "POLICY_DENY"):
-        return openai_error(err, status=402, err_type="insufficient_quota", code="insufficient_quota")
+    meta = _tollgate_error_meta(result)
+    headers: dict[str, str] = {}
+    if meta.get("retry_after_s"):
+        headers["Retry-After"] = str(int(meta["retry_after_s"]))
+    # Always expose class for operators / n8n
+    if meta.get("error_class"):
+        headers["X-Tollgate-Error-Class"] = str(meta["error_class"])[:64]
+    if meta.get("protection"):
+        headers["X-Tollgate-Protection"] = str(meta["protection"])[:64]
+
+    if "auth" in low or (ec in ("AUTH_DEAD", "POLICY_DENY") and "key" in low):
+        body, status = openai_error(
+            err,
+            status=401,
+            err_type="invalid_request_error",
+            code="invalid_api_key",
+            tollgate=meta,
+        )
+        return body, status, headers
+    if (
+        "rate" in low
+        or ec == "RATE_LIMIT"
+        or "429" in low
+        or "max_requests_minute" in low
+        or meta.get("protection") == "max_requests_minute"
+    ):
+        body, status = openai_error(
+            err,
+            status=429,
+            err_type="rate_limit_error",
+            code="rate_limit_exceeded",
+            tollgate=meta,
+        )
+        if "Retry-After" not in headers:
+            headers["Retry-After"] = "1"
+        return body, status, headers
+    if (
+        "budget" in low
+        or "limit" in low
+        or "agent protection" in low
+        or ec in ("BUDGET_HARD", "POLICY_DENY")
+        or meta.get("protection")
+    ):
+        body, status = openai_error(
+            err,
+            status=402,
+            err_type="insufficient_quota",
+            code="insufficient_quota",
+            tollgate=meta,
+        )
+        return body, status, headers
     if "circuit" in low or ec == "PROVIDER_DOWN":
-        return openai_error(err, status=503, err_type="server_error", code="provider_down")
-    return openai_error(err, status=502, err_type="server_error", code=ec or "upstream_error")
+        body, status = openai_error(
+            err,
+            status=503,
+            err_type="server_error",
+            code="provider_down",
+            tollgate=meta,
+        )
+        return body, status, headers
+    body, status = openai_error(
+        err,
+        status=502,
+        err_type="server_error",
+        code=ec or "upstream_error",
+        tollgate=meta,
+    )
+    return body, status, headers
 
 
 def to_openai_completion(

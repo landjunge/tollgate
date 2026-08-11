@@ -24,6 +24,19 @@ curl -s 'http://127.0.0.1:8787/v1/audit?summary=true'
 
 Also on the control plane: `GET /v1/control` → `recent_denies` + dashboard table.
 
+## Daily operator report (v0.3.2+)
+
+```bash
+tollgate report                      # markdown (default)
+tollgate report --format json -o /tmp/day.json
+curl -s 'http://127.0.0.1:8787/v1/report?format=md'
+```
+
+One brief: spend, top burners, deny reasons, sick providers, resilience, last chaos.
+
+OpenAI/Anthropic denies include `error.tollgate` (`error_class`, `protection`, `wait_ms`)
+and headers `Retry-After`, `X-Tollgate-Error-Class`, `X-Tollgate-Protection`.
+
 ## Metrics auth (v0.3+)
 
 | Mode | Behavior |
