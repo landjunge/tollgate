@@ -82,5 +82,6 @@ def test_cache_key_includes_consumer():
 
 
 def test_denylist_covers_memory_words():
-    for w in ("content", "transcript", "wish", "history", "chat"):
+    for w in ("content", "transcript", "wish", "history", "message", "prompt"):
         assert w in META_DENYLIST
+    # "chat" is a valid op counter name under by_op — not denylisted
