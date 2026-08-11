@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-tollgate",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "n8n community node for Tollgate — Protect·Route·Prove control plane (chat, budget, report, audit)",
   "keywords": [
     "n8n-community-node-package",

@@ -1,6 +1,6 @@
 # Tollgate
 
-**v1.0.11** · *Pay the toll — or don't call.*
+**v1.0.12** · *Pay the toll — or don't call.*
 
 # “My AI agent must never go out of control.”
 

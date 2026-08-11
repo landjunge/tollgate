@@ -34,6 +34,30 @@ PY="${ROOT}/.venv/bin/python"
 "$PY" -m tollgate.cli certificate 2>/dev/null || true
 
 echo ""
+echo "────────────────────────────────────────────────────────"
+echo " Checklist (stranger test)"
+echo "────────────────────────────────────────────────────────"
+"$PY" - <<'PY' 2>/dev/null || true
+from tollgate.certificate import build_certificate
+c = build_certificate()
+ids = {x["id"]: x for x in (c.get("checks") or [])}
+def row(cid, label):
+    ch = ids.get(cid) or {}
+    st = ch.get("status") or "?"
+    mark = {"PASS": "✓", "FAIL": "✗", "NOT_RUN": "·", "READY": "·"}.get(st, "·")
+    print(f"  {mark} {label:<28} {st}")
+print(f"  Overall: {c.get('overall')}")
+row("budget_protection", "Know what this is for")
+row("agent_loop_protection", "Runaway can be hard-stopped")
+row("provider_failover", "Failover can be proven")
+if c.get("prove_pending") or (ids.get("provider_failover") or {}).get("status") == "NOT_RUN":
+    print("  · Prove pending is OK if Protect passed — finish chaos when keys ready")
+if (ids.get("provider_failover") or {}).get("status") == "FAIL":
+    print("  · DR failed — free_llm needs a second keyed provider (see chaos next_step)")
+print(f"  Resilience: {c.get('resilience_score')}/100")
+PY
+
+echo ""
 echo "  Dashboard: http://${HOST}:${PORT}/dashboard"
 echo "  If anything above was confusing → that's the product bug."
 echo "  Docs for strangers: docs/TEN_MINUTE.md"

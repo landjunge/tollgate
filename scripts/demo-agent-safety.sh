@@ -99,9 +99,31 @@ if [[ "$SKIP_CHAOS" != "1" ]]; then
   echo "────────────────────────────────────────────────────────"
   echo " AHA #2 — PROVE: primary outage → survive?"
   echo "────────────────────────────────────────────────────────"
-  echo "Chaos test provider=$CHAOS_PROVIDER (router-only probes, low cost)…"
+  # Soft-ensure free_llm has deepseek after primary when DEEPSEEK key exists
+  # (old desks only had zen→nvidia→openrouter — chaos fails without nvidia/or keys)
+  "$PY" - <<'PY' 2>/dev/null || true
+from tollgate.app_config import load_config, save_config
+cfg = load_config(force=True)
+ri = (cfg.get("routing") or {}).setdefault("intents", {})
+chain = list(ri.get("free_llm") or [])
+# Insert deepseek as #2 when missing — common keyed fallback for Prove
+if chain and "deepseek" not in chain:
+    ri["free_llm"] = [chain[0], "deepseek"] + [p for p in chain[1:] if p != "deepseek"]
+    save_config(cfg)
+    print("→ free_llm chain: added deepseek as failover (for Prove)")
+elif not chain:
+    ri["free_llm"] = ["opencode_zen", "deepseek", "openrouter", "nvidia"]
+    save_config(cfg)
+    print("→ free_llm chain: set default prove-ready order")
+else:
+    print("→ free_llm chain:", " → ".join(chain))
+PY
+  # intent=llm (not free_llm): free_llm only admits providers with free_llm capability
+  # (deepseek is llm/paid_llm — desks with DEEPSEEK_API_KEY need llm for failover proof)
+  CHAOS_INTENT="${DEMO_CHAOS_INTENT:-llm}"
+  echo "Chaos test provider=$CHAOS_PROVIDER intent=$CHAOS_INTENT (router-only probes)…"
   echo ""
-  "$PY" -m tollgate.cli chaos test "$CHAOS_PROVIDER" --requests 8 --intent free_llm 2>/dev/null \
+  "$PY" -m tollgate.cli chaos test "$CHAOS_PROVIDER" --requests 8 --intent "$CHAOS_INTENT" 2>/dev/null \
     | "$PY" -c '
 import json,sys
 try:
@@ -117,10 +139,17 @@ print("Recovery ms:", d.get("recovery_time_ms_best"))
 print("Survived:   ", d.get("survived"))
 print()
 print(d.get("message") or "")
+if d.get("next_step"):
+  print()
+  print("Next:", d.get("next_step"))
 if d.get("survived"):
   print()
   print("✓ Your agent survived.")
-' || echo "(chaos test skipped or failed — check providers enabled)"
+elif not d.get("survived"):
+  print()
+  print("Prove did not pass yet — Protect Aha above still counts.")
+  print("  tollgate doctor · fix free_llm keys · re-run chaos · or SKIP_CHAOS=1")
+' || echo "(chaos test skipped or failed — check providers enabled; SKIP_CHAOS=1 for Protect-only)"
 fi
 
 echo ""

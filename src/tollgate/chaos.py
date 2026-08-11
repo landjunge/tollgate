@@ -337,6 +337,14 @@ def run_failover_test(
     from tollgate.paths import pin_data_home_env
 
     pin_data_home_env()
+    # Key.txt → env so inventory/route see DEEPSEEK_*/OPENCODE_* during CLI chaos
+    try:
+        from tollgate.secrets import ensure_env_from_key_txt, load_keys
+
+        ensure_env_from_key_txt(root)
+        load_keys(root)
+    except Exception:  # noqa: BLE001
+        pass
     pid = (provider or "").strip().lower()
     if not pid:
         return {"ok": False, "error": "provider required"}
@@ -357,6 +365,11 @@ def run_failover_test(
         usd_before = 0.0
 
     ks = get_keys_service()
+    # Fresh inventory after keys load (avoid stale "key missing" cards)
+    try:
+        ks.inventory(live=False, use_cache=False)
+    except Exception:  # noqa: BLE001
+        pass
     ok_n = 0
     fail_n = 0
     failover_n = 0
@@ -364,6 +377,8 @@ def run_failover_test(
     latencies: list[float] = []
     samples: list[dict[str, Any]] = []
 
+    last_route_error = ""
+    last_tried: list[Any] = []
     try:
         for i in range(n):
             t0 = time.time()
@@ -378,6 +393,10 @@ def run_failover_test(
                     failover_n += 1
             else:
                 fail_n += 1
+                last_route_error = str(r.get("error") or "route failed")
+                tried = r.get("tried") if isinstance(r.get("tried"), list) else []
+                if tried:
+                    last_tried = tried
             samples.append(
                 {
                     "i": i,
@@ -385,6 +404,10 @@ def run_failover_test(
                     "provider": chosen or None,
                     "latency_ms": round(dt, 1),
                     "chaos_target": pid,
+                    "error": (None if (r.get("ok") and chosen) else (r.get("error") or None)),
+                    "tried": (r.get("tried") or [])[:6]
+                    if not (r.get("ok") and chosen)
+                    else None,
                 }
             )
             if live_chat and r.get("ok") and chosen:
@@ -419,6 +442,41 @@ def run_failover_test(
     max_fo_ms = float(pol["max_failover_time_s"]) * 1000.0
     within_sla = recovery_ms <= max_fo_ms if latencies else False
     survived = fail_n == 0 and ok_n > 0 and used_providers.get(pid, 0) == 0
+    # Human next step when no route succeeded (usually: fallbacks lack keys)
+    skip_hints: list[str] = []
+    for row in last_tried:
+        if not isinstance(row, dict):
+            continue
+        p = str(row.get("provider") or "")
+        skip = str(row.get("skip") or row.get("reason") or "")
+        if p and skip:
+            skip_hints.append(f"{p}: {skip}")
+    if not survived and not ok_n:
+        next_step = (
+            "Fallbacks could not admit while primary was injected down. "
+            "Need a second provider with a key on this intent. "
+            f"Try: tollgate chaos test {pid} --intent llm --requests 8 "
+            "(llm chain usually includes deepseek). "
+            "Or set OPENROUTER/NVIDIA keys for free_llm."
+        )
+        if skip_hints:
+            next_step = "Skipped during inject: " + "; ".join(skip_hints[:6]) + ". " + next_step
+        fail_msg = (
+            f"Failed: no successful routes while {pid} was down"
+            + (f" ({last_route_error})" if last_route_error else "")
+        )
+    elif not survived and ok_n:
+        next_step = (
+            f"Partial failover ({ok_n}/{n}). Tighten free_llm chain or re-run "
+            f"with more requests. Check circuits: tollgate circuits list"
+        )
+        fail_msg = (
+            f"Partial: {ok_n}/{n} ok, {used_providers.get(pid, 0)} still hit chaos target"
+        )
+    else:
+        next_step = None
+        fail_msg = ""
+
     report = {
         "ok": fail_n == 0 and ok_n > 0,
         "id": uuid.uuid4().hex[:12],
@@ -443,6 +501,9 @@ def run_failover_test(
             "availability_target": pol["availability_target"],
         },
         "survived": survived,
+        "next_step": next_step,
+        "route_error": last_route_error or None,
+        "tried_on_fail": last_tried[:8] if last_tried else None,
         "message": (
             f"Application survived {pid} outage"
             + (f" · extra cost ${extra_cost:.4f}" if extra_cost else "")
@@ -456,11 +517,7 @@ def run_failover_test(
                 )
             )
             if survived
-            else (
-                f"Partial: {ok_n}/{n} ok, {used_providers.get(pid, 0)} still hit chaos target"
-                if ok_n
-                else f"Failed: no successful routes while {pid} was down"
-            )
+            else fail_msg
         ),
         "samples": samples[:20],
         "finished_at": time.time(),

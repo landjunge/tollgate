@@ -2,6 +2,15 @@
 
 All notable releases of [landjunge/tollgate](https://github.com/landjunge/tollgate).
 
+## 1.0.12 — 2026-08-11
+
+### Cold path / Prove friction
+- Default `free_llm` chain includes **deepseek** (so chaos has a keyed fallback)
+- Demo soft-adds deepseek to free_llm when missing; chaos report `next_step` + tried skips
+- ten-minute stranger checklist; n8n-smoke protect + certificate
+- n8n node **0.2.1**: Certificate op + clearer toolCallsEst help
+- doctor warns when free_llm is enabled but not keyed
+
 ## 1.0.11 — 2026-08-11
 
 ### Product friction (not features)

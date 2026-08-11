@@ -100,6 +100,12 @@ class Tollgate {
 							description: 'Query admit denies / usage trail',
 							action: 'Audit trail',
 						},
+						{
+							name: 'Certificate',
+							value: 'certificate',
+							description: 'AI Reliability Report scorecard (Protect·Route·Prove)',
+							action: 'Reliability certificate',
+						},
 					],
 					default: 'chat',
 				},
@@ -160,7 +166,7 @@ class Tollgate {
 					type: 'number',
 					default: 0,
 					description:
-						'Agent loop depth this turn — enforced via max_tool_calls envelope (Protect)',
+						'Agent loop depth this turn (Protect). Required for max_tool_calls to fire on single-turn chat. Use high number to demo block (e.g. 99). 0 = omit field.',
 					typeOptions: { minValue: 0 },
 					displayOptions: { show: { operation: ['chat', 'invoke'] } },
 				},
@@ -335,6 +341,13 @@ class Tollgate {
 				out = await this.helpers.httpRequest({
 					method: 'GET',
 					url: `${baseUrl}/v1/resilience`,
+					headers,
+					json: true,
+				});
+			} else if (operation === 'certificate') {
+				out = await this.helpers.httpRequest({
+					method: 'GET',
+					url: `${baseUrl}/v1/certificate`,
 					headers,
 					json: true,
 				});

@@ -232,6 +232,51 @@ def run_doctor(*, live: bool = False, root: Path | None = None) -> dict[str, Any
                     f"policy: {intent_name} has {len(ready)}≥{req_fb} fallbacks"
                 )
 
+            # Usable keys matter for Prove (chaos) — enabled without keys is a trap
+            if intent_name == "free_llm" and ready:
+                try:
+                    from tollgate.service import get_keys_service
+
+                    inv = get_keys_service().inventory(live=False, use_cache=True)
+                    cards_raw = inv.get("providers") if isinstance(inv, dict) else inv
+                    if not isinstance(cards_raw, list):
+                        cards_raw = inv.get("cards") if isinstance(inv, dict) else []
+                    cards = {
+                        str(c.get("id") or c.get("provider") or ""): c
+                        for c in (cards_raw or [])
+                        if isinstance(c, dict)
+                    }
+                    usable = []
+                    for p in ready:
+                        card = cards.get(p) or {}
+                        if card.get("ready") is True or card.get("has_key") is True:
+                            usable.append(p)
+                            continue
+                        g = str(card.get("grade") or "").upper()
+                        if g and g not in ("F", "MISSING", "NO_KEY", "?", ""):
+                            usable.append(p)
+                    if len(usable) < min(req_fb, 2):
+                        issues.append(
+                            {
+                                "level": "warn",
+                                "code": "free_llm_keys",
+                                "message": (
+                                    f"free_llm has {len(ready)} enabled but only "
+                                    f"{len(usable)} with usable keys — chaos failover will fail"
+                                ),
+                                "action": (
+                                    "Add deepseek to free_llm (DEEPSEEK_API_KEY) or set "
+                                    "NVIDIA/OPENROUTER keys; routing.intents.free_llm"
+                                ),
+                            }
+                        )
+                    else:
+                        ok_items.append(
+                            f"free_llm: {len(usable)} providers look keyed for failover"
+                        )
+                except Exception:  # noqa: BLE001
+                    pass
+
         ch = chaos_status()
         last = ch.get("last_report") if isinstance(ch.get("last_report"), dict) else None
         if not last:

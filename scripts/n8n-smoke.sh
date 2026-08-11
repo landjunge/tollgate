@@ -58,6 +58,27 @@ if [[ -f /tmp/tg-n8n-chat.json ]]; then
   python3 -c "import json;d=json.load(open('/tmp/tg-n8n-chat.json')); c=(d.get('choices') or [{}])[0].get('message',{}).get('content',''); print('    text=', (c or str(d)[:120])[:100])" 2>/dev/null || true
 fi
 
+# Protect: ensure n8n lane has tool limit, then block with tool_calls_est
+python3 -m tollgate.cli consumer-budget n8n --max-tool-calls 20 --max-usd-day 1 >/dev/null 2>&1 || true
+code=$(curl -sS -o /tmp/tg-n8n-loop.json -w '%{http_code}' \
+  -H "$AUTH" -H "$XCK" -H 'Content-Type: application/json' \
+  -d '{"model":"tollgate/free","messages":[{"role":"user","content":"loop"}],"max_tokens":8,"tool_calls_est":99}' \
+  "$BASE/v1/chat/completions" || echo 000)
+# expect deny (402) or error body with max_tool_calls
+if [[ "$code" == "402" || "$code" == "429" ]]; then
+  check "chat tool_calls_est block" "$code" "$code"
+elif [[ -f /tmp/tg-n8n-loop.json ]] && grep -q max_tool_calls /tmp/tg-n8n-loop.json 2>/dev/null; then
+  echo "OK  chat tool_calls_est block (body deny, HTTP $code)"
+  pass=$((pass + 1))
+else
+  echo "WARN chat tool_calls_est block (HTTP $code) — set consumer-budget n8n --max-tool-calls 20"
+fi
+
+# Certificate surface (Control Room / Prove)
+code=$(curl -sS -o /tmp/tg-n8n-cert.json -w '%{http_code}' \
+  -H "$AUTH" -H "$XCK" "$BASE/v1/certificate" || echo 000)
+check "certificate" "$code"
+
 # search is optional (needs Brave key)
 code=$(curl -sS -o /tmp/tg-n8n-search.json -w '%{http_code}' \
   -H "$AUTH" -H "$XCK" -H 'Content-Type: application/json' \

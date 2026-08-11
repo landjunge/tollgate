@@ -143,7 +143,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
         # never put google in free_llm by default
         "intents": {
             "llm": ["opencode_zen", "deepseek", "nvidia", "openrouter", "worker"],
-            "free_llm": ["opencode_zen", "nvidia", "openrouter"],
+            # deepseek after zen — most desks have DEEPSEEK_API_KEY; nvidia/openrouter often missing
+            "free_llm": ["opencode_zen", "deepseek", "openrouter", "nvidia"],
             "paid_llm": ["deepseek", "openrouter", "opencode_zen"],
             "search": ["brave"],
             "tts": ["elevenlabs"],
