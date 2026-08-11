@@ -115,9 +115,11 @@ def to_anthropic_message(
     *,
     model: str,
     consumer: str = "",
+    requested_model: str = "",
 ) -> dict[str, Any]:
     content = str(result.get("content") or "")
     mid = str(result.get("model") or model or "tollgate")
+    req = (requested_model or model or "").strip()
     pt = int(result.get("prompt_tokens") or (result.get("usage") or {}).get("prompt_tokens") or 0)
     ct = int(
         result.get("completion_tokens")
@@ -127,6 +129,20 @@ def to_anthropic_message(
     if pt == 0 and ct == 0 and content:
         ct = max(1, len(content) // 4)
     msg_id = f"msg_{uuid.uuid4().hex[:24]}"
+    tollgate_extra: dict[str, Any] = {
+        "provider": result.get("provider"),
+        "consumer": consumer,
+        "error_class": result.get("error_class"),
+        "cache_hit": result.get("cache_hit"),
+    }
+    # Non-silent: claude-* / tollgate/* may be rewritten to actual provider model
+    if req and (req != mid or req.lower().startswith("claude") or req.startswith("tollgate/")):
+        tollgate_extra["routed_from"] = req
+        tollgate_extra["routed_to"] = mid
+        tollgate_extra["note"] = (
+            "Model id was resolved by Tollgate router (not a direct Anthropic call). "
+            "No Anthropic API key required."
+        )
     return {
         "id": msg_id,
         "type": "message",
@@ -143,10 +159,7 @@ def to_anthropic_message(
         },
         # Tollgate extensions (clients ignore)
         "tollgate": {
-            "provider": result.get("provider"),
-            "consumer": consumer,
-            "error_class": result.get("error_class"),
-            "cache_hit": result.get("cache_hit"),
+            **tollgate_extra,
             "soft_degrade": result.get("soft_degrade"),
         },
     }

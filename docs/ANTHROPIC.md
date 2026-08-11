@@ -68,8 +68,21 @@ Auth (any one):
 |-------|----------|
 | `tollgate/auto` | intent `llm` |
 | `tollgate/free` | intent `free_llm` |
-| `claude-*` | treated as auto (router picks real provider) |
+| `claude-*` | **not** a direct Anthropic call — router picks a Tollgate LLM provider |
 | other | model hint for router |
+
+Rewrites are **not silent**. Response extension:
+
+```json
+"tollgate": {
+  "provider": "opencode_zen",
+  "routed_from": "claude-sonnet-4-0",
+  "routed_to": "deepseek-v4-flash-free",
+  "note": "Model id was resolved by Tollgate router …"
+}
+```
+
+Stream: header `X-Tollgate-Routed-From: claude-…` when applicable.
 
 Optional Tollgate body fields: `intent`, `provider`, `request_class`, `prefer_free`.
 

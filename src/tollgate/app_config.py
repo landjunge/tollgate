@@ -295,11 +295,30 @@ def load_config(*, force: bool = False, root: Path | None = None) -> dict[str, A
         return deepcopy(cfg)
 
 
-def save_config(cfg: dict[str, Any], *, root: Path | None = None) -> dict[str, Any]:
-    """Write config (merged with defaults for safety)."""
+def save_config(
+    cfg: dict[str, Any],
+    *,
+    root: Path | None = None,
+    validate: bool = True,
+) -> dict[str, Any]:
+    """
+    Write config (merged with defaults for safety).
+
+    When ``validate=True`` (default), runs the same schema/semantic checks as
+    process start so a live PATCH cannot leave a broken keys_app.json.
+    """
     global _CACHE, _CACHE_MTIME
     path = config_path(root)
     merged = _deep_merge(DEFAULT_CONFIG, cfg if isinstance(cfg, dict) else {})
+    if validate:
+        from tollgate.config_validate import validate_config_dict
+
+        data, errs = validate_config_dict(merged)
+        if errs:
+            raise ValueError("keys_app.json invalid:\n- " + "\n- ".join(errs))
+        if data is not None:
+            # Keep defaults filled by validator for stability
+            merged = _deep_merge(DEFAULT_CONFIG, data)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(merged, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -312,7 +331,7 @@ def save_config(cfg: dict[str, Any], *, root: Path | None = None) -> dict[str, A
 
 def patch_config(patch: dict[str, Any], *, root: Path | None = None) -> dict[str, Any]:
     cur = load_config(force=True, root=root)
-    return save_config(_deep_merge(cur, patch), root=root)
+    return save_config(_deep_merge(cur, patch), root=root, validate=True)
 
 
 def provider_cfg(provider_id: str, *, root: Path | None = None) -> dict[str, Any]:

@@ -10,6 +10,13 @@
 
 First command after install: **`tollgate doctor`**.
 
+## Metrics auth
+
+`GET /metrics` is **intentionally unauthenticated** for local Prometheus scrapes on
+loopback. Do **not** expose `:8787` on a public interface without a reverse proxy
+auth layer if you care about usage leakage. Consumer-scoped product data lives under
+`/v1/*` (auth when `consumers.json` is set).
+
 ## Doctor
 
 ```bash

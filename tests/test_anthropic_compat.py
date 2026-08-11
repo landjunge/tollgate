@@ -38,7 +38,7 @@ def test_messages_shape(client):
                 "anthropic-version": "2023-06-01",
             },
             json={
-                "model": "tollgate/free",
+                "model": "claude-sonnet-4-0",
                 "max_tokens": 64,
                 "system": "Be brief.",
                 "messages": [{"role": "user", "content": "hi"}],
@@ -53,7 +53,9 @@ def test_messages_shape(client):
     assert body["usage"]["input_tokens"] == 4
     assert body["usage"]["output_tokens"] == 2
     assert body["tollgate"]["consumer"] in ("desk", "anonymous")
-
+    # non-silent rewrite of claude-* alias
+    assert body["tollgate"].get("routed_from") == "claude-sonnet-4-0"
+    assert body["tollgate"].get("routed_to") == "deepseek-v4-flash-free"
 
 def test_messages_content_blocks(client):
     fake = {

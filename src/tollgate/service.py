@@ -737,11 +737,18 @@ class KeysService:
     def set_config(self, patch: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(patch, dict):
             return {"ok": False, "error": "config patch must be object"}
-        cfg = patch_config(patch)
+        try:
+            cfg = patch_config(patch)
+        except ValueError as e:
+            return {"ok": False, "error": str(e), "validation_failed": True}
         return {"ok": True, "config": cfg}
 
     def replace_config(self, cfg: dict[str, Any]) -> dict[str, Any]:
-        return {"ok": True, "config": save_config(cfg if isinstance(cfg, dict) else {})}
+        try:
+            out = save_config(cfg if isinstance(cfg, dict) else {}, validate=True)
+        except ValueError as e:
+            return {"ok": False, "error": str(e), "validation_failed": True}
+        return {"ok": True, "config": out}
 
     def check_provider_limits(
         self, provider_id: str, *, tokens_est: int = 0, chars_est: int = 0

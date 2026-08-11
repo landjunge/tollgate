@@ -28,6 +28,29 @@ def test_config_post_exists(monkeypatch, tmp_path):
     assert client.get("/v1/config").status_code == 200
 
 
+def test_config_post_rejects_invalid_high_risk(monkeypatch, tmp_path):
+    """Live PATCH must not leave invalid keys_app (same checks as startup)."""
+    monkeypatch.setenv("TOLLGATE_HOME", str(tmp_path))
+    monkeypatch.delenv("TOLLGATE_REQUIRE_AUTH", raising=False)
+    (tmp_path / "User").mkdir(parents=True)
+    from tollgate import consumers as c
+
+    c.clear_cache()
+    from tollgate.server_v1 import app
+
+    client = TestClient(app)
+    r = client.post(
+        "/v1/config",
+        json={
+            "cost_guard": {"high_risk_providers": ["azure_openai"]},
+            "providers": {
+                "azure_openai": {"enabled": True, "high_risk": True, "max_usd_day": 0},
+            },
+        },
+    )
+    assert r.status_code == 400
+
+
 def test_redact_bearer_and_sk():
     raw = "Authorization: Bearer sk-supersecretvalue12345 failed"
     out = redact_secrets(raw)

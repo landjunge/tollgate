@@ -60,6 +60,10 @@ Secrets stay in `User/Key.txt` — **not** in `keys_app.json`.
 
 Server must be running: `tollgate serve` → bind **127.0.0.1** only unless you add real auth.
 
+`POST /v1/config` runs the **same schema/semantic validation** as process start
+(`validate_config_dict`) and returns **HTTP 400** if the merged config would be invalid.
+Invalid patches are **not** written.
+
 ```bash
 # Read (limits + routing — no API keys in this file)
 curl -s http://127.0.0.1:8787/v1/config | jq .
@@ -116,7 +120,20 @@ Provider caps and `max_usd_day_global` still apply. Additionally, each **consume
 }
 ```
 
-`0` / omit = no consumer-level cap. Ledger tracks `keys_usage.json → consumers.<id>`.
+`0` / omit = **no consumer-level cap** on that dimension. Ledger tracks
+`keys_usage.json → consumers.<id>`.
+
+**Default policy (desk-friendly, not multi-tenant-safe):** `_default` is all zeros —
+an unknown consumer is limited only by **provider** + **global** cost_guard until you
+set an envelope. That is intentional for local testing ("pay the toll" still applies
+at global/provider hard stops). For production agents:
+
+```bash
+# tighten unknown lanes
+tollgate consumer-budget _default --max-usd-day 1 --max-requests-minute 60
+# and explicit per-agent caps
+tollgate consumer-budget coding-agent --max-usd-day 20 --max-tool-calls 15
+```
 
 ### Agent protection (loop / runaway stops)
 

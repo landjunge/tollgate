@@ -78,7 +78,7 @@ _bootstrap_env()
 
 app = FastAPI(
     title="Tollgate",
-    version="0.2.7",
+    version="0.2.8",
     description=(
         "Tollgate — AI reliability & control plane. "
         "Protect · Route · Prove (chaos failover tests). "
@@ -144,7 +144,7 @@ def health() -> dict[str, Any]:
         "ok": True,
         "service": "tollgate",
         "product": "Tollgate",
-        "version": "0.2.7",
+        "version": "0.2.8",
         "extractable": True,
         "multi_consumer": True,
         "portable": path_snapshot(),
@@ -419,6 +419,11 @@ def config_patch(
     if not isinstance(patch, dict):
         raise HTTPException(status_code=400, detail="invalid patch")
     out = get_keys_service().set_config(patch)
+    if not out.get("ok"):
+        raise HTTPException(
+            status_code=400,
+            detail=out.get("error") or "config validation failed",
+        )
     out["consumer"] = auth["consumer"]
     return out
 
@@ -544,7 +549,12 @@ def openai_chat_completions(
         err, code = map_tollgate_error(result)
         return JSONResponse(err, status_code=code)
 
-    return to_openai_completion(result, model=body.model or "tollgate", consumer=consumer)
+    return to_openai_completion(
+        result,
+        model=str(result.get("model") or body.model or "tollgate"),
+        consumer=consumer,
+        requested_model=body.model or "tollgate",
+    )
 
 
 # ── Anthropic-compatible drop-in ──────────────────────────────────────
@@ -665,6 +675,8 @@ def anthropic_messages(
             "X-Tollgate-Provider": str(started.get("provider") or ""),
             "X-Tollgate-Compat": "anthropic",
         }
+        if mid.lower().startswith("claude") or mid.startswith("tollgate/"):
+            headers["X-Tollgate-Routed-From"] = mid
         # chat_stream yields OpenAI SSE → convert to Anthropic event stream
         anthro_stream = stream_anthropic_from_openai_sse(
             started["stream"],
@@ -693,7 +705,12 @@ def anthropic_messages(
     if not result.get("ok"):
         err, code = map_anthropic_error(result)
         return JSONResponse(err, status_code=code)
-    return to_anthropic_message(result, model=body.model or "tollgate", consumer=consumer)
+    return to_anthropic_message(
+        result,
+        model=str(result.get("model") or body.model or "tollgate"),
+        consumer=consumer,
+        requested_model=body.model or "tollgate",
+    )
 
 
 @app.get("/")
