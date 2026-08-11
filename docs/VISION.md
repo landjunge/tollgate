@@ -90,6 +90,7 @@ Agents ────┘         HTTP + MCP + OpenAI/Anthropic drop-ins
 | Structured alerts | webhook schema v1 · chaos events · alert CLI | **done (v0.3.4)** |
 | Consumer scopes | allow/block providers · intents · ops per lane | **done (v0.3.5)** |
 | Freeze + circuits | global kill switch · circuit reset CLI/API | **done (v0.3.6)** |
+| Desk status | compact status + success response headers | **done (v0.3.7)** |
 | Enterprise | Teams, SSO/RBAC | later |
 
 ---

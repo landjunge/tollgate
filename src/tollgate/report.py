@@ -31,6 +31,7 @@ def build_report(*, root: Any = None) -> dict[str, Any]:
     last = chaos.get("last_report") if isinstance(chaos.get("last_report"), dict) else None
     consumers = snap.get("consumers") or []
     providers = snap.get("providers") or []
+    freeze = snap.get("freeze") or {}
 
     # Top burners by usd
     burners = sorted(
@@ -81,6 +82,8 @@ def build_report(*, root: Any = None) -> dict[str, Any]:
                 "agent_protection_blocks": s.get("agent_protection_blocks")
                 or summary.get("agent_protection_blocks"),
                 "consumers_protected": s.get("consumers_protected"),
+                "frozen": bool(freeze.get("frozen")),
+                "freeze_reason": freeze.get("reason") or "",
                 "top_deny_reasons": summary.get("top_deny_reasons") or [],
                 "top_consumers_audit": summary.get("top_consumers") or [],
                 "recent_denies": denies,
@@ -129,6 +132,12 @@ def format_report_markdown(report: dict[str, Any] | None = None, *, root: Any = 
         "",
         "## Protect",
         "",
+        f"- **Admission freeze:** "
+        + (
+            f"ON — {protect.get('freeze_reason') or 'kill switch'}"
+            if protect.get("frozen")
+            else "off"
+        ),
         f"- **Spent today:** ${float(protect.get('usd_today') or 0):.4f}",
         f"- **Calls:** {protect.get('calls') or 0}",
         f"- **Admit denies:** {protect.get('admit_denies') or 0}",
@@ -243,4 +252,4 @@ def _version() -> str:
 
         return str(__version__)
     except Exception:  # noqa: BLE001
-        return "0.3.3"
+        return "0.3.7"

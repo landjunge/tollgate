@@ -10,6 +10,17 @@
 
 First command after install: **`tollgate doctor`**.
 
+## Desk status (v0.3.7+)
+
+```bash
+tollgate status              # human one-glance
+tollgate status --json
+curl -s 'http://127.0.0.1:8787/v1/status?format=text'
+```
+
+Successful chat/messages responses also set `X-Tollgate-Provider`,
+`X-Tollgate-Consumer`, `X-Tollgate-Model`, optional `X-Tollgate-Routed-From`.
+
 ## Global freeze (kill switch, v0.3.6+)
 
 Emergency stop for **all billable** traffic (Protect panic button):

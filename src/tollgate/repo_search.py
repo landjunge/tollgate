@@ -310,6 +310,7 @@ HTTP_ROUTES: list[dict[str, str]] = [
     {"method": "GET", "path": "/v1/health", "summary": "Portable + auth mode"},
     {"method": "GET", "path": "/v1/auth", "summary": "Auth status"},
     {"method": "GET", "path": "/v1/control", "summary": "Control plane JSON"},
+    {"method": "GET", "path": "/v1/status", "summary": "Compact desk status"},
     {"method": "GET", "path": "/v1/resilience", "summary": "Resilience score"},
     {"method": "GET", "path": "/v1/chaos", "summary": "Chaos inject status"},
     {"method": "GET", "path": "/v1/audit", "summary": "Query deny/usage audit trail"},
@@ -365,6 +366,7 @@ CLI_COMMANDS: list[dict[str, str]] = [
     {"cmd": "snapshot", "summary": "Export/import desk ops state (USB migrate)"},
     {"cmd": "alert", "summary": "Webhook test / event catalog"},
     {"cmd": "freeze", "summary": "Global admission kill switch"},
+    {"cmd": "status", "summary": "Compact desk status one-glance"},
     {"cmd": "circuits", "summary": "List or reset circuit breakers"},
 ]
 

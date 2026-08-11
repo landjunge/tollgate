@@ -40,6 +40,7 @@ from tollgate.openai_compat import (
     openai_error,
     parse_bearer,
     resolve_intent,
+    response_headers,
     to_openai_completion,
 )
 
@@ -78,7 +79,7 @@ _bootstrap_env()
 
 app = FastAPI(
     title="Tollgate",
-    version="0.3.6",
+    version="0.3.7",
     description=(
         "Tollgate — AI reliability & control plane. "
         "Protect · Route · Prove (chaos failover tests). "
@@ -146,7 +147,7 @@ def health() -> dict[str, Any]:
         "ok": not fr.get("frozen"),
         "service": "tollgate",
         "product": "Tollgate",
-        "version": "0.3.6",
+        "version": "0.3.7",
         "extractable": True,
         "multi_consumer": True,
         "portable": path_snapshot(),
@@ -156,6 +157,7 @@ def health() -> dict[str, Any]:
         "circuits": get_circuits().snapshot()[:30],
         "metrics": "/metrics",
         "control": "/v1/control",
+        "status": "/v1/status",
         "audit": "/v1/audit",
         "report": "/v1/report",
         "alerts": "/v1/alerts",
@@ -278,6 +280,25 @@ def control_plane_view(
 
     out = control_snapshot()
     out["consumer"] = auth["consumer"]
+    return out
+
+
+@app.get("/v1/status")
+def status_view(
+    format: str = Query("json", description="json | text"),
+    x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+    x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> Any:
+    """Compact desk status (freeze · resilience · spend · attention)."""
+    auth = _require(x_consumer_key, x_consumer_id, authorization=authorization)
+    from tollgate.status import desk_status, format_status_text
+
+    fmt = (format or "json").strip().lower()
+    if fmt in ("text", "txt", "md"):
+        return PlainTextResponse(format_status_text(), media_type="text/plain; charset=utf-8")
+    out = desk_status()
+    out["viewer"] = auth["consumer"]
     return out
 
 
@@ -830,12 +851,16 @@ def openai_chat_completions(
         err, code, hdrs = map_tollgate_error(result)
         return JSONResponse(err, status_code=code, headers=hdrs or None)
 
-    return to_openai_completion(
+    body_out = to_openai_completion(
         result,
         model=str(result.get("model") or body.model or "tollgate"),
         consumer=consumer,
         requested_model=body.model or "tollgate",
     )
+    hdrs = response_headers(
+        result, consumer=consumer, requested_model=body.model or "tollgate"
+    )
+    return JSONResponse(body_out, headers=hdrs or None)
 
 
 # ── Anthropic-compatible drop-in ──────────────────────────────────────
@@ -986,12 +1011,16 @@ def anthropic_messages(
     if not result.get("ok"):
         err, code, hdrs = map_anthropic_error(result)
         return JSONResponse(err, status_code=code, headers=hdrs or None)
-    return to_anthropic_message(
+    body_out = to_anthropic_message(
         result,
         model=str(result.get("model") or body.model or "tollgate"),
         consumer=consumer,
         requested_model=body.model or "tollgate",
     )
+    hdrs = response_headers(
+        result, consumer=consumer, requested_model=body.model or "tollgate"
+    )
+    return JSONResponse(body_out, headers=hdrs or None)
 
 
 @app.get("/")

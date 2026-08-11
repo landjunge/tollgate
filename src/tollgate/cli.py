@@ -156,6 +156,16 @@ def main(argv: list[str] | None = None) -> None:
         help="Propose routing/budget tweaks from ledger (never auto-applies)",
     )
 
+    st = sub.add_parser(
+        "status",
+        help="Compact desk status (freeze · resilience · spend · attention)",
+    )
+    st.add_argument(
+        "--json",
+        action="store_true",
+        help="machine-readable JSON (default is human text)",
+    )
+
     frz = sub.add_parser(
         "freeze",
         help="Emergency kill switch — deny all billable admission",
@@ -443,6 +453,17 @@ def main(argv: list[str] | None = None) -> None:
         out = test_webhook(message=args.message)
         print(json.dumps(out, indent=2, default=str))
         raise SystemExit(0 if out.get("ok") else 1)
+
+    if args.cmd == "status":
+        from tollgate.paths import pin_data_home_env
+        from tollgate.status import desk_status, format_status_text
+
+        pin_data_home_env()
+        if args.json:
+            print(json.dumps(desk_status(), indent=2, default=str))
+        else:
+            print(format_status_text())
+        return
 
     if args.cmd in ("freeze", "unfreeze"):
         from tollgate.freeze import freeze_status, set_frozen

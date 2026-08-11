@@ -195,6 +195,38 @@ def map_tollgate_error(
     return body, status, headers
 
 
+def response_headers(
+    result: dict[str, Any],
+    *,
+    consumer: str = "",
+    requested_model: str = "",
+) -> dict[str, str]:
+    """Ops headers for successful (and some error) responses."""
+    headers: dict[str, str] = {}
+    prov = str(result.get("provider") or "").strip()
+    mid = str(result.get("model") or "").strip()
+    req = (requested_model or "").strip()
+    if consumer:
+        headers["X-Tollgate-Consumer"] = consumer[:64]
+    if prov:
+        headers["X-Tollgate-Provider"] = prov[:64]
+    if mid:
+        headers["X-Tollgate-Model"] = mid[:128]
+    if req and mid and req != mid:
+        headers["X-Tollgate-Routed-From"] = req[:128]
+        headers["X-Tollgate-Routed-To"] = mid[:128]
+    if result.get("cache_hit"):
+        headers["X-Tollgate-Cache"] = "hit"
+    if result.get("soft_degrade"):
+        headers["X-Tollgate-Soft-Degrade"] = "1"
+    fo = result.get("failover")
+    if isinstance(fo, dict) and fo.get("hops"):
+        headers["X-Tollgate-Failover-Hops"] = str(int(fo.get("hops") or 0))
+    elif result.get("failover_hops"):
+        headers["X-Tollgate-Failover-Hops"] = str(int(result.get("failover_hops") or 0))
+    return headers
+
+
 def to_openai_completion(
     result: dict[str, Any],
     *,

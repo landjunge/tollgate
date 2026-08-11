@@ -203,6 +203,34 @@ KEYS_MCP_TOOLS: list[dict[str, Any]] = [
         ),
     },
     {
+        "name": "keys_desk_status",
+        "description": (
+            "Compact desk status: freeze, resilience score, spend, attention. "
+            "format=json|text."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "format": {
+                    "type": "string",
+                    "enum": ["json", "text"],
+                    "default": "json",
+                },
+            },
+        },
+        "handler": lambda format="json", **_k: (
+            {
+                "ok": True,
+                "format": "text",
+                "text": __import__(
+                    "tollgate.status", fromlist=["format_status_text"]
+                ).format_status_text(),
+            }
+            if str(format or "json").lower() in ("text", "txt", "md")
+            else __import__("tollgate.status", fromlist=["desk_status"]).desk_status()
+        ),
+    },
+    {
         "name": "keys_freeze",
         "description": (
             "Global admission kill switch. action=status|on|off. "

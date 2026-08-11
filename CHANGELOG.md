@@ -2,6 +2,14 @@
 
 All notable releases of [landjunge/tollgate](https://github.com/landjunge/tollgate).
 
+## 0.3.7 — 2026-08-11
+
+### Added
+- `tollgate status` / `GET /v1/status` — compact freeze · resilience · spend · attention
+- MCP `keys_desk_status`
+- Success response headers: `X-Tollgate-Provider`, `Consumer`, `Model`, `Routed-From/To`, cache/failover
+- Report includes admission freeze line
+
 ## 0.3.6 — 2026-08-11
 
 ### Added

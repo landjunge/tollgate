@@ -47,6 +47,7 @@ Repo example: [`configs/mcp-tollgate.example.json`](../configs/mcp-tollgate.exam
 |------|--------|
 | `keys_dashboard` | Grades, usage, smart route |
 | `keys_control` | Health, burn, resilience, attention (Protect·Route·Prove) |
+| `keys_desk_status` | Compact status (freeze · score · spend) |
 | `keys_resilience` | AI Resilience Score 0–100 + policy |
 | `keys_chaos_status` | Chaos injects + last DR report |
 | `keys_agent_protect_check` | Dry-run max_tool_calls / budgets for a consumer |

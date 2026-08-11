@@ -25,6 +25,7 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | `GET` | `/v1/health` | Portable + auth mode |
 | `GET` | `/v1/auth` | Auth status |
 | `GET` | `/v1/control` | Control plane JSON |
+| `GET` | `/v1/status` | Compact desk status |
 | `GET` | `/v1/resilience` | Resilience score |
 | `GET` | `/v1/chaos` | Chaos inject status |
 | `GET` | `/v1/audit` | Query deny/usage audit trail |
@@ -73,6 +74,7 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | `tollgate snapshot` | Export/import desk ops state (USB migrate) |
 | `tollgate alert` | Webhook test / event catalog |
 | `tollgate freeze` | Global admission kill switch |
+| `tollgate status` | Compact desk status one-glance |
 | `tollgate circuits` | List or reset circuit breakers |
 
 ## Concepts → code
@@ -184,6 +186,7 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | `server_v1.py` | Standalone multi-consumer HTTP surface. |
 | `service.py` | KeysService — flagship facade: inventory, dashboard, policy, ops. |
 | `snapshot.py` | Desk snapshot export / import — portable migration without guessing paths. |
+| `status.py` | Compact operator status — one glance at Protect · Route · Prove. |
 | `suggest.py` | Config suggestions from ledger patterns — propose only, never auto-apply. |
 | `usage_ledger.py` | Token / call / char ledger — daily buckets, persistent. |
 

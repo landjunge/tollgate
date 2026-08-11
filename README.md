@@ -29,6 +29,7 @@ tollgate report                     # daily Protect·Route·Prove brief
 tollgate snapshot export -o desk.tgz  # portable desk migrate
 tollgate alert test                   # webhook probe (n8n / Telegram)
 tollgate freeze --reason "panic"      # global kill switch
+tollgate status                       # one-glance desk health
 tollgate circuits reset --all         # clear breakers
 tollgate search circuit breaker     # repo map / modules
 ```
