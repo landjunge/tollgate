@@ -36,6 +36,8 @@ See [docs/PORTABLE.md](docs/PORTABLE.md). No machine-local `/Users/…` paths re
 
 ### HTTP (multi-consumer)
 
+Kurzüberblick — **aktuelle Signaturen:** `http://127.0.0.1:8787/docs` (OpenAPI/Swagger, SSoT).
+
 | Method | Path | Purpose |
 |--------|------|---------|
 | GET | `/v1/health` | Liveness + portable + auth mode |
@@ -47,6 +49,8 @@ See [docs/PORTABLE.md](docs/PORTABLE.md). No machine-local `/Users/…` paths re
 | GET/POST | `/v1/config` | policy (admin when auth on) |
 
 Header: `X-Consumer-Key: n8n` (open mode) or `n8n:<secret>` after `tollgate consumer-add n8n`.
+
+Contract tests in `tests/test_contract_v1.py` fire these paths in CI.
 
 ### MCP
 
@@ -72,7 +76,15 @@ Compat: `GNOM_WS` still works.
 - [VISION.md](docs/VISION.md)
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - [COST_LIMITS.md](docs/COST_LIMITS.md)
+- [MCP.md](docs/MCP.md)
 - [N8N.md](docs/N8N.md)
+- [PORTABLE.md](docs/PORTABLE.md)
+
+```bash
+./scripts/check_docs_drift.sh    # old paths/ports in docs
+./scripts/check_migration.sh     # green/yellow/red per doc
+pytest -q                        # includes contract + distill schema
+```
 
 ## Relation to Gnom-Hub
 

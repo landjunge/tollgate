@@ -1,0 +1,24 @@
+# pip install pre-commit && pre-commit install
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.10
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: tollgate-docs-drift
+        name: tollgate docs drift
+        entry: bash scripts/check_docs_drift.sh
+        language: system
+        pass_filenames: false
+        files: '^(docs/|README\.md|configs/)'
+
+      - id: tollgate-distill-schema
+        name: tollgate distill schema
+        entry: python -m pytest tests/test_distill_schema.py -q
+        language: system
+        pass_filenames: false
+        files: '^src/tollgate/distill/.*\.json$'

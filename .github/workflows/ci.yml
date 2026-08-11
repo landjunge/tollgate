@@ -22,7 +22,11 @@ jobs:
         run: |
           python -m pip install -U pip
           pip install -e ".[dev]"
-      - name: Pytest
+      - name: Docs drift
+        run: bash scripts/check_docs_drift.sh
+      - name: Migration ampel
+        run: bash scripts/check_migration.sh
+      - name: Pytest (unit + contract + distill)
         run: pytest -q
         env:
           TOLLGATE_HOME: ${{ runner.temp }}/tg-home
