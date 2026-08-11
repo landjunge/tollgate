@@ -27,6 +27,7 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | `GET` | `/v1/control` | Control plane JSON |
 | `GET` | `/v1/resilience` | Resilience score |
 | `GET` | `/v1/chaos` | Chaos inject status |
+| `GET` | `/v1/audit` | Query deny/usage audit trail |
 | `GET` | `/dashboard` | HTML control plane |
 | `GET` | `/v1/providers` | Provider inventory |
 | `GET` | `/v1/budget` | Budget snapshot |
@@ -60,6 +61,7 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | `tollgate doctor` | Self-diagnose install/config |
 | `tollgate suggest` | Ledger-based config proposals |
 | `tollgate search` | Search repo modules / docs / routes |
+| `tollgate audit` | Query audit trail — who was denied and why |
 
 ## Concepts → code
 
@@ -80,7 +82,7 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | Token streaming (SSE) | `src/tollgate/chat_stream.py` |
 | Provider distill JSON (SSoT) | `src/tollgate/distill/` |
 | Usage ledger (fail-closed) | `src/tollgate/usage_ledger.py` |
-| Append-only audit trail | `src/tollgate/audit_log.py` |
+| Append-only audit trail + query | `src/tollgate/audit_log.py` |
 | Consumer auth (id:secret) | `src/tollgate/consumers.py` |
 | Cost guard + high-risk providers | `src/tollgate/cost.py` |
 | keys_app.json config + validate | `src/tollgate/app_config.py` |

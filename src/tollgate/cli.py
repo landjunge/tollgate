@@ -109,6 +109,25 @@ def main(argv: list[str] | None = None) -> None:
         help="Propose routing/budget tweaks from ledger (never auto-applies)",
     )
 
+    aud = sub.add_parser(
+        "audit",
+        help="Query audit trail — who was denied and why (ops only)",
+    )
+    aud.add_argument(
+        "--event",
+        default="",
+        help="filter event (admit_deny, usage, …)",
+    )
+    aud.add_argument("--consumer", default="", help="filter consumer/agent id")
+    aud.add_argument("--provider", default="", help="filter provider id")
+    aud.add_argument("--limit", type=int, default=30, help="max rows (default 30)")
+    aud.add_argument(
+        "--summary",
+        action="store_true",
+        help="aggregates: top deny reasons + by event/consumer",
+    )
+    aud.add_argument("--json", action="store_true", help="machine-readable (default)")
+
     srch = sub.add_parser(
         "search",
         help="Search repo modules / docs / HTTP / CLI (find code without guessing paths)",
@@ -211,6 +230,26 @@ def main(argv: list[str] | None = None) -> None:
         else:
             print(format_search_text(result))
         raise SystemExit(0 if result.get("hits") else 1)
+
+    if args.cmd == "audit":
+        from tollgate.audit_log import audit_summary, query_audit
+        from tollgate.paths import pin_data_home_env
+
+        pin_data_home_env()
+        if args.summary:
+            out = audit_summary()
+            print(json.dumps(out, indent=2, default=str))
+            return
+        out = query_audit(
+            limit=int(args.limit),
+            event=args.event,
+            consumer=args.consumer,
+            provider=args.provider,
+        )
+        if args.json or True:
+            # always JSON for machine + human-friendly structure
+            print(json.dumps(out, indent=2, default=str))
+        return
 
     if args.cmd == "health":
         from tollgate import get_keys_service

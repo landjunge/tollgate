@@ -294,32 +294,23 @@ def _audit_protection_stats(*, root: Any = None, max_lines: int = 5000) -> dict[
     """Count recent admit denials / agent protection from audit.jsonl (ops only)."""
     out = {"admit_denies": 0, "agent_protection_blocks": 0, "failovers_hint": 0}
     try:
-        from tollgate.audit_log import audit_path
+        from tollgate.audit_log import audit_summary
 
-        path = audit_path(root)
-        if not path.is_file():
-            return out
-        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()[-max_lines:]
-        for ln in lines:
-            try:
-                row = json.loads(ln)
-            except Exception:  # noqa: BLE001
-                continue
-            if not isinstance(row, dict):
-                continue
-            ev = str(row.get("event") or "")
-            if ev == "admit_deny":
-                out["admit_denies"] += 1
-                extra = row.get("extra") if isinstance(row.get("extra"), dict) else {}
-                if extra.get("protection") or "agent protection" in str(row.get("error") or "").lower():
-                    out["agent_protection_blocks"] += 1
-            if ev == "usage" and row.get("extra") and isinstance(row["extra"], dict):
-                if int(row["extra"].get("failover_hops") or 0) > 1:
-                    out["failovers_hint"] += 1
+        s = audit_summary(max_scan=max_lines, root=root)
+        out["admit_denies"] = int(s.get("admit_denies") or 0)
+        out["agent_protection_blocks"] = int(s.get("agent_protection_blocks") or 0)
+        # failover hops still need line walk for extra field
+        from tollgate.audit_log import query_audit
+
+        hops = 0
+        for row in (query_audit(limit=200, event="usage", max_scan=max_lines, root=root).get("events") or []):
+            extra = row.get("extra") if isinstance(row.get("extra"), dict) else {}
+            if int(extra.get("failover_hops") or 0) > 1:
+                hops += 1
+        out["failovers_hint"] = hops
     except Exception:  # noqa: BLE001
         pass
     return out
-
 
 def _protected_lane_count() -> int:
     """How many named consumer envelopes have any hard protection field."""
@@ -367,6 +358,16 @@ def control_snapshot(*, root: Any = None) -> dict[str, Any]:
     audit = _audit_protection_stats(root=root)
     blocks = int(audit.get("agent_protection_blocks") or 0)
     denies = int(audit.get("admit_denies") or 0)
+    recent_deny_rows: list[dict[str, Any]] = []
+    audit_top: dict[str, Any] = {}
+    try:
+        from tollgate.audit_log import audit_summary, recent_denies
+
+        recent_deny_rows = recent_denies(limit=12, root=root)
+        audit_top = audit_summary(max_scan=3000, root=root)
+    except Exception:  # noqa: BLE001
+        recent_deny_rows = []
+        audit_top = {}
 
     # Attention feed (product: "3 things need attention")
     attention: list[dict[str, str]] = []
@@ -532,6 +533,14 @@ def control_snapshot(*, root: Any = None) -> dict[str, Any]:
         "consumers": consumers,
         "chaos": chaos_blob,
         "resilience": res_blob,
+        "recent_denies": recent_deny_rows,
+        "audit": {
+            "admit_denies": denies,
+            "agent_protection_blocks": blocks,
+            "top_deny_reasons": (audit_top.get("top_deny_reasons") or [])[:8],
+            "top_consumers": (audit_top.get("top_consumers") or [])[:8],
+            "by_event": audit_top.get("by_event") or {},
+        },
         "day_fraction": round(_day_fraction(), 4),
         "ts": time.time(),
     }

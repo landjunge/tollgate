@@ -202,6 +202,41 @@ KEYS_MCP_TOOLS: list[dict[str, Any]] = [
             usd_est=float(usd_est or 0),
         ),
     },
+    {
+        "name": "keys_audit",
+        "description": (
+            "Query audit trail: admit denies, usage events. "
+            "Who was stopped and why (Protect evidence). summary=true for aggregates."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "limit": {"type": "integer", "default": 40},
+                "event": {
+                    "type": "string",
+                    "description": "admit_deny | usage | empty for all",
+                    "default": "",
+                },
+                "consumer": {"type": "string", "default": ""},
+                "provider": {"type": "string", "default": ""},
+                "summary": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Return aggregates instead of event rows",
+                },
+            },
+        },
+        "handler": lambda limit=40, event="", consumer="", provider="", summary=False, **_k: (
+            __import__("tollgate.audit_log", fromlist=["audit_summary"]).audit_summary()
+            if summary
+            else __import__("tollgate.audit_log", fromlist=["query_audit"]).query_audit(
+                limit=int(limit or 40),
+                event=str(event or ""),
+                consumer=str(consumer or ""),
+                provider=str(provider or ""),
+            )
+        ),
+    },
 
     {
         "name": "keys_config_get",

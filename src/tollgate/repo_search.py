@@ -158,10 +158,10 @@ CONCEPTS: list[dict[str, Any]] = [
     },
     {
         "id": "audit",
-        "title": "Append-only audit trail",
+        "title": "Append-only audit trail + query",
         "path": "src/tollgate/audit_log.py",
-        "summary": "User/audit.jsonl — deny/spend events never rewritten.",
-        "keywords": "audit audit.jsonl append-only compliance",
+        "summary": "audit.jsonl; GET /v1/audit · tollgate audit — who was denied and why.",
+        "keywords": "audit audit.jsonl append-only compliance deny admit_deny query who why",
     },
     {
         "id": "consumers-auth",
@@ -277,6 +277,7 @@ HTTP_ROUTES: list[dict[str, str]] = [
     {"method": "GET", "path": "/v1/control", "summary": "Control plane JSON"},
     {"method": "GET", "path": "/v1/resilience", "summary": "Resilience score"},
     {"method": "GET", "path": "/v1/chaos", "summary": "Chaos inject status"},
+    {"method": "GET", "path": "/v1/audit", "summary": "Query deny/usage audit trail"},
     {"method": "GET", "path": "/dashboard", "summary": "HTML control plane"},
     {"method": "GET", "path": "/v1/providers", "summary": "Provider inventory"},
     {"method": "GET", "path": "/v1/budget", "summary": "Budget snapshot"},
@@ -317,6 +318,7 @@ CLI_COMMANDS: list[dict[str, str]] = [
     {"cmd": "doctor", "summary": "Self-diagnose install/config"},
     {"cmd": "suggest", "summary": "Ledger-based config proposals"},
     {"cmd": "search", "summary": "Search repo modules / docs / routes"},
+    {"cmd": "audit", "summary": "Query audit trail — who was denied and why"},
 ]
 
 

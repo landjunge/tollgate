@@ -49,6 +49,7 @@ Agents ────┘         HTTP + MCP + OpenAI/Anthropic drop-ins
 | `POST /v1/invoke` | admit + call + meter |
 | `GET  /v1/budget` | remaining calls/tokens/usd + consumer envelope |
 | `GET  /v1/control` | **health · consumer burn · headline** (product pane) |
+| `GET  /v1/audit` | **who was denied and why** (append-only trail query) |
 | `GET  /v1/health` | liveness + circuits |
 | `GET  /v1/providers` | inventory grades (masked) |
 | `POST /v1/chat/completions` | OpenAI drop-in |
@@ -82,6 +83,7 @@ Agents ────┘         HTTP + MCP + OpenAI/Anthropic drop-ins
 | Health-aware route | Prefer healthy/cheap automatically | **done (v0.2.2)** |
 | Prove (chaos + score) | DR tests + Resilience Score | **done (v0.2.4–0.2.6)** |
 | Safe defaults | Protect-on `_default`, metrics auth, circuit jitter | **done (v0.3.0)** |
+| Audit query | who/why denied — CLI · HTTP · dashboard · MCP | **done (v0.3.1)** |
 | Enterprise | Teams, SSO/RBAC | later |
 
 ---

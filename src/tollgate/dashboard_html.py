@@ -84,6 +84,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   <div class="dr" id="dr"><div>—</div></div>
   <h2>Needs attention</h2>
   <div class="attn" id="attention"><div>—</div></div>
+  <h2>Recent denies (Protect)</h2>
+  <table><thead><tr><th>When</th><th>Agent</th><th>Provider</th><th>Why</th></tr></thead>
+  <tbody id="denies"></tbody></table>
   <h2>Chaos test history</h2>
   <table><thead><tr><th>When</th><th>Provider</th><th>Result</th><th>OK / Fail</th></tr></thead>
   <tbody id="history"></tbody></table>
@@ -101,7 +104,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     · <a href="/v1/resilience">Resilience</a>
     · <a href="/v1/chaos">Chaos</a>
   </p>
-  <p class="promise">CLI: <code>tollgate chaos test opencode_zen --requests 5</code> · <code>tollgate resilience</code> · <code>tollgate doctor</code></p>
+  <p class="promise">CLI: <code>tollgate audit --event admit_deny</code> · <code>tollgate chaos test opencode_zen --requests 5</code> · <code>tollgate resilience</code></p>
 </main>
 <script>
 function cls(s){ if(!s) return ''; if(['healthy','ok','idle'].includes(s)) return 'ok'; if(['warn','likely_over','degraded','half_open'].includes(s)) return 'warn'; return 'bad'; }
@@ -158,6 +161,16 @@ async function load(){
   document.getElementById('attention').innerHTML = att.length
     ? att.map(a => `<div class="${a.level||''}">${a.level==='ok'?'✓':(a.level==='error'?'⛔':'⚠')} ${a.message||''}</div>`).join('')
     : '<div class="ok">✓ Nothing urgent — agents under control</div>';
+  const denies = d.recent_denies || [];
+  document.getElementById('denies').innerHTML = denies.length
+    ? denies.map(x => `
+      <tr>
+        <td>${when(x.ts)}</td>
+        <td>${x.consumer||'—'}</td>
+        <td>${x.provider||'—'}</td>
+        <td class="warn">${(x.protection ? ('['+x.protection+'] ') : '') + (x.error||x.reason||'deny')}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="4" class="ok">No admit denies in recent audit — gate is quiet</td></tr>';
   const hist = (d.chaos && d.chaos.history) || [];
   document.getElementById('history').innerHTML = hist.length
     ? hist.slice().reverse().map(h => `

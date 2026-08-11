@@ -23,7 +23,8 @@ tollgate resilience                              # AI Resilience Score
 tollgate consumer-budget n8n --max-usd-day 2 --max-tool-calls 15
 tollgate chaos test opencode_zen --requests 5
 tollgate resilience
-tollgate search circuit breaker    # repo is searchable
+tollgate audit --event admit_deny   # who was stopped and why
+tollgate search circuit breaker     # repo map / modules
 ```
 
 ## Who it's for

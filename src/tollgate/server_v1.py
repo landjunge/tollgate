@@ -78,7 +78,7 @@ _bootstrap_env()
 
 app = FastAPI(
     title="Tollgate",
-    version="0.3.0",
+    version="0.3.1",
     description=(
         "Tollgate — AI reliability & control plane. "
         "Protect · Route · Prove (chaos failover tests). "
@@ -144,7 +144,7 @@ def health() -> dict[str, Any]:
         "ok": True,
         "service": "tollgate",
         "product": "Tollgate",
-        "version": "0.3.0",
+        "version": "0.3.1",
         "extractable": True,
         "multi_consumer": True,
         "portable": path_snapshot(),
@@ -153,6 +153,7 @@ def health() -> dict[str, Any]:
         "circuits": get_circuits().snapshot()[:30],
         "metrics": "/metrics",
         "control": "/v1/control",
+        "audit": "/v1/audit",
         "dashboard": "/dashboard",
     }
 
@@ -301,6 +302,38 @@ def chaos_status_http(
 
     out = chaos_status()
     out["consumer"] = auth["consumer"]
+    return out
+
+
+@app.get("/v1/audit")
+def audit_view(
+    limit: int = Query(40, ge=1, le=500),
+    event: str = Query("", description="Filter: admit_deny | usage | …"),
+    consumer: str = Query("", description="Consumer / agent lane id"),
+    provider: str = Query(""),
+    summary: bool = Query(False, description="Return aggregates instead of event list"),
+    x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+    x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> dict[str, Any]:
+    """
+    Query append-only audit trail (denies, usage) — ops only, no secrets.
+
+    Explains *who* was stopped and *why* (Protect pillar evidence).
+    """
+    auth = _require(x_consumer_key, x_consumer_id, authorization=authorization)
+    from tollgate.audit_log import audit_summary, query_audit
+
+    if summary:
+        out = audit_summary()
+    else:
+        out = query_audit(
+            limit=limit,
+            event=event,
+            consumer=consumer,
+            provider=provider,
+        )
+    out["viewer"] = auth["consumer"]
     return out
 
 

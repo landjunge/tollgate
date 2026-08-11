@@ -10,6 +10,20 @@
 
 First command after install: **`tollgate doctor`**.
 
+## Audit trail (who was denied)
+
+Append-only file: `$TOLLGATE_HOME/User/audit.jsonl` (never rewritten).
+
+```bash
+tollgate audit --event admit_deny --limit 20
+tollgate audit --consumer n8n
+tollgate audit --summary
+curl -s 'http://127.0.0.1:8787/v1/audit?event=admit_deny&limit=20'
+curl -s 'http://127.0.0.1:8787/v1/audit?summary=true'
+```
+
+Also on the control plane: `GET /v1/control` → `recent_denies` + dashboard table.
+
 ## Metrics auth (v0.3+)
 
 | Mode | Behavior |
