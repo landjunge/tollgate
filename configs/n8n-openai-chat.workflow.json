@@ -1,0 +1,44 @@
+{
+  "name": "Tollgate OpenAI Chat (smoke)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "1",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8787/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer n8n" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"tollgate/free\",\n  \"messages\": [\n    { \"role\": \"user\", \"content\": \"Reply with exactly: N8N_TOLL_OK\" }\n  ],\n  \"max_tokens\": 32\n}",
+        "options": {}
+      },
+      "id": "2",
+      "name": "Tollgate Chat",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [280, 0]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [[{ "node": "Tollgate Chat", "type": "main", "index": 0 }]]
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "notes": "Import in n8n. If n8n is not in Docker, use http://127.0.0.1:8787/v1/chat/completions"
+  }
+}
