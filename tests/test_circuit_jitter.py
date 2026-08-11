@@ -68,6 +68,59 @@ def test_hard_failure_uses_hard_cooldown():
     assert c.cooldown_s >= 120.0
 
 
+def test_hard_cooldown_not_sticky_after_recovery(monkeypatch, tmp_path):
+    """
+    Hard open elevates cooldown_s for the OPEN window only.
+    After half-open canary success, soft cooldown is restored from defaults
+    (not permanently stuck at hard_cooldown_s in circuits.json).
+    """
+    monkeypatch.setenv("TOLLGATE_HOME", str(tmp_path))
+    (tmp_path / "User").mkdir(parents=True)
+    (tmp_path / "User" / "keys_app.json").write_text(
+        """{
+      "version": 2,
+      "circuits": {
+        "cooldown_s": 30.0,
+        "hard_cooldown_s": 300.0,
+        "jitter_min": 1.0,
+        "jitter_max": 1.0,
+        "half_open_successes_needed": 1
+      }
+    }
+    """,
+        encoding="utf-8",
+    )
+    from tollgate import app_config
+
+    app_config._CACHE = None
+    app_config._CACHE_MTIME = None
+    reset_circuits_for_tests()
+
+    c = Circuit(
+        provider="deepseek",
+        cooldown_s=30.0,
+        hard_cooldown_s=300.0,
+        failure_threshold=99,
+        half_open_successes_needed=1,
+        jitter_min=1.0,
+        jitter_max=1.0,
+    )
+    c.record_failure(message="401 invalid key", hard=True)
+    assert c.state == CircuitState.OPEN
+    assert c.cooldown_s == 300.0
+
+    # Force half-open → success closes and restores soft cooldown
+    c.state = CircuitState.HALF_OPEN
+    c.record_success()
+    assert c.state == CircuitState.CLOSED
+    assert c.cooldown_s == 30.0
+    assert c.hard_cooldown_s == 300.0
+
+    reset_circuits_for_tests()
+    app_config._CACHE = None
+    app_config._CACHE_MTIME = None
+
+
 def test_registry_applies_config_defaults(monkeypatch, tmp_path):
     monkeypatch.setenv("TOLLGATE_HOME", str(tmp_path))
     (tmp_path / "User").mkdir(parents=True)

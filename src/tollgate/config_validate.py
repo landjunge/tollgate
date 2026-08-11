@@ -116,9 +116,16 @@ def validate_config_dict(cfg: dict[str, Any]) -> tuple[dict[str, Any] | None, li
     """
     Return (normalized_dict, errors).
     errors empty ⇒ ok; normalized is model_dump when ok.
+
+    Backward compatible: configs **without** a ``circuits`` block are valid.
+    ``CircuitsModel`` / ``KeysAppConfig`` defaults apply (jitter 0.8–1.2, 30s, …).
+    Explicit ``circuits.jitter_*`` must be > 0 (enforced by CircuitsModel).
     """
+    raw_in = cfg if isinstance(cfg, dict) else {}
+    # Never require callers to have migrated keys_app.json for new circuit fields.
+    # Missing / null circuits → pydantic default_factory(CircuitsModel).
     try:
-        m = KeysAppConfig.model_validate(cfg or {})
+        m = KeysAppConfig.model_validate(raw_in or {})
     except Exception as e:  # noqa: BLE001 — collect pydantic errors
         return None, [str(e)]
     # Semantic checks beyond schema
@@ -136,11 +143,21 @@ def validate_config_dict(cfg: dict[str, Any]) -> tuple[dict[str, Any] | None, li
                 f"providers.{pid}: high-risk and enabled but max_usd_day unset/0 "
                 "(set a tight dollar cap)"
             )
-    circ = data.get("circuits") or {}
-    jmin = float(circ.get("jitter_min") or 0)
-    jmax = float(circ.get("jitter_max") or 0)
-    if jmin <= 0 or jmax <= 0:
-        errs.append("circuits: jitter_min and jitter_max must be > 0")
+    # Circuits: only double-check when the *input* provided a circuits object.
+    # Do not treat absence as error (old installs have no circuits key).
+    # After model_validate, dump always has defaults — use those, never `or 0`
+    # on missing keys (that would falsely fail empty dumps).
+    raw_circ = raw_in.get("circuits") if isinstance(raw_in.get("circuits"), dict) else None
+    if raw_circ is not None:
+        circ = data.get("circuits") or {}
+        try:
+            jmin = float(circ["jitter_min"])
+            jmax = float(circ["jitter_max"])
+        except (KeyError, TypeError, ValueError):
+            errs.append("circuits: jitter_min and jitter_max must be numeric and > 0")
+        else:
+            if jmin <= 0 or jmax <= 0:
+                errs.append("circuits: jitter_min and jitter_max must be > 0")
     return data, errs
 
 

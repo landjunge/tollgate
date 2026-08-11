@@ -58,7 +58,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "jitter_max": 1.2,
         "notes": (
             "jitter_min/max spread canary wake-ups to avoid thundering herd. "
-            "hard_cooldown_s applies on AUTH_DEAD (and other hard failures)."
+            "hard_cooldown_s elevates cooldown for the OPEN window on AUTH_DEAD "
+            "(and other hard failures); soft cooldown is restored after canary success. "
+            "Omit this whole block on old installs — defaults apply."
         ),
     },
     # Per-consumer day envelopes (n8n / gnom / …). 0 or omit = no consumer-level cap.
