@@ -21,13 +21,14 @@ import os
 from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException, Query
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from tollgate import get_keys_service, routed_chat
 from tollgate.consumers import auth_status, verify_consumer
 from tollgate.gateway.context import RequestClass, RequestContext
 from tollgate.gateway.entry import gateway_call
+from tollgate.metrics import render_prometheus
 from tollgate.openai_compat import (
     list_models_openai,
     map_tollgate_error,
@@ -121,14 +122,24 @@ def health() -> dict[str, Any]:
         "ok": True,
         "service": "tollgate",
         "product": "Tollgate",
-        "version": "0.1.2",
+        "version": "0.1.4",
         "extractable": True,
         "multi_consumer": True,
         "portable": path_snapshot(),
         "auth": auth_status(),
         "app": ks.app_status(),
         "circuits": get_circuits().snapshot()[:30],
+        "metrics": "/metrics",
     }
+
+
+@app.get("/metrics")
+def metrics() -> PlainTextResponse:
+    """Prometheus text exposition (ledger, circuits, cache, portable)."""
+    return PlainTextResponse(
+        render_prometheus(),
+        media_type="text/plain; version=0.0.4; charset=utf-8",
+    )
 
 
 @app.get("/v1/auth")
@@ -401,6 +412,7 @@ def root() -> dict[str, Any]:
         "mcp": "docs/MCP.md",
         "portable": "docs/PORTABLE.md",
         "cost_limits": "docs/COST_LIMITS.md",
+        "metrics": "/metrics",
         "v1": [
             "/v1/health",
             "/v1/auth",

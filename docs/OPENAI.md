@@ -91,3 +91,11 @@ Body follows OpenAI `{"error":{"message","type","code"}}` plus Tollgate still re
 
 - Not a full OpenAI product (vision tools, assistants, files, …)
 - Does **not** store chat history (no gateway memory)
+
+## Related surfaces
+
+| Path | Role |
+|------|------|
+| `/metrics` | Prometheus (ledger, circuits, cache) |
+| Webhook | `cost_guard.alert_webhook_url` / `TOLLGATE_ALERT_WEBHOOK` |
+| Docker | `docker compose up -d` |
