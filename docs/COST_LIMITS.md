@@ -91,14 +91,15 @@ curl -s -X POST http://127.0.0.1:8787/v1/config \
 
 `keys_config_get` / `keys_config_patch` (same deep-merge semantics).
 
-## Security note (Phase 3 still open)
+## Security note
 
 | Endpoint | Risk today |
 |----------|------------|
 | `GET /v1/providers` | Key values **masked** in inventory cards |
-| `GET`/`POST` `/v1/config` | Returns **policy** (`keys_app.json`), not `Key.txt` secrets — but still desk-sensitive (budgets, enables). **No consumer admin scope yet.** Bind to loopback; do not expose on `0.0.0.0` without auth. |
+| `GET`/`POST` `/v1/config` | Policy only (`keys_app.json`), not `Key.txt`. **Admin scope** when consumers.json is active (`consumer-add desk --admin`). |
+| Consumer envelopes | Lane caps in `consumer_envelopes`; open mode uses header **label** only |
 
-Planned: hashed consumer keys + admin scope before public multi-tenant.
+Hashed consumer keys + admin scope: ship. For multi-host: set `TOLLGATE_REQUIRE_AUTH=1` / populate consumers.json; bind loopback unless you trust the network.
 
 ## Per-consumer envelopes (n8n vs Gnom)
 
