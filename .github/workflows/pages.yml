@@ -40,7 +40,7 @@ jobs:
             echo "configured=true" >> "$GITHUB_OUTPUT"
           elif [ "$status" = "404" ]; then
             echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::GitHub Pages is not enabled for $REPO; skipping deploy."
+            echo "::notice::GitHub Pages is not enabled for $REPO, or the workflow token cannot read the Pages configuration; skipping deploy."
           else
             cat /tmp/pages.json
             echo "::error::Unexpected response while checking GitHub Pages configuration: HTTP $status"
