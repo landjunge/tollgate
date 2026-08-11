@@ -110,12 +110,57 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
   .auth-bar { font-size:.8rem; color:var(--muted); }
   .auth-bar input { background:#0f1218; border:1px solid var(--line); color:var(--fg);
     border-radius:6px; padding:.25rem .5rem; width:11rem; }
+  /* Onboarding */
+  #onboard {
+    display:none; position:fixed; inset:0; z-index:50;
+    background:rgba(8,10,14,.92); backdrop-filter:blur(10px);
+    align-items:center; justify-content:center; padding:1.25rem;
+  }
+  #onboard.open { display:flex; }
+  .ob-card {
+    width:min(440px,100%); background:var(--panel); border:1px solid var(--line);
+    border-radius:16px; padding:1.4rem 1.5rem 1.35rem;
+  }
+  .ob-steps { display:flex; gap:.4rem; margin:0 0 1.1rem; }
+  .ob-steps i {
+    flex:1; height:4px; border-radius:2px; background:var(--line);
+  }
+  .ob-steps i.on { background:var(--acc); }
+  .ob-card h1 { font-size:1.25rem; margin:0 0 .4rem; }
+  .ob-card .sub { margin-bottom:1rem; }
+  .field { margin:0 0 .85rem; }
+  .field label { display:block; font-size:.78rem; color:var(--muted); text-transform:uppercase;
+    letter-spacing:.05em; margin-bottom:.3rem; }
+  .field input, .field select {
+    width:100%; background:#0f1218; border:1px solid var(--line); color:var(--fg);
+    border-radius:8px; padding:.55rem .7rem; font:inherit;
+  }
+  .field-row { display:grid; grid-template-columns:1fr 1fr; gap:.65rem; }
+  .ob-actions { display:flex; gap:.5rem; justify-content:space-between; margin-top:1.1rem; flex-wrap:wrap; }
+  .ob-check { margin:.4rem 0; font-size:.95rem; }
+  .ob-check.ok { color:var(--ok); }
 </style>
 </head>
 <body>
+<!-- First-run: protect your first agent -->
+<div id="onboard" role="dialog" aria-label="Setup">
+  <div class="ob-card">
+    <div class="ob-steps" id="obSteps"><i class="on"></i><i></i><i></i><i></i></div>
+    <div id="obBody"></div>
+    <div class="ob-actions">
+      <button type="button" class="ghost" id="obSkip">Skip</button>
+      <div style="display:flex;gap:.5rem">
+        <button type="button" class="ghost" id="obBack" style="display:none">Back</button>
+        <button type="button" id="obNext">Continue</button>
+      </div>
+    </div>
+    <p class="muted" id="obErr" style="margin:.75rem 0 0;font-size:.85rem;display:none"></p>
+  </div>
+</div>
 <header>
   <div class="brand">TOLLGATE <span id="dayLabel"></span></div>
   <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
+    <button type="button" class="ghost" id="btnSetup" style="padding:.28rem .65rem;font-size:.75rem">Setup</button>
     <div class="auth-bar" title="Open mode: any label. Auth mode: id:secret">
       key <input id="apiKey" placeholder="desk" value="desk"/>
     </div>
@@ -591,6 +636,174 @@ $('btnChaos').onclick = async () => {
       '\n\nOpen mode: use any key. Auth mode: need admin consumer.';
   } finally {
     btn.disabled = false;
+  }
+};
+
+// ── Onboarding: protect first agent in 4 steps ──────────────────────
+const OB = {
+  step: 0,
+  name: 'support-agent',
+  maxUsdDay: 20,
+  maxUsdReq: 2,
+  maxToolCalls: 20,
+  maxRpm: 50,
+};
+
+function obDone() {
+  try { return localStorage.getItem('tollgate_onboarded') === '1'; } catch { return false; }
+}
+function setObDone() {
+  try { localStorage.setItem('tollgate_onboarded', '1'); } catch {}
+}
+function needsOnboarding(ctrl) {
+  if (obDone()) return false;
+  const list = (ctrl && ctrl.consumers) || [];
+  const anyProt = list.some(c => c.protected);
+  // also check summary consumers_protected (default envelope may count)
+  return !anyProt;
+}
+function showOnboard(show) {
+  $('onboard').classList.toggle('open', !!show);
+}
+function renderObSteps() {
+  const dots = $('obSteps').querySelectorAll('i');
+  dots.forEach((d, i) => d.classList.toggle('on', i <= OB.step));
+  $('obBack').style.display = OB.step > 0 ? '' : 'none';
+  const next = $('obNext');
+  next.textContent = OB.step === 0 ? 'Get started' : (OB.step === 3 ? 'Finish' : 'Continue');
+  const body = $('obBody');
+  $('obErr').style.display = 'none';
+
+  if (OB.step === 0) {
+    body.innerHTML = `
+      <h1>Welcome to Tollgate</h1>
+      <p class="sub">Let's protect your first AI agent — not configure 50 gateways.</p>
+      <div class="ob-check ok">✓ Safety layer between agents and the internet</div>
+      <div class="ob-check">1 · Name the agent</div>
+      <div class="ob-check">2 · Set protection (budget + tool loops)</div>
+      <div class="ob-check">3 · Prove it works</div>
+      <p class="muted" style="margin-top:1rem;font-size:.85rem">
+        API keys stay in <code>Key.txt</code> (optional for the loop-block test).
+      </p>`;
+  } else if (OB.step === 1) {
+    body.innerHTML = `
+      <h1>Who are we protecting?</h1>
+      <p class="sub">Application / agent lane name (consumer id).</p>
+      <div class="field">
+        <label>Application name</label>
+        <input id="obName" value="${OB.name}" placeholder="support-agent"/>
+      </div>`;
+  } else if (OB.step === 2) {
+    body.innerHTML = `
+      <h1>Set protection</h1>
+      <p class="sub">Hard stops before the invoice. You can tighten later.</p>
+      <div class="field-row">
+        <div class="field"><label>Daily budget ($)</label>
+          <input id="obDay" type="number" min="0" step="0.5" value="${OB.maxUsdDay}"/></div>
+        <div class="field"><label>Max $ / task</label>
+          <input id="obReq" type="number" min="0" step="0.1" value="${OB.maxUsdReq}"/></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Max tool calls</label>
+          <input id="obTools" type="number" min="1" step="1" value="${OB.maxToolCalls}"/></div>
+        <div class="field"><label>Max requests / min</label>
+          <input id="obRpm" type="number" min="1" step="1" value="${OB.maxRpm}"/></div>
+      </div>`;
+  } else {
+    body.innerHTML = `
+      <h1>You're protected</h1>
+      <p class="sub">Lane <b id="obFinalName">${OB.name}</b> will get hard limits.</p>
+      <div class="ob-check ok">✓ Budget configured</div>
+      <div class="ob-check ok">✓ Tool-loop limit enabled</div>
+      <div class="ob-check ok">✓ Rate limit enabled</div>
+      <p class="muted" style="margin-top:.85rem;font-size:.9rem">
+        Next: run a failover test under <b>Prove</b>, or
+        <code>tollgate demo --skip-chaos</code> for the tool-loop Aha.
+      </p>`;
+  }
+}
+
+function readObFields() {
+  if (OB.step === 1) {
+    const n = ($('obName') && $('obName').value || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+    if (!n) throw new Error('Enter an application name');
+    OB.name = n.slice(0, 64);
+  }
+  if (OB.step === 2) {
+    OB.maxUsdDay = Math.max(0, Number($('obDay').value) || 0);
+    OB.maxUsdReq = Math.max(0, Number($('obReq').value) || 0);
+    OB.maxToolCalls = Math.max(0, parseInt($('obTools').value, 10) || 0);
+    OB.maxRpm = Math.max(0, parseInt($('obRpm').value, 10) || 0);
+    if (!OB.maxUsdDay && !OB.maxToolCalls) {
+      throw new Error('Set at least a daily budget or max tool calls');
+    }
+  }
+}
+
+async function applyProtection() {
+  const env = {};
+  if (OB.maxUsdDay > 0) env.max_usd_day = OB.maxUsdDay;
+  if (OB.maxUsdReq > 0) env.max_usd_request = OB.maxUsdReq;
+  if (OB.maxToolCalls > 0) env.max_tool_calls = OB.maxToolCalls;
+  if (OB.maxRpm > 0) env.max_requests_minute = OB.maxRpm;
+  // Keep free_llm + chat usable for desk demos
+  env.allowed_intents = ['free_llm', 'llm'];
+  env.allowed_ops = ['chat', 'status', 'search'];
+  await api('/v1/config', {
+    method: 'POST',
+    body: JSON.stringify({ consumer_envelopes: { [OB.name]: env } }),
+  });
+}
+
+$('obSkip').onclick = () => {
+  setObDone();
+  showOnboard(false);
+};
+$('obBack').onclick = () => {
+  if (OB.step > 0) { OB.step -= 1; renderObSteps(); }
+};
+$('obNext').onclick = async () => {
+  try {
+    readObFields();
+  } catch (e) {
+    $('obErr').style.display = '';
+    $('obErr').textContent = e.message;
+    return;
+  }
+  if (OB.step < 3) {
+    OB.step += 1;
+    renderObSteps();
+    return;
+  }
+  // Finish: write protection
+  $('obNext').disabled = true;
+  try {
+    await applyProtection();
+    setObDone();
+    showOnboard(false);
+    await loadAll();
+    location.hash = '#agents';
+    onHash();
+  } catch (e) {
+    $('obErr').style.display = '';
+    $('obErr').textContent = 'Could not save protection: ' + e.message;
+  } finally {
+    $('obNext').disabled = false;
+  }
+};
+$('btnSetup').onclick = () => {
+  OB.step = 0;
+  renderObSteps();
+  showOnboard(true);
+};
+
+const _loadAllOrig = loadAll;
+loadAll = async function() {
+  await _loadAllOrig();
+  if (CTRL && needsOnboarding(CTRL)) {
+    OB.step = 0;
+    renderObSteps();
+    showOnboard(true);
   }
 };
 

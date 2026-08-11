@@ -2,6 +2,14 @@
 
 All notable releases of [landjunge/tollgate](https://github.com/landjunge/tollgate).
 
+## 1.0.4 — 2026-08-11
+
+### WebUI — first-agent onboarding
+- 4-step wizard: welcome → name agent → protection → done
+- Writes `consumer_envelopes` via `/v1/config` (no CLI required for first lane)
+- Auto-shows when no protected agents; **Setup** button to re-run
+- Still five main screens — Settings stay out of nav
+
 ## 1.0.3 — 2026-08-11
 
 ### WebUI — Control Room (simple, not dense)
