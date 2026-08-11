@@ -109,6 +109,31 @@ def main(argv: list[str] | None = None) -> None:
         help="Propose routing/budget tweaks from ledger (never auto-applies)",
     )
 
+    srch = sub.add_parser(
+        "search",
+        help="Search repo modules / docs / HTTP / CLI (find code without guessing paths)",
+    )
+    srch.add_argument(
+        "query",
+        nargs="*",
+        default=[],
+        help="search terms (e.g. circuit breaker); omit with --map",
+    )
+    srch.add_argument(
+        "--kind",
+        action="append",
+        dest="kinds",
+        default=None,
+        help="filter: concept module doc http cli config script (repeatable)",
+    )
+    srch.add_argument("--limit", type=int, default=15, help="max hits (default 15)")
+    srch.add_argument("--json", action="store_true", help="machine-readable output")
+    srch.add_argument(
+        "--map",
+        action="store_true",
+        help="print full repo map markdown (docs/MAP.md body)",
+    )
+
     args = p.parse_args(argv)
 
     if args.cmd == "mcp" or (args.cmd is None and len(sys.argv) == 1):
@@ -162,6 +187,30 @@ def main(argv: list[str] | None = None) -> None:
         pin_data_home_env()
         print(json.dumps(routing_suggestions(), indent=2, default=str))
         return
+
+    if args.cmd == "search":
+        from tollgate.repo_search import format_search_text, map_markdown, search
+
+        if args.map:
+            print(map_markdown())
+            return
+        q = " ".join(args.query or []).strip()
+        if not q:
+            print(
+                "usage: tollgate search <query> [--kind module] [--json]\n"
+                "       tollgate search --map\n"
+                "examples: tollgate search circuit breaker\n"
+                "          tollgate search budget --kind concept\n"
+                "map: docs/MAP.md",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
+        result = search(q, limit=int(args.limit), kinds=args.kinds)
+        if args.json:
+            print(json.dumps(result, indent=2, default=str))
+        else:
+            print(format_search_text(result))
+        raise SystemExit(0 if result.get("hits") else 1)
 
     if args.cmd == "health":
         from tollgate import get_keys_service

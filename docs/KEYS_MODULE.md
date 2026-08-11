@@ -1,5 +1,7 @@
 # Tollgate module map
 
+> Prefer **[MAP.md](MAP.md)** + `tollgate search <query>` for a living, searchable index.
+
 Multi-consumer **secrets, limits, token ledger, routing, auto-update**.
 
 Not “is the string set?” — researched APIs, grades A–F, call/token/char budgets, smart failover.

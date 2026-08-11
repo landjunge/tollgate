@@ -1,0 +1,66 @@
+# Tollgate
+
+> AI Reliability & Control Plane — Protect · Route · Prove.
+> Self-hosted admission, budgets, agent-loop hard stops, health routing, chaos/DR proof.
+> Not another LLM gateway catalog.
+
+## Start here
+
+- [README](README.md)
+- [5-minute setup](docs/GETTING_STARTED.md)
+- [Product wedge](docs/PRODUCT.md)
+- [Repo map (searchable index)](docs/MAP.md)
+- [Architecture](docs/ARCHITECTURE.md)
+
+## Find anything
+
+```bash
+tollgate search <query>           # modules, docs, HTTP, CLI
+tollgate search circuit breaker
+tollgate search budget --kind concept
+tollgate search /v1/messages --kind http
+tollgate search --map             # full markdown map
+```
+
+## Core code
+
+- HTTP surface: `src/tollgate/server_v1.py` (:8787 `/v1/*`)
+- Admission: `src/tollgate/gateway/admit.py`
+- Circuits: `src/tollgate/gateway/circuit.py`
+- Router: `src/tollgate/router.py`
+- Agent protection: `src/tollgate/agent_guard.py`
+- OpenAI drop-in: `src/tollgate/openai_compat.py`
+- Anthropic drop-in: `src/tollgate/anthropic_compat.py`
+- Streaming: `src/tollgate/chat_stream.py`
+- Control plane: `src/tollgate/control_plane.py`
+- Chaos/DR: `src/tollgate/chaos.py`
+- Resilience score: `src/tollgate/resilience.py`
+- Provider truth (data): `src/tollgate/distill/*.json`
+- CLI: `src/tollgate/cli.py`
+- Repo search: `src/tollgate/repo_search.py`
+
+## HTTP
+
+| Method | Path |
+|--------|------|
+| GET | /v1/health |
+| GET | /v1/control |
+| GET | /v1/resilience |
+| GET | /dashboard |
+| POST | /v1/route |
+| POST | /v1/invoke |
+| GET/POST | /v1/config |
+| GET | /v1/models |
+| POST | /v1/chat/completions |
+| POST | /v1/messages |
+| GET | /metrics |
+
+## Docs
+
+- docs/OPENAI.md · docs/ANTHROPIC.md · docs/MCP.md · docs/N8N.md
+- docs/COST_LIMITS.md · docs/OPERATIONS.md · docs/PORTABLE.md · docs/STABILITY.md
+
+## Optional
+
+- n8n node: `n8n-nodes-tollgate/`
+- workflows: `configs/n8n-*.workflow.json`

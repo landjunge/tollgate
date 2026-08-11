@@ -6,17 +6,28 @@
 | Doc | Topic |
 |-----|--------|
 | [GETTING_STARTED.md](GETTING_STARTED.md) | **5-minute setup** |
+| [MAP.md](MAP.md) | **Repo map — modules, HTTP, CLI, concepts** |
 | [VISION.md](VISION.md) | Product lock, multi-consumer |
 | [PRODUCT.md](PRODUCT.md) | Protect · Route · Prove positioning |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 7 layers, circuits, taxonomy |
 | [COST_LIMITS.md](COST_LIMITS.md) | Google off, budgets, `/v1/config` |
 | [MCP.md](MCP.md) | stdio MCP + HTTP `/v1/*` |
 | [N8N.md](N8N.md) | n8n as consumer |
-| [KEYS_MODULE.md](KEYS_MODULE.md) | Module map (legacy name) |
+| [KEYS_MODULE.md](KEYS_MODULE.md) | Module map (legacy; prefer MAP.md) |
 | [PORTABLE.md](PORTABLE.md) | USB stick / no host paths |
 | [OPENAI.md](OPENAI.md) | OpenAI drop-in base_url |
 | [STABILITY.md](STABILITY.md) | Scale, multi-worker, schema version, deprecation |
 | [OPERATIONS.md](OPERATIONS.md) | doctor, deploy, auto-maintenance boundary |
+
+## Search the repo
+
+```bash
+tollgate search circuit breaker
+tollgate search budget --kind concept
+tollgate search --map
+```
+
+Also: root [`llms.txt`](../llms.txt) for agents.
 
 ## Rule (no more code thrash)
 

@@ -15,13 +15,15 @@ tollgate resilience                              # AI Resilience Score
 > As soon as you run **more than one** AI tool against paid keys, you need an instance that never puts secrets in agent memory and never spends more than you allowed — no matter which tool calls.
 
 **Feel it:** `http://127.0.0.1:8787/dashboard` · JSON: `GET /v1/control`  
-**5 minutes:** [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)
+**5 minutes:** [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)  
+**Find code:** `tollgate search <query>` · [docs/MAP.md](docs/MAP.md) · [llms.txt](llms.txt)
 
 ```bash
 ./scripts/desk-ready.sh
 tollgate consumer-budget n8n --max-usd-day 2 --max-tool-calls 15
 tollgate chaos test opencode_zen --requests 5
 tollgate resilience
+tollgate search circuit breaker    # repo is searchable
 ```
 
 ## Who it's for
@@ -159,9 +161,14 @@ Portable/USB: [docs/PORTABLE.md](docs/PORTABLE.md).
 
 ## Docs & quality gates
 
-- [OPENAI.md](docs/OPENAI.md) · [VISION.md](docs/VISION.md) · [ARCHITECTURE.md](docs/ARCHITECTURE.md) · [N8N.md](docs/N8N.md)
+- **[MAP.md](docs/MAP.md)** — full module / HTTP / CLI index  
+- [OPENAI.md](docs/OPENAI.md) · [VISION.md](docs/VISION.md) · [ARCHITECTURE.md](docs/ARCHITECTURE.md) · [N8N.md](docs/N8N.md)  
+- [llms.txt](llms.txt) — machine-readable entry for agents
 
 ```bash
+tollgate search budget              # concepts + modules + docs
+tollgate search /v1/messages --kind http
+tollgate search --map               # print map to stdout
 ./scripts/check_docs_drift.sh
 ./scripts/check_migration.sh
 pytest -q
