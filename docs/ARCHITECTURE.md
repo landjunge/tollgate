@@ -111,15 +111,26 @@ Documented so agents do not assume “own repo ⇒ safe on 0.0.0.0”.
 
 ## Gateway memory / cache (L7+)
 
+**Cache yes (narrow). Memory no.** Enforced in code (`ops_boundary`, `response_cache`).
+
 Operational only — shared across Gnom, n8n, MCP clients:
 
-- **Append-only events** (who/what/when/$)  
+- **Append-only ledger** (provider, tokens, usd, consumer id, op, timestamp) — **no `content`/`message`/`prompt`**
 - **Aggregates** (day/consumer/provider)  
-- **Circuit + dead-key state** (process-safe store)  
-- **Optional response cache** (hash of provider+op+args, TTL; never for high-risk Google by default)  
-- **Health scores** (EWMA success / 429 / latency)
+- **Circuit + dead-key state**  
+- **Response cache** (`response_cache`): TTL for `search` / `status` / `quota` / `models` only; request_class `free|batch|system`; key includes **consumer**; never high-risk; never interactive by default  
+- **Health / inventory** short TTL (already via `use_cache`)
 
-Do **not** store user wishes, chat transcripts, or project files here.
+Do **not** store user wishes, chat transcripts, or project files here.  
+Agent memory stays on the **consumer** (Gnom/n8n/Cursor). Tollgate must not become a second source of truth for conversation state.
+
+Code guards:
+
+| Module | Role |
+|--------|------|
+| `ops_boundary.sanitize_meta` | strips forbidden fields from ledger meta |
+| `ops_boundary.assert_no_memory_fields` | test/CI invariant on usage day JSON |
+| `response_cache` | policy + consumer-scoped keys |
 
 ## Implementation order
 

@@ -102,7 +102,14 @@ def record_usage(
     root: Path | None = None,
     meta: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Atomic-ish append to today's ledger."""
+    """
+    Atomic-ish append to today's ledger.
+
+    Operational counters only. ``meta`` is sanitized — no chat/transcript/content
+    (see ops_boundary.sanitize_meta). This is not agent memory.
+    """
+    from tollgate.ops_boundary import sanitize_meta
+
     path = usage_path(root)
     tin = max(0, int(tokens_in or 0))
     tout = max(0, int(tokens_out or 0))
@@ -115,6 +122,7 @@ def record_usage(
             usd_v = estimate_usd(provider_id, tokens_in=tin, tokens_out=tout)
         except Exception:  # noqa: BLE001
             usd_v = 0.0
+    safe_meta = sanitize_meta(meta)
     with _LOCK:
         data = load_usage(root=root)
         if data.get("day") != _today():
@@ -137,10 +145,12 @@ def record_usage(
         slot["chars"] = int(slot.get("chars") or 0) + ch
         slot["usd"] = float(slot.get("usd") or 0.0) + usd_v
         by_op[op] = slot
-        if meta:
-            p["last_meta"] = {k: meta[k] for k in list(meta)[:12]}
+        if safe_meta:
+            p["last_meta"] = safe_meta
+        # strip any previously smuggled forbidden keys
+        for bad in ("content", "message", "messages", "prompt", "transcript", "query"):
+            p.pop(bad, None)
         providers[provider_id] = p
-
         tot = data.setdefault("totals", _empty_day()["totals"])
         tot["calls"] = int(tot.get("calls") or 0) + 1
         tot["tokens_in"] = int(tot.get("tokens_in") or 0) + tin

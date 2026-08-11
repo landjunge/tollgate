@@ -51,9 +51,28 @@ def gateway_call(
             "op": op,
         }
 
+    # Operational response cache (not agent memory) — free/batch search & probes only
+    cache_key = ""
+    try:
+        from tollgate.response_cache import cache_eligible, get as cache_get, make_key, put as cache_put
+
+        if cache_eligible(provider, op, ctx=ctx):
+            consumer = str(ctx.agent_id or "")
+            cache_key = make_key(provider, op, kwargs, consumer=consumer)
+            hit = cache_get(cache_key)
+            if hit is not None:
+                out = dict(hit)
+                out["cache_hit"] = True
+                out.setdefault("admit", decision.as_dict())
+                out.setdefault("request", ctx.as_dict())
+                if decision.soft_degrade:
+                    out["soft_degrade"] = True
+                    out["soft_degrade_reason"] = decision.reason
+                return out
+    except Exception:  # noqa: BLE001
+        cache_key = ""
+
     ks = get_keys_service()
-    # system probes: skip recording billable cost ops if needed — service still records;
-    # pass billable flag via meta when we enhance ledger
     try:
         result = ks.call(
             provider,
@@ -87,18 +106,31 @@ def gateway_call(
 
     result.setdefault("admit", decision.as_dict())
     result.setdefault("request", ctx.as_dict())
+    result["cache_hit"] = False
 
     ec = classify_result(result)
     result["error_class"] = ec.value
     circuits = get_circuits()
     if ec == ErrorClass.OK and result.get("ok") is not False:
         circuits.success(provider, model=mid)
+        if cache_key:
+            try:
+                from tollgate.response_cache import put as cache_put
+
+                # store without admit/request to keep cache pure
+                to_store = {
+                    k: v
+                    for k, v in result.items()
+                    if k not in ("admit", "request", "cache_hit")
+                }
+                cache_put(cache_key, to_store)
+            except Exception:  # noqa: BLE001
+                pass
     elif ec == ErrorClass.AUTH_DEAD:
         circuits.failure(provider, model=mid, message=str(result.get("error")), hard=True)
     elif ec in (ErrorClass.RATE_LIMIT, ErrorClass.PROVIDER_DOWN):
         circuits.failure(provider, model=mid, message=str(result.get("error")), hard=False)
     elif ec == ErrorClass.EDGE_BLOCK:
-        # do not burn key circuit the same way — short open on provider only
         circuits.failure(provider, model=mid, message="EDGE_BLOCK", hard=False)
 
     if decision.soft_degrade:

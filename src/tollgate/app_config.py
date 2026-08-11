@@ -51,6 +51,21 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "live_probes": False,  # live probes on interval (Brave costs quota if true)
         "refresh_models": True,
     },
+    # Operational response cache only — never agent memory / interactive chat default
+    "response_cache": {
+        "enabled": True,
+        "ttl_s": 300,
+        "max_entries": 256,
+        "ops": ["search", "status", "quota", "models", "credits", "research"],
+        "request_classes": ["free", "batch", "system"],
+        "allow_interactive": False,
+        "include_consumer_in_key": True,
+        "notes": (
+            "Caches idempotent free/batch probes and search. "
+            "Not for interactive chat. Never high-risk providers. "
+            "Key = provider|op|args|consumer. No chat transcripts in ledger."
+        ),
+    },
     "routing": {
         # first match that is enabled + under limits + ready wins
         # never put google in free_llm by default
