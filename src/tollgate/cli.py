@@ -8,7 +8,10 @@ import sys
 
 
 def main(argv: list[str] | None = None) -> None:
-    p = argparse.ArgumentParser(prog="tollgate", description="Tollgate — API admission gateway")
+    p = argparse.ArgumentParser(
+        prog="tollgate",
+        description="Tollgate — AI reliability & control plane for agents",
+    )
     sub = p.add_subparsers(dest="cmd")
     sub.add_parser("serve", help="Run HTTP server (uvicorn)")
     sub.add_parser("mcp", help="Run MCP stdio server")
@@ -17,6 +20,29 @@ def main(argv: list[str] | None = None) -> None:
         "control",
         help="Control plane snapshot (provider health + consumer burn + headline)",
     )
+    sub.add_parser(
+        "resilience",
+        help="AI Resilience Score (0–100) + warnings",
+    )
+    ch = sub.add_parser(
+        "chaos",
+        help="Chaos / DR: inject provider outage or run failover test",
+    )
+    ch.add_argument(
+        "action",
+        choices=["status", "start", "stop", "test"],
+        help="status | start | stop | test",
+    )
+    ch.add_argument("provider", nargs="?", default="", help="provider id (e.g. opencode_zen)")
+    ch.add_argument(
+        "--duration",
+        default="5m",
+        help="inject duration: 30s, 5m, 1h (default 5m)",
+    )
+    ch.add_argument("--requests", type=int, default=5, help="probes for chaos test")
+    ch.add_argument("--intent", default="free_llm", help="route intent for test")
+    ch.add_argument("--live-chat", action="store_true", help="also send tiny chats (costs)")
+    ch.add_argument("--all", action="store_true", help="stop all injects")
     sub.add_parser("paths", help="Print portable path snapshot")
 
     cadd = sub.add_parser("consumer-add", help="Add HTTP consumer (id:secret)")
@@ -165,6 +191,75 @@ def main(argv: list[str] | None = None) -> None:
 
         pin_data_home_env()
         print(json.dumps(control_snapshot(), indent=2, default=str))
+        return
+
+    if args.cmd == "resilience":
+        from tollgate.paths import pin_data_home_env
+        from tollgate.resilience import resilience_score
+
+        pin_data_home_env()
+        print(json.dumps(resilience_score(), indent=2, default=str))
+        return
+
+    if args.cmd == "chaos":
+        from tollgate.chaos import run_failover_test, start_chaos, status, stop_chaos
+        from tollgate.paths import pin_data_home_env
+
+        pin_data_home_env()
+
+        def _parse_dur(s: str) -> float:
+            s = (s or "5m").strip().lower()
+            if s.endswith("ms"):
+                return max(0.001, float(s[:-2]) / 1000.0)
+            if s.endswith("s"):
+                return max(1.0, float(s[:-1]))
+            if s.endswith("m"):
+                return max(1.0, float(s[:-1]) * 60.0)
+            if s.endswith("h"):
+                return max(1.0, float(s[:-1]) * 3600.0)
+            return max(1.0, float(s))
+
+        if args.action == "status":
+            print(json.dumps(status(), indent=2, default=str))
+            return
+        if args.action == "stop":
+            print(
+                json.dumps(
+                    stop_chaos(args.provider, all_injects=bool(args.all)),
+                    indent=2,
+                    default=str,
+                )
+            )
+            return
+        if args.action == "start":
+            if not args.provider:
+                print(json.dumps({"ok": False, "error": "provider required"}))
+                raise SystemExit(1)
+            print(
+                json.dumps(
+                    start_chaos(
+                        args.provider,
+                        duration_s=_parse_dur(args.duration),
+                        reason="cli",
+                    ),
+                    indent=2,
+                    default=str,
+                )
+            )
+            return
+        if args.action == "test":
+            if not args.provider:
+                print(json.dumps({"ok": False, "error": "provider required"}))
+                raise SystemExit(1)
+            rep = run_failover_test(
+                args.provider,
+                intent=args.intent,
+                requests=int(args.requests),
+                duration_s=_parse_dur(args.duration),
+                live_chat=bool(args.live_chat),
+            )
+            print(json.dumps(rep, indent=2, default=str))
+            raise SystemExit(0 if rep.get("survived") or rep.get("ok") else 1)
         return
 
     if args.cmd == "paths":

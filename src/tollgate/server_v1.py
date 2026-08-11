@@ -78,10 +78,10 @@ _bootstrap_env()
 
 app = FastAPI(
     title="Tollgate",
-    version="0.2.3",
+    version="0.2.4",
     description=(
-        "Tollgate — safety & control layer for AI agents. "
-        "Protects from outages, runaway cost, bad model choices. "
+        "Tollgate — AI reliability & control plane. "
+        "Protect · Route · Prove (chaos failover tests). "
         "https://github.com/landjunge/tollgate"
     ),
 )
@@ -139,7 +139,7 @@ def health() -> dict[str, Any]:
         "ok": True,
         "service": "tollgate",
         "product": "Tollgate",
-        "version": "0.2.3",
+        "version": "0.2.4",
         "extractable": True,
         "multi_consumer": True,
         "portable": path_snapshot(),
@@ -183,12 +183,48 @@ def control_plane_view(
     """
     Product control pane: provider health, consumer burn, headline.
 
-    Reliability · Cost · Control — not a secret dump.
+    Protect · Route · Prove — not a secret dump.
     """
     auth = _require(x_consumer_key, x_consumer_id, authorization=authorization)
     from tollgate.control_plane import control_snapshot
 
     out = control_snapshot()
+    out["consumer"] = auth["consumer"]
+    try:
+        from tollgate.resilience import resilience_score
+
+        out["resilience"] = resilience_score()
+    except Exception:  # noqa: BLE001
+        pass
+    return out
+
+
+@app.get("/v1/resilience")
+def resilience_view(
+    x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+    x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> dict[str, Any]:
+    """AI Resilience Score 0–100 + warnings (Prove pillar)."""
+    auth = _require(x_consumer_key, x_consumer_id, authorization=authorization)
+    from tollgate.resilience import resilience_score
+
+    out = resilience_score()
+    out["consumer"] = auth["consumer"]
+    return out
+
+
+@app.get("/v1/chaos")
+def chaos_status_http(
+    x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+    x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> dict[str, Any]:
+    """Active chaos injects + last failover test report."""
+    auth = _require(x_consumer_key, x_consumer_id, authorization=authorization)
+    from tollgate.chaos import status as chaos_status
+
+    out = chaos_status()
     out["consumer"] = auth["consumer"]
     return out
 
@@ -659,6 +695,8 @@ def root() -> dict[str, Any]:
         "anthropic_base_url": "/",
         "anthropic": ["/v1/messages"],
         "control": "/v1/control",
+        "resilience": "/v1/resilience",
+        "chaos": "/v1/chaos",
         "dashboard": "/dashboard",
         "vision": "docs/VISION.md",
         "product": "docs/PRODUCT.md",
@@ -671,6 +709,8 @@ def root() -> dict[str, Any]:
             "/v1/health",
             "/v1/auth",
             "/v1/control",
+            "/v1/resilience",
+            "/v1/chaos",
             "/v1/models",
             "/v1/chat/completions",
             "/v1/messages",

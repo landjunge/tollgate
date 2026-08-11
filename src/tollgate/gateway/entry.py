@@ -34,6 +34,21 @@ def gateway_call(
 
     ctx = ctx or RequestContext()
     mid = model or str(kwargs.get("model") or "")
+    # Chaos inject: fail closed for targeted provider (DR / chaos tests)
+    try:
+        from tollgate.chaos import is_provider_in_chaos
+
+        if is_provider_in_chaos(provider):
+            return {
+                "ok": False,
+                "error": f"chaos inject: provider {provider} simulated unavailable",
+                "error_class": "PROVIDER_DOWN",
+                "provider": provider,
+                "op": op,
+                "chaos": True,
+            }
+    except Exception:  # noqa: BLE001
+        pass
     decision = admit(
         provider,
         op=op,

@@ -196,6 +196,17 @@ def route(
             entry["skip"] = "disabled in keys_app.json"
             tried.append(entry)
             continue
+        # Chaos / DR inject — treat as unavailable (prove failover)
+        try:
+            from tollgate.chaos import is_provider_in_chaos
+
+            if is_provider_in_chaos(pid):
+                entry["skip"] = "chaos inject — provider simulated down"
+                entry["chaos"] = True
+                tried.append(entry)
+                continue
+        except Exception:  # noqa: BLE001
+            pass
         if not card.get("ready"):
             entry["skip"] = card.get("error") or "not ready"
             entry["grade"] = card.get("grade")

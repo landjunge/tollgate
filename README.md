@@ -2,10 +2,15 @@
 
 **Pay the toll — or don't call.**
 
-> **The safety and control layer for AI agents.**
+> **AI Reliability & Control Plane** — Protect · Route · **Prove**.
 
-Protects apps from **provider outages**, **runaway costs**, and **bad model choices**.  
-Not another LLM gateway — Reliability · Cost · Agent protection · Control.
+Protects apps from **provider outages**, **runaway costs**, and **agent loops** — and **proves** failover works (chaos tests).  
+Not another LLM gateway.
+
+```bash
+tollgate chaos test opencode_zen --requests 10   # DR proof
+tollgate resilience                              # AI Resilience Score
+```
 
 > As soon as you run **more than one** AI tool against paid keys, you need an instance that never puts secrets in agent memory and never spends more than you allowed — no matter which tool calls.
 

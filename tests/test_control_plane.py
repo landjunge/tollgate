@@ -63,7 +63,7 @@ def test_provider_health_and_consumer_burn(monkeypatch, tmp_path):
     snap = control_snapshot()
     assert snap["ok"] is True
     assert "headline" in snap
-    assert snap["pillars"] == ["reliability", "cost", "agent_protection"]
+    assert snap["pillars"] == ["protect", "route", "prove"]
     assert "attention" in snap
     assert len(snap["providers"]) >= 2
     assert len(snap["consumers"]) >= 1

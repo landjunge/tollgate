@@ -429,6 +429,44 @@ def control_snapshot(*, root: Any = None) -> dict[str, Any]:
                 "message": "No agent lanes have hard budgets/limits — set consumer-budget",
             }
         )
+    try:
+        from tollgate.chaos import status as chaos_status
+
+        ch = chaos_status()
+        if ch.get("active"):
+            for inj in ch["active"][:3]:
+                attention.append(
+                    {
+                        "level": "warn",
+                        "code": "chaos_active",
+                        "message": (
+                            f"Chaos inject active on «{inj.get('provider')}» "
+                            f"(until {inj.get('until')})"
+                        ),
+                    }
+                )
+        last = ch.get("last_report") if isinstance(ch.get("last_report"), dict) else None
+        if last and last.get("survived"):
+            attention.append(
+                {
+                    "level": "ok",
+                    "code": "chaos_ok",
+                    "message": (
+                        f"Last DR test: {last.get('chaos_provider')} outage survived "
+                        f"({last.get('successful')}/{last.get('requests_tested')} routes)"
+                    ),
+                }
+            )
+        elif not last:
+            attention.append(
+                {
+                    "level": "warn",
+                    "code": "chaos_untested",
+                    "message": "No failover chaos test yet — tollgate chaos test <provider>",
+                }
+            )
+    except Exception:  # noqa: BLE001
+        pass
 
     headline = (
         f"${day_usd:.2f} spent today · "
@@ -442,11 +480,14 @@ def control_snapshot(*, root: Any = None) -> dict[str, Any]:
     return {
         "ok": True,
         "product": "Tollgate",
-        "tagline": "LiteLLM connects models. Helicone shows traffic. Tollgate keeps agents in line.",
+        "tagline": (
+            "Prove your AI app survives a provider outage — "
+            "Protect · Route · Prove"
+        ),
         "promise": (
             "Prevents AI agents from becoming unreliable, expensive and uncontrollable."
         ),
-        "pillars": ["reliability", "cost", "agent_protection"],
+        "pillars": ["protect", "route", "prove"],
         "day": usage.get("day"),
         "updated_at": usage.get("updated_at") or datetime.now(timezone.utc).isoformat(),
         "headline": headline,

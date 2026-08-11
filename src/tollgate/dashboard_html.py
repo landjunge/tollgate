@@ -67,12 +67,13 @@ async function load(){
   document.getElementById('tagline').textContent = d.tagline || d.promise || '';
   if (d.promise) document.getElementById('promise').textContent = d.promise;
   const s = d.summary || {};
+  const res = d.resilience || {};
   document.getElementById('stats').innerHTML = [
+    ['Resilience', (res.score!=null?res.score:'—')+'/100'],
     ['Spent today', '$'+(s.usd||0).toFixed(2)],
     ['Agent stops', s.agent_protection_blocks ?? 0],
     ['Provider errors', s.errors ?? 0],
     ['Agents protected', s.consumers_protected ?? 0],
-    ['Circuits open', s.circuits_open ?? 0],
     ['Calls', s.calls ?? 0]
   ].map(([k,v]) => `<div class="stat"><b>${v}</b><span>${k}</span></div>`).join('');
   const att = d.attention || [];

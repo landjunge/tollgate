@@ -2,105 +2,89 @@
 
 ## Core promise
 
-> **Tollgate prevents AI agents from becoming unreliable, expensive and uncontrollable.**
+> **Prove that your AI application survives a provider outage — and keep agents from becoming expensive and uncontrollable.**
 
-Not: “access to many LLM providers.”  
-Category:
+**Product name framing:**
 
-> **The simplest self-hosted AI control plane for agents.**
+> **Tollgate — AI Reliability & Control Plane**
 
-Sibling products (LiteLLM, Portkey, Helicone, Bifrost, Envoy AI Gateway, Cloudflare AI Gateway) prove the **market** exists. They also prove that **“AI Gateway” alone is crowded**.
+Three killer features:
 
-Tollgate does **not** win by supporting 30 more providers.
+| # | Pillar | Meaning |
+|---|--------|---------|
+| **1 Protect** | Budget, rate, token, tool-loop hard stops | Agents cannot burn the invoice |
+| **2 Route** | Health-aware failover + explain | Traffic moves when providers die |
+| **3 Prove** | Chaos / DR tests + Resilience Score | Evidence for CTOs, not just config |
 
-## Competitive map (why not clone LiteLLM)
+Not another LiteLLM. Not only observability.
 
-| Tool | Strength | Tollgate wedge |
-|------|----------|----------------|
-| **LiteLLM** | 100+ providers, proxy, fallbacks, spend | **Agent protection + policy + MCP/tools**, not catalog width |
-| **Portkey** | Production stack, guardrails, governance | **Self-hosted, simpler, developer-first desk** |
-| **Helicone** | Observability, cost analytics | **Runtime control**: hard stop before spend, not only after |
-| **Bifrost** | Fast OSS gateway | We’re not competing on raw gateway speed |
-| **Envoy AI Gateway** | K8s / infra | Desk/agents first, not platform engineering first |
-| **Cloudflare AI Gateway** | Managed edge | **Provider-neutral, self-hosted, USB/portable** |
+> LiteLLM connects models. Helicone shows traffic.  
+> **Tollgate keeps agents in line — and proves failover works.**
 
-**One-liner vs the field:**
-
-> LiteLLM connects you to models.  
-> Helicone shows what happened.  
-> **Tollgate keeps your agents from misbehaving.**
-
-## Three pillars (product, not feature soup)
-
-```text
-                 TOLLGATE
-                    │
-       ┌────────────┼────────────┐
-       ↓            ↓            ↓
-  Reliability     Budget      Policy
-       │            │            │
-    Failover      $/day      token limits
-    Health        $/agent    rate limits
-    Circuit       $/request  allowed models
-    Ranking       alerts     MCP/tool caps
-       └────────────┼────────────┘
-                    ↓
-             LLM + tools
-```
-
-| Pillar | Job |
-|--------|-----|
-| **Reliability** | Health, circuits, failover, health-aware route |
-| **Cost** | Envelopes, burn, projection |
-| **Agent protection** | max $/request/hour, rpm, tokens, tool loops — **fail closed** |
-
-MCP + agents (not only chat completions) is a deliberate second surface:
-
-```text
-Agent ──► LLM ──► Tollgate ──► providers
-   └──► MCP/tools ──► Tollgate ──► APIs
-```
-
-Same consumer lane: *this agent may use free LLM, max €5/day, max 20 tool calls per task.*
-
-## What we refuse (for now)
-
-- “Support every provider LiteLLM has”  
-- Zapier/Slack/Discord/K8s operator sprawl  
-- Cloud multi-tenant SaaS before the safety layer is excellent  
-
-**80% of users never need advanced JSON** — budget + protection + failover.
-
-## 5-minute success
+## Chaos / DR (Prove)
 
 ```bash
-docker compose up -d
-# open http://127.0.0.1:8787/dashboard
-# set OPENAI_BASE_URL=http://127.0.0.1:8787/v1
+# Simulate provider outage for 5 minutes (router + invoke skip it)
+tollgate chaos start opencode_zen --duration 5m
+tollgate chaos status
+tollgate chaos stop opencode_zen
+
+# Active test: inject → N routes → report
+tollgate chaos test opencode_zen --requests 10 --duration 2m
+tollgate resilience
 ```
 
-Then:
+Example report shape:
 
 ```text
-✓ Providers connected (Key.txt)
-✓ Budget / agent limits set
-✓ Failover on
-→ Agents stop burning money in loops
+FAILOVER TEST
+Requests tested        10
+Successful             10
+Failed                  0
+Automatic failover    100%
+Recovery time        ~ms
+✓ Application survived opencode_zen outage
 ```
 
-## Roadmap phases
+## Resilience Score
 
-| Phase | Focus | Status |
-|-------|--------|--------|
-| 1 Stability | Config, secrets, doctor, tests | continuous |
-| 2 Agent protection | request/hour/minute/tool hard stops | **done** |
-| 3 Intelligence | health-aware routing + explain | **done** |
-| 4 Visibility | feelable dashboard (spend, health, attention) | **shipping** |
-| 5 Enterprise | RBAC, teams, SSO | later |
+```bash
+tollgate resilience
+# or GET /v1/resilience
+```
 
-## Audiences
+```text
+AI RESILIENCE  87/100
+  reliability        94
+  failover           91
+  budget_control     82
+  provider_diversity 75
+  observability      89
+```
 
-1. Agent builders / startups  
-2. Companies with many AI tools  
-3. n8n / automation  
-4. Self-hosted + paid APIs  
+## Competitive wedge
+
+| Field is crowded with | Tollgate sells |
+|----------------------|----------------|
+| Multi-provider proxy | **DR proof** + agent protection |
+| Post-hoc analytics | **Pre-admission hard stop** |
+| K8s / edge gateways | **Simple self-host desk + agents + MCP** |
+
+## Business sketch (later)
+
+| Tier | Scope |
+|------|--------|
+| Community | 1 host, basic protect/route, chaos test CLI |
+| Pro | analytics, chaos reports history, advanced routing |
+| Enterprise | RBAC, SSO, multi-region, SLA |
+
+## What we already ship
+
+- Protect: consumer envelopes + agent_guard  
+- Route: health-aware ranking + execute failover  
+- Prove: `chaos` + `resilience` + dashboard attention  
+
+## What we refuse
+
+- “30 more providers” as roadmap  
+- Feature soup without Protect / Route / Prove  
