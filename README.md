@@ -2,10 +2,14 @@
 
 **Pay the toll — or don't call.**
 
-Local, multi-consumer **API admission gate** for AI agents.  
-One place holds secrets, budgets, and routing — so Gnom, n8n, Cursor/MCP, and anything else never each invent their own spend logic.
+> **Existing gateways route traffic. Tollgate governs AI traffic.**
+
+Local **AI traffic control plane** — Reliability · Cost · Control.  
+One place holds secrets, budgets, health, and routing — so Gnom, n8n, Cursor/MCP, and agents never each invent their own spend logic.
 
 > As soon as you run **more than one** AI tool against paid keys, you need an instance that never puts secrets in agent memory and never spends more than you allowed — no matter which tool calls.
+
+**Feel it:** `http://127.0.0.1:8787/dashboard` · JSON: `GET /v1/control`
 
 ## Who it's for
 

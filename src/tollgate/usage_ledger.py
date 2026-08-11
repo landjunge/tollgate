@@ -57,6 +57,10 @@ def _empty_provider() -> dict[str, Any]:
         "errors": 0,
         "last_call_ts": 0.0,
         "by_op": {},
+        # ops health (not agent memory)
+        "latency_ms_sum": 0.0,
+        "latency_ms_n": 0,
+        "latency_ms_last": 0.0,
     }
 
 
@@ -158,6 +162,7 @@ def record_usage(
     root: Path | None = None,
     meta: dict[str, Any] | None = None,
     consumer: str = "",
+    latency_ms: float = 0.0,
 ) -> dict[str, Any]:
     """
     Atomic-ish append to today's ledger.
@@ -166,6 +171,7 @@ def record_usage(
     (see ops_boundary.sanitize_meta). This is not agent memory.
 
     When ``consumer`` is set, also increments the per-consumer day envelope counters.
+    ``latency_ms`` feeds provider health averages (control plane).
     """
     from tollgate.ops_boundary import sanitize_meta
 
@@ -174,6 +180,7 @@ def record_usage(
     tout = max(0, int(tokens_out or 0))
     ch = max(0, int(chars or 0))
     usd_v = max(0.0, float(usd or 0.0))
+    lat = max(0.0, float(latency_ms or 0.0))
     cid = _norm_consumer(consumer)
     if usd_v <= 0.0 and (tin or tout):
         try:
@@ -220,6 +227,10 @@ def record_usage(
             if error:
                 p["errors"] = int(p.get("errors") or 0) + 1
             p["last_call_ts"] = time.time()
+            if lat > 0:
+                p["latency_ms_sum"] = float(p.get("latency_ms_sum") or 0.0) + lat
+                p["latency_ms_n"] = int(p.get("latency_ms_n") or 0) + 1
+                p["latency_ms_last"] = lat
             by_op = p.setdefault("by_op", {})
             slot = by_op.get(op) or {"calls": 0, "tokens": 0, "chars": 0, "usd": 0.0}
             slot["calls"] = int(slot.get("calls") or 0) + 1

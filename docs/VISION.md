@@ -1,12 +1,13 @@
 # Tollgate — Vision (locked)
 
 **Product / repo:** **[landjunge/tollgate](https://github.com/landjunge/tollgate)**  
-**Status:** agreed 2026-08-11 · **name locked** · own repo shipped  
-**One-liner:** Die Mautstelle für AI-API-Calls — Admission, Budgets, Routing. Gnom ist *ein* Client, nicht der Eigentümer der Wahrheit.
+**Status:** agreed 2026-08-11 · **name locked** · control-plane direction locked  
+**One-liner:** The **control plane** between AI apps/agents and model providers — Reliability · Cost · Control.
 
-**Why Tollgate:** Every request passes a controlled gate; hard caps prevent bill shock; multi-consumer lanes (Gnom, n8n, agents) share one ledger.
+**Tagline:** *Pay the toll — or don't call.*  
+**Category line:** *Existing gateways route traffic. Tollgate governs AI traffic.*
 
-**Tagline:** *Pay the toll — or don't call.*
+See **[PRODUCT.md](PRODUCT.md)** for audiences and priority table.
 
 ---
 
@@ -14,98 +15,84 @@
 
 ```
 Gnom-Hub ──┐
-n8n ───────┼──►  tollgate (own repo)  ──► Provider APIs
-Cursor/MCP ┤         HTTP + MCP + optional
-Agents ────┘         OpenAI-compatible /v1
+n8n ───────┼──►  tollgate (control plane)  ──► Provider APIs
+Cursor/MCP ┤         admit · budget · health · explain
+Agents ────┘         HTTP + MCP + OpenAI/Anthropic drop-ins
 ```
 
 | Property | Target |
 |----------|--------|
 | Repo | `tollgate` |
-| Package / CLI | `tollgate` |
-| Service id | `tollgate` |
-| Consumers | Gnom, n8n, OpenClaw, Cursor, CLI, other agents |
-| Control | Budgets, limits, Google hard-off, circuits, audit |
-| Truth | `distill/*.json` (docs → data, not code thrash) |
-| Shipping | **Own repo** (versioned, CI, changelog) |
+| Role | **AI traffic control plane** (not “just a proxy”) |
+| Pillars | Reliability · Cost · Control |
+| Consumers | Gnom, n8n, Cursor/MCP, agents, internal tools |
+| Truth | `distill/*.json` + day ledger + circuits (ops memory only) |
 | Gnom role | First-class **client**, thin integration |
-| Env prefix (future) | `TOLLGATE_*` (in-hub still `GNOM_WS` / keys_app paths) |
 
 ---
 
 ## Why
 
-- Jeder Agent neu Keys/Limits bauen = Bill shock + Drift  
-- n8n braucht dieselben Caps wie der Desk  
-- Google/Gemini bleibt zentral gesperrt, nicht pro Tool versteckt  
-- Ein Fail-closed Admission-Punkt für alle
+- Many tools × many keys = bill shock and no single admission point  
+- Agents and n8n loops fail open on cost without a gate  
+- Provider outages without health-aware failover burn time and money  
+- Orgs need **explainable** spend and routing, not black-box proxying  
 
 ---
 
-## Public contract (stable, multi-consumer)
-
-These shapes should survive the repo split:
+## Public contract (stable)
 
 | Surface | Purpose |
 |---------|---------|
-| `POST /v1/route` | intent + estimates → provider/model + fallbacks |
-| `POST /v1/invoke` | admit + call + meter (`agent_id`, `job_id`, `request_class`) |
-| `GET  /v1/budget` | remaining calls/tokens/usd |
-| `GET  /v1/health` | liveness + circuit summary |
+| `POST /v1/route` | intent → provider/model + fallbacks + **explain** |
+| `POST /v1/invoke` | admit + call + meter |
+| `GET  /v1/budget` | remaining calls/tokens/usd + consumer envelope |
+| `GET  /v1/control` | **health · consumer burn · headline** (product pane) |
+| `GET  /v1/health` | liveness + circuits |
 | `GET  /v1/providers` | inventory grades (masked) |
-| MCP stdio | same ops as `keys_*` tools (`tollgate` MCP server) |
-| Later | `POST /v1/chat/completions` (OpenAI-compatible for n8n) |
-
-**Consumer auth (required before multi-tenant trust):**  
-API key per consumer (`gnom`, `n8n`, `cursor`, …) with **own** daily envelope.
+| `POST /v1/chat/completions` | OpenAI drop-in |
+| `POST /v1/messages` | Anthropic drop-in |
+| `GET  /dashboard` | human-readable control plane |
+| MCP stdio | same ops for Cursor / Claude Desktop |
 
 ---
 
-## Gateway memory / cache (direction)
-
-Own operational memory — **not** Gnom agent memory (wishes, project HTML).
+## Gateway memory (ops only)
 
 | Store | Role |
 |-------|------|
-| Ledger | tokens, $, calls per day / consumer |
-| Circuits | open/half-open cooldowns shared by all clients |
-| Health EWMA | soft scores for routing |
-| Response cache | optional TTL for search / free chat (saves quota) |
-| Dead-key memory | AUTH_DEAD without 401 storms |
-
-Policy sketch: prefer cache for `batch`/`free`; `interactive` often fresh.  
-Lives with the **own-repo** gateway (SQLite first; Redis only if multi-host).
+| Ledger | tokens, $, calls, latency averages — day / provider / **consumer** |
+| Circuits | open/half-open cooldowns |
+| Health scores | success rate + circuit + spend → ranking input |
+| Response cache | free/batch probes — **not** agent memory |
+| Audit log | append-only deny/spend events |
 
 ---
 
-## Roadmap
+## Roadmap status
 
 | Phase | Outcome | Status |
 |-------|---------|--------|
-| 0 | Control plane in gnom-hub (distill, cost_guard, MCP, admit/circuit) | **done** |
-| 1 | Extractable package + standalone HTTP `/v1/*` | **done (v0.1)** — `keys.server_v1` as Tollgate |
-| 2 | Seal all Gnom spend through Tollgate | **done** (client + tools + UI) |
-| 3 | Consumer API keys + per-consumer budgets | **done** (hash auth + envelopes) |
-| 4 | **Own repo `tollgate`** + CI + version tags | **done** |
-| 5 | n8n: HTTP workflows → community node | **done** (`n8n-nodes-tollgate` + workflow pack) |
-| 6 | Optional OpenAI-compatible proxy | **done** (`/v1/chat/completions`) |
-| 7 | Optional quality/semantic routing | later |
+| Foundation | Admit, budgets, circuits, distill, own repo | **done** |
+| Multi-consumer | Auth, envelopes, n8n node, OpenAI/Anthropic | **done** |
+| Failover | Execute-time hop on retriable errors | **done** |
+| Control plane v0.2 | Provider health · consumer burn · explain · mini UI | **shipping** |
+| Health-aware route | Prefer healthy/cheap automatically | next |
+| Enterprise | Teams, SSO/RBAC | later |
 
 ---
 
 ## Non-goals (for now)
 
-- Replacing OpenRouter/LiteLLM as a global SaaS  
-- Multi-user SaaS multi-tenancy in the cloud  
-- Semantic routing before admission is boring and correct  
-- Mixing agent long-term memory into Tollgate  
+- Replacing LiteLLM/Portkey as global SaaS catalog  
+- Semantic “best model” before admission is correct  
+- Mixing agent project memory into Tollgate  
 
 ---
 
 ## Success
 
-1. n8n workflow can `route` + `invoke` without holding provider secrets.  
-2. Gnom agents use the same service.  
-3. Google cannot spend unless explicitly unlocked with hard `$` caps.  
-4. Runaway loop → hard deny + audit, not invoice.  
-5. Repo `tollgate` can leave gnom-hub without rewriting clients (stable `/v1` + MCP).
+1. One control plane for agents **and** n8n without secrets in either.  
+2. Runaway loop → hard deny + audit, not invoice.  
+3. Operator can answer: *which agent burns $? which provider is sick? why this model?*  
+4. Product feels like **governance**, not plumbing.

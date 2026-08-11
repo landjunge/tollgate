@@ -6,6 +6,7 @@
 | Doc | Topic |
 |-----|--------|
 | [VISION.md](VISION.md) | Product lock, multi-consumer |
+| [PRODUCT.md](PRODUCT.md) | Control plane positioning, audiences, priorities |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 7 layers, circuits, taxonomy |
 | [COST_LIMITS.md](COST_LIMITS.md) | Google off, budgets, `/v1/config` |
 | [MCP.md](MCP.md) | stdio MCP + HTTP `/v1/*` |

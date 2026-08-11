@@ -25,7 +25,7 @@ import os
 from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException, Query
-from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from tollgate import get_keys_service, routed_chat
@@ -78,11 +78,10 @@ _bootstrap_env()
 
 app = FastAPI(
     title="Tollgate",
-    version="0.1.9",
+    version="0.2.0",
     description=(
-        "Tollgate — multi-consumer API admission + router. "
-        "OpenAI /v1/chat/completions + Anthropic /v1/messages drop-ins. "
-        "Budgets, circuits, portable/USB. "
+        "Tollgate — AI traffic control plane (Reliability · Cost · Control). "
+        "OpenAI + Anthropic drop-ins, budgets, health, explain, portable/USB. "
         "https://github.com/landjunge/tollgate"
     ),
 )
@@ -140,7 +139,7 @@ def health() -> dict[str, Any]:
         "ok": True,
         "service": "tollgate",
         "product": "Tollgate",
-        "version": "0.1.9",
+        "version": "0.2.0",
         "extractable": True,
         "multi_consumer": True,
         "portable": path_snapshot(),
@@ -148,6 +147,8 @@ def health() -> dict[str, Any]:
         "app": ks.app_status(),
         "circuits": get_circuits().snapshot()[:30],
         "metrics": "/metrics",
+        "control": "/v1/control",
+        "dashboard": "/dashboard",
     }
 
 
@@ -173,6 +174,33 @@ def auth_info() -> dict[str, Any]:
     }
 
 
+@app.get("/v1/control")
+def control_plane_view(
+    x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+    x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> dict[str, Any]:
+    """
+    Product control pane: provider health, consumer burn, headline.
+
+    Reliability · Cost · Control — not a secret dump.
+    """
+    auth = _require(x_consumer_key, x_consumer_id, authorization=authorization)
+    from tollgate.control_plane import control_snapshot
+
+    out = control_snapshot()
+    out["consumer"] = auth["consumer"]
+    return out
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def dashboard_page() -> HTMLResponse:
+    """Human-readable control plane (no SPA build)."""
+    from tollgate.dashboard_html import DASHBOARD_HTML
+
+    return HTMLResponse(DASHBOARD_HTML)
+
+
 @app.get("/v1/providers")
 def providers(
     live: bool = Query(False),
@@ -182,6 +210,12 @@ def providers(
     auth = _require(x_consumer_key, x_consumer_id)
     out = get_keys_service().inventory(live=live)
     out["consumer"] = auth["consumer"]
+    try:
+        from tollgate.control_plane import provider_health
+
+        out["health"] = provider_health()
+    except Exception:  # noqa: BLE001
+        pass
     return out
 
 
@@ -228,6 +262,7 @@ def budget(
 @app.post("/v1/route")
 def route(
     body: RouteBody,
+    explain: bool = Query(True, description="Include why-this-provider explainability"),
     x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
     x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
 ) -> dict[str, Any]:
@@ -237,8 +272,16 @@ def route(
         tokens_est=body.tokens_est,
         chars_est=body.chars_est,
         live=body.live,
+        prefer_free=body.prefer_free,
     )
     out["consumer"] = auth["consumer"]
+    if explain:
+        try:
+            from tollgate.control_plane import explain_route
+
+            out["explain"] = explain_route(out)
+        except Exception as e:  # noqa: BLE001
+            out["explain"] = {"ok": False, "error": str(e)}
     return out
 
 
@@ -615,7 +658,10 @@ def root() -> dict[str, Any]:
         "openai": ["/v1/chat/completions", "/v1/models"],
         "anthropic_base_url": "/",
         "anthropic": ["/v1/messages"],
+        "control": "/v1/control",
+        "dashboard": "/dashboard",
         "vision": "docs/VISION.md",
+        "product": "docs/PRODUCT.md",
         "architecture": "docs/ARCHITECTURE.md",
         "mcp": "docs/MCP.md",
         "portable": "docs/PORTABLE.md",
@@ -624,6 +670,7 @@ def root() -> dict[str, Any]:
         "v1": [
             "/v1/health",
             "/v1/auth",
+            "/v1/control",
             "/v1/models",
             "/v1/chat/completions",
             "/v1/messages",

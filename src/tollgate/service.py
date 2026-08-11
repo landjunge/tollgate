@@ -624,6 +624,7 @@ class KeysService:
                 call_kw = {k: v for k, v in kwargs.items() if k in allowed}
         except Exception:  # noqa: BLE001
             call_kw = kwargs
+        t0 = time.time()
         try:
             result = fn(**call_kw)
         except TypeError as e:
@@ -632,11 +633,13 @@ class KeysService:
             return {"ok": False, "error": str(e)}
         except Exception as e:  # noqa: BLE001
             return {"ok": False, "error": str(e)}
+        latency_ms = max(0.0, (time.time() - t0) * 1000.0)
 
         if isinstance(result, dict):
             out = dict(result)
             out.setdefault("provider", pid)
             out.setdefault("op", oname)
+            out["latency_ms"] = round(latency_ms, 1)
             # Usage accounting
             cfg = load_config()
             if bool(cfg.get("record_usage", True)) and oname in cost_ops:
@@ -664,6 +667,7 @@ class KeysService:
                         error=not bool(out.get("ok", True)),
                         meta={"model": out.get("model") or kwargs.get("model")},
                         consumer=consumer,
+                        latency_ms=latency_ms,
                     )
                     out["usage_today"] = {
                         "calls": used.get("calls"),

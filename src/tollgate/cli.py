@@ -13,6 +13,10 @@ def main(argv: list[str] | None = None) -> None:
     sub.add_parser("serve", help="Run HTTP server (uvicorn)")
     sub.add_parser("mcp", help="Run MCP stdio server")
     sub.add_parser("health", help="Print local health JSON (paths + auth mode)")
+    sub.add_parser(
+        "control",
+        help="Control plane snapshot (provider health + consumer burn + headline)",
+    )
     sub.add_parser("paths", help="Print portable path snapshot")
 
     cadd = sub.add_parser("consumer-add", help="Add HTTP consumer (id:secret)")
@@ -144,6 +148,14 @@ def main(argv: list[str] | None = None) -> None:
                 default=str,
             )
         )
+        return
+
+    if args.cmd == "control":
+        from tollgate.control_plane import control_snapshot
+        from tollgate.paths import pin_data_home_env
+
+        pin_data_home_env()
+        print(json.dumps(control_snapshot(), indent=2, default=str))
         return
 
     if args.cmd == "paths":
