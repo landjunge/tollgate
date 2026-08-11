@@ -16,6 +16,7 @@ cd ~/tollgate
 | **Gnom** | Hub auto-pins `TOLLGATE_HOME`. Optional: `TOLLGATE_URL=http://127.0.0.1:8787` |
 | **n8n** | OpenAI Base `http://127.0.0.1:8787/v1`, Key `n8n`, Model `tollgate/free` |
 | **n8n Docker** | Base `http://host.docker.internal:8787/v1` |
+| **Anthropic SDK** | Base `http://127.0.0.1:8787`, Key `desk` → `POST /v1/messages` ([ANTHROPIC.md](ANTHROPIC.md)) |
 | **Import** | `configs/n8n-openai-chat.workflow.json` |
 
 ## Checks

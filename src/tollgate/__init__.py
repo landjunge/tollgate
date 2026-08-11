@@ -38,4 +38,4 @@ __all__ = [
     "routed_chat",
 ]
 
-__version__ = "0.1.6"
+__version__ = "0.1.7"

@@ -13,6 +13,10 @@ OpenAI-compatible drop-in:
   GET  /v1/models
   POST /v1/chat/completions
   Authorization: Bearer <consumer_id>:<secret>  (or X-Consumer-Key)
+
+Anthropic-compatible drop-in:
+  POST /v1/messages
+  x-api-key: <consumer_id>:<secret>  (or Authorization Bearer / X-Consumer-Key)
 """
 
 from __future__ import annotations
@@ -74,10 +78,10 @@ _bootstrap_env()
 
 app = FastAPI(
     title="Tollgate",
-    version="0.1.6",
+    version="0.1.7",
     description=(
         "Tollgate — multi-consumer API admission + router. "
-        "OpenAI-compatible /v1/chat/completions drop-in. "
+        "OpenAI /v1/chat/completions + Anthropic /v1/messages drop-ins. "
         "Budgets, circuits, portable/USB. "
         "https://github.com/landjunge/tollgate"
     ),
@@ -90,9 +94,12 @@ def _require(
     *,
     need_admin: bool = False,
     authorization: str | None = None,
+    x_api_key: str | None = None,
 ) -> dict[str, Any]:
-    # Bearer takes precedence when X-Consumer-Key empty (OpenAI SDK style)
+    # Prefer X-Consumer-Key, then Anthropic x-api-key, then Bearer (OpenAI SDK)
     key = x_consumer_key
+    if not (key or "").strip():
+        key = (x_api_key or "").strip() or None
     if not (key or "").strip():
         key = parse_bearer(authorization)
     auth = verify_consumer(key, x_consumer_id, need_admin=need_admin)
@@ -133,7 +140,7 @@ def health() -> dict[str, Any]:
         "ok": True,
         "service": "tollgate",
         "product": "Tollgate",
-        "version": "0.1.6",
+        "version": "0.1.7",
         "extractable": True,
         "multi_consumer": True,
         "portable": path_snapshot(),
@@ -448,6 +455,155 @@ def openai_chat_completions(
     return to_openai_completion(result, model=body.model or "tollgate", consumer=consumer)
 
 
+# ── Anthropic-compatible drop-in ──────────────────────────────────────
+
+
+class AnthropicMessagesBody(BaseModel):
+    model: str = "tollgate/auto"
+    messages: list[dict[str, Any]] = Field(default_factory=list)
+    max_tokens: int = 1024
+    system: str | list[Any] | None = None
+    temperature: float | None = 1.0
+    stream: bool = False
+    metadata: dict[str, Any] | None = None
+    # Tollgate extras
+    intent: str | None = None
+    provider: str | None = None
+    request_class: str | None = None
+    prefer_free: bool | None = None
+
+
+@app.post("/v1/messages")
+def anthropic_messages(
+    body: AnthropicMessagesBody,
+    x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+    x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    x_api_key: str | None = Header(default=None, alias="x-api-key"),
+    anthropic_version: str | None = Header(default=None, alias="anthropic-version"),
+) -> Any:
+    """
+    Anthropic-compatible Messages API (admission + route + meter).
+
+    Drop-in::
+
+        export ANTHROPIC_BASE_URL=http://127.0.0.1:8787
+        export ANTHROPIC_API_KEY=n8n:secret   # open mode: any label
+
+        # or curl with x-api-key
+        curl -s http://127.0.0.1:8787/v1/messages \\
+          -H 'x-api-key: desk' -H 'anthropic-version: 2023-06-01' \\
+          -H 'content-type: application/json' \\
+          -d '{"model":"tollgate/free","max_tokens":64,"messages":[{"role":"user","content":"hi"}]}'
+
+    Does **not** require an Anthropic provider key — routes through Tollgate LLMs.
+    ``anthropic-version`` is accepted and ignored (compat).
+    """
+    _ = anthropic_version  # accepted for SDK compat
+    auth = _require(
+        x_consumer_key,
+        x_consumer_id,
+        authorization=authorization,
+        x_api_key=x_api_key,
+    )
+    consumer = auth["consumer"]
+
+    from tollgate.anthropic_compat import (
+        anthropic_error,
+        map_anthropic_error,
+        normalize_anthropic_messages,
+        stream_anthropic_from_openai_sse,
+        to_anthropic_message,
+    )
+
+    msgs = normalize_anthropic_messages(body.messages, system=body.system)
+    # strip system-only → need at least one user/assistant turn for most providers
+    userish = [m for m in msgs if m.get("role") != "system"]
+    if not userish:
+        err, code = anthropic_error("messages is required", status=400)
+        return JSONResponse(err, status_code=code)
+
+    intent = (body.intent or "").strip()
+    prefer_free = body.prefer_free
+    if not intent:
+        intent, auto_free = resolve_intent(body.model, prefer_free=prefer_free)
+        if prefer_free is None:
+            prefer_free = auto_free
+    else:
+        prefer_free = bool(prefer_free) if prefer_free is not None else intent == "free_llm"
+
+    mid = (body.model or "").strip()
+    provider = (body.provider or "").strip()
+    # claude-* / tollgate/* → let router pick provider/model
+    if mid.startswith("tollgate/") or mid.lower().startswith("claude"):
+        route_model = ""
+    else:
+        route_model = mid
+    rclass = (body.request_class or "interactive").strip() or "interactive"
+    meta_user = ""
+    if isinstance(body.metadata, dict):
+        meta_user = str(body.metadata.get("user_id") or body.metadata.get("user") or "")[:64]
+    agent = (meta_user or f"anthropic:{consumer}")[:64]
+    max_tok = max(1, int(body.max_tokens or 1024))
+    temp = float(body.temperature if body.temperature is not None else 0.7)
+
+    if body.stream:
+        from tollgate.chat_stream import start_chat_stream
+
+        started = start_chat_stream(
+            msgs,
+            intent=intent or "llm",
+            model=route_model,
+            provider=provider,
+            max_tokens=max_tok,
+            temperature=temp,
+            agent_id=agent,
+            consumer=consumer,
+            request_class=rclass,
+            prefer_free=prefer_free,
+            requested_model=body.model or "tollgate",
+        )
+        if not started.get("ok"):
+            err, code = map_anthropic_error(started)
+            return JSONResponse(err, status_code=code)
+        headers = {
+            "Cache-Control": "no-cache",
+            "X-Tollgate-Consumer": consumer,
+            "X-Tollgate-Stream": str(started.get("mode") or "upstream"),
+            "X-Tollgate-Provider": str(started.get("provider") or ""),
+            "X-Tollgate-Compat": "anthropic",
+        }
+        # chat_stream yields OpenAI SSE → convert to Anthropic event stream
+        anthro_stream = stream_anthropic_from_openai_sse(
+            started["stream"],
+            model=body.model or str(started.get("model") or "tollgate"),
+            provider=str(started.get("provider") or ""),
+            consumer=consumer,
+        )
+        return StreamingResponse(
+            anthro_stream,
+            media_type="text/event-stream",
+            headers=headers,
+        )
+
+    result = routed_chat(
+        msgs,
+        intent=intent or "llm",
+        model=route_model,
+        provider=provider,
+        max_tokens=max_tok,
+        temperature=temp,
+        agent_id=agent,
+        consumer=consumer,
+        request_class=rclass,
+        prefer_free=prefer_free,
+    )
+    if not result.get("ok"):
+        err, code = map_anthropic_error(result)
+        return JSONResponse(err, status_code=code)
+    return to_anthropic_message(result, model=body.model or "tollgate", consumer=consumer)
+
+
 @app.get("/")
 def root() -> dict[str, Any]:
     return {
@@ -457,6 +613,8 @@ def root() -> dict[str, Any]:
         "repo": "https://github.com/landjunge/tollgate",
         "openai_base_url": "/v1",
         "openai": ["/v1/chat/completions", "/v1/models"],
+        "anthropic_base_url": "/",
+        "anthropic": ["/v1/messages"],
         "vision": "docs/VISION.md",
         "architecture": "docs/ARCHITECTURE.md",
         "mcp": "docs/MCP.md",
@@ -468,6 +626,7 @@ def root() -> dict[str, Any]:
             "/v1/auth",
             "/v1/models",
             "/v1/chat/completions",
+            "/v1/messages",
             "/v1/route",
             "/v1/invoke",
             "/v1/budget",
