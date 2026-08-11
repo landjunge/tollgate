@@ -79,7 +79,11 @@ def admit(
             )
 
     lim = check_limits(
-        pid, tokens_est=tokens_est, chars_est=chars_est, op=op
+        pid,
+        tokens_est=tokens_est,
+        chars_est=chars_est,
+        op=op,
+        consumer=ctx.consumer_id(),
     )
     if not lim.get("allowed"):
         code = ErrorClass.BUDGET_HARD

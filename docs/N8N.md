@@ -24,6 +24,16 @@ tollgate consumer-add n8n
 
 Without consumers.json, open mode accepts any `X-Consumer-Key` label (desk).
 
+### Cap n8n spend independently of Gnom
+
+```bash
+tollgate consumer-budget n8n --max-usd-day 0.5 --max-calls-day 200
+# remaining / used:
+curl -s http://127.0.0.1:8787/v1/budget -H 'X-Consumer-Key: n8n'
+```
+
+Envelopes live in `keys_app.json` → `consumer_envelopes`. See [COST_LIMITS.md](COST_LIMITS.md).
+
 ## OpenAI-Node (einfachste Variante)
 
 Viele n8n AI-Nodes sprechen OpenAI-Format:

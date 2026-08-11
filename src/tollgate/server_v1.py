@@ -75,7 +75,7 @@ _bootstrap_env()
 
 app = FastAPI(
     title="Tollgate",
-    version="0.1.4",
+    version="0.1.5",
     description=(
         "Tollgate — multi-consumer API admission + router. "
         "OpenAI-compatible /v1/chat/completions drop-in. "
@@ -134,7 +134,7 @@ def health() -> dict[str, Any]:
         "ok": True,
         "service": "tollgate",
         "product": "Tollgate",
-        "version": "0.1.4",
+        "version": "0.1.5",
         "extractable": True,
         "multi_consumer": True,
         "portable": path_snapshot(),
@@ -189,19 +189,31 @@ def budget(
 ) -> dict[str, Any]:
     auth = _require(x_consumer_key, x_consumer_id)
     ks = get_keys_service()
+    from tollgate.limits import check_consumer_limits, consumer_envelope
+    from tollgate.usage_ledger import consumer_usage
+
+    cid = auth["consumer"]
+    c_lim = check_consumer_limits(cid, tokens_est=tokens_est)
+    c_used = consumer_usage(cid)
     if provider.strip():
         return {
             "ok": True,
-            "consumer": auth["consumer"],
+            "consumer": cid,
             "provider": provider,
             "limits": ks.check_provider_limits(
                 provider, tokens_est=tokens_est, chars_est=chars_est
             ),
+            "consumer_envelope": consumer_envelope(cid),
+            "consumer_limits": c_lim,
+            "consumer_usage": c_used,
             "usage": ks.usage(),
         }
     return {
         "ok": True,
-        "consumer": auth["consumer"],
+        "consumer": cid,
+        "consumer_envelope": consumer_envelope(cid),
+        "consumer_limits": c_lim,
+        "consumer_usage": c_used,
         "usage": ks.usage(),
         "config": ks.get_config().get("config", {}).get("cost_guard"),
     }
@@ -239,6 +251,7 @@ def invoke(
         rclass = RequestClass.INTERACTIVE
     ctx = RequestContext(
         agent_id=body.agent_id or consumer,
+        consumer=consumer,
         job_id=body.job_id,
         session_id=body.session_id,
         request_class=rclass,
@@ -389,6 +402,7 @@ def openai_chat_completions(
         max_tokens=int(body.max_tokens or 1024),
         temperature=float(body.temperature if body.temperature is not None else 0.7),
         agent_id=agent,
+        consumer=consumer,
         request_class=rclass,
         prefer_free=prefer_free,
     )

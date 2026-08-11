@@ -23,17 +23,30 @@ class RequestContext:
     agent_id: str = ""
     job_id: str = ""
     session_id: str = ""
+    # Consumer lane (n8n / gnom / …) — used for envelopes + ledger attribution
+    consumer: str = ""
     request_class: RequestClass = RequestClass.INTERACTIVE
     request_id: str = field(default_factory=lambda: uuid.uuid4().hex[:16])
     allow_paid_fallback: bool = False
     billable: bool = True
     created_ts: float = field(default_factory=time.time)
 
+    def consumer_id(self) -> str:
+        """Prefer explicit consumer; fall back to agent_id for desk paths."""
+        c = (self.consumer or "").strip()
+        if c:
+            return c[:64]
+        a = (self.agent_id or "").strip()
+        if a.startswith("openai:"):
+            a = a[7:]
+        return (a or "anonymous")[:64]
+
     def as_dict(self) -> dict[str, Any]:
         return {
             "agent_id": self.agent_id,
             "job_id": self.job_id,
             "session_id": self.session_id,
+            "consumer": self.consumer_id(),
             "request_class": self.request_class.value,
             "request_id": self.request_id,
             "allow_paid_fallback": self.allow_paid_fallback,

@@ -78,6 +78,31 @@ def render_prometheus() -> str:
                 _line("tollgate_provider_usd_total", float(p.get("usd") or 0.0), labels)
             )
 
+    consumers = usage.get("consumers") or {}
+    if isinstance(consumers, dict) and consumers:
+        lines += [
+            "# HELP tollgate_consumer_calls_total Per-consumer calls today.",
+            "# TYPE tollgate_consumer_calls_total gauge",
+        ]
+        for cid, c in consumers.items():
+            if not isinstance(c, dict):
+                continue
+            labels = {"consumer": str(cid), "day": day}
+            lines.append(
+                _line("tollgate_consumer_calls_total", int(c.get("calls") or 0), labels)
+            )
+        lines += [
+            "# HELP tollgate_consumer_usd_total Per-consumer estimated USD today.",
+            "# TYPE tollgate_consumer_usd_total gauge",
+        ]
+        for cid, c in consumers.items():
+            if not isinstance(c, dict):
+                continue
+            labels = {"consumer": str(cid), "day": day}
+            lines.append(
+                _line("tollgate_consumer_usd_total", float(c.get("usd") or 0.0), labels)
+            )
+
     # circuits: 0=closed 1=half_open 2=open
     state_map = {"closed": 0, "half_open": 1, "open": 2}
     lines += [

@@ -47,6 +47,18 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "anomaly_burn_factor: soft_warn if spend ≫ linear day pace (no auto config change)."
         ),
     },
+    # Per-consumer day envelopes (n8n / gnom / …). 0 or omit = no consumer-level cap.
+    # Provider + global cost_guard still apply. Open mode uses X-Consumer-Key as label.
+    "consumer_envelopes": {
+        "_default": {
+            "max_calls_day": 0,
+            "max_tokens_day": 0,
+            "max_usd_day": 0.0,
+        },
+        # Examples (uncomment via CLI: tollgate consumer-budget n8n --max-usd-day 0.5)
+        # "n8n": {"max_calls_day": 200, "max_tokens_day": 500000, "max_usd_day": 0.5},
+        # "gnom": {"max_calls_day": 5000, "max_tokens_day": 2000000, "max_usd_day": 3.0},
+    },
     "auto_update": {
         "enabled": True,
         "interval_s": 300,

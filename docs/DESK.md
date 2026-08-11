@@ -25,6 +25,9 @@ cd ~/tollgate
 ./scripts/live_smoke.sh      # route + chat
 tollgate doctor
 curl -s localhost:8787/metrics | head
+# optional lane caps (n8n vs gnom):
+# tollgate consumer-budget n8n --max-usd-day 0.5 --max-calls-day 200
+# curl -s localhost:8787/v1/budget -H 'X-Consumer-Key: n8n'
 ```
 
 ## Stop

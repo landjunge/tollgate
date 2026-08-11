@@ -58,6 +58,9 @@ tollgate suggest                     # ledger-based proposals (never auto-applie
 ```bash
 tollgate consumer-add n8n
 tollgate consumer-add desk --admin
+# optional day envelopes (n8n vs gnom lanes)
+tollgate consumer-budget n8n --max-usd-day 0.5 --max-calls-day 200
+tollgate consumer-budget --list
 # Header: X-Consumer-Key: n8n:<secret>
 # Open mode if no consumers.json (local desk only)
 ```
@@ -97,7 +100,7 @@ curl -s localhost:8787/metrics | head   # Prometheus
 
 → [docs/OPENAI.md](docs/OPENAI.md)
 
-Review-Liste: **OpenAI ✅ · Docker ✅ · Webhooks ✅ · Prometheus ✅** · Anthropic/n8n-Node/LiteLLM-Import → on demand.
+Review-Liste: **OpenAI ✅ · Docker ✅ · Webhooks ✅ · Prometheus ✅ · Consumer envelopes ✅** · Anthropic/n8n-Node/LiteLLM-Import → on demand.
 
 ## HTTP native (kurz)
 

@@ -497,6 +497,7 @@ class KeysService:
         skip_limit = bool(kwargs.pop("_skip_limit", False))
         tokens_est = int(kwargs.pop("tokens_est", 0) or 0)
         chars_est = int(kwargs.pop("chars_est", 0) or 0)
+        consumer = str(kwargs.pop("consumer", "") or "")[:64]
         # estimate chars/tokens from message/query/messages for chat/search
         if not chars_est and oname in ("chat", "search", "budget"):
             raw = str(kwargs.get("message") or kwargs.get("query") or "")
@@ -579,7 +580,11 @@ class KeysService:
         }
         if not skip_limit and oname in cost_ops:
             lim = check_limits(
-                pid, tokens_est=tokens_est, chars_est=chars_est, op=oname
+                pid,
+                tokens_est=tokens_est,
+                chars_est=chars_est,
+                op=oname,
+                consumer=consumer,
             )
             if not lim.get("allowed"):
                 return {
@@ -588,6 +593,7 @@ class KeysService:
                     "provider": pid,
                     "op": oname,
                     "limits": lim,
+                    "consumer": consumer or None,
                 }
 
         # EL min_remaining from config overrides env if set
@@ -657,18 +663,33 @@ class KeysService:
                         chars=ch,
                         error=not bool(out.get("ok", True)),
                         meta={"model": out.get("model") or kwargs.get("model")},
+                        consumer=consumer,
                     )
                     out["usage_today"] = {
                         "calls": used.get("calls"),
                         "tokens": used.get("tokens"),
                         "chars": used.get("chars"),
                     }
-                    lim2 = check_limits(pid, tokens_est=0, chars_est=0, op=oname)
+                    if used.get("consumer_usage"):
+                        out["consumer_usage_today"] = used["consumer_usage"]
+                    lim2 = check_limits(
+                        pid,
+                        tokens_est=0,
+                        chars_est=0,
+                        op=oname,
+                        consumer=consumer,
+                    )
                     out["limits_remaining"] = {
                         "calls": lim2.get("remaining_calls"),
                         "tokens": lim2.get("remaining_tokens"),
                         "chars": lim2.get("remaining_chars"),
                     }
+                    if lim2.get("consumer_limits"):
+                        out["consumer_limits_remaining"] = {
+                            "calls": lim2["consumer_limits"].get("remaining_calls"),
+                            "tokens": lim2["consumer_limits"].get("remaining_tokens"),
+                            "usd": lim2["consumer_limits"].get("remaining_usd"),
+                        }
                 except Exception:  # noqa: BLE001
                     pass
             return out

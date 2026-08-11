@@ -33,6 +33,7 @@ def _empty_day(day: str | None = None) -> dict[str, Any]:
         "day": day or _today(),
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "providers": {},
+        "consumers": {},
         "totals": {
             "calls": 0,
             "tokens_in": 0,
@@ -57,6 +58,27 @@ def _empty_provider() -> dict[str, Any]:
         "last_call_ts": 0.0,
         "by_op": {},
     }
+
+
+def _empty_consumer() -> dict[str, Any]:
+    """Per-consumer day counters (same shape as provider, no by_op noise)."""
+    return {
+        "calls": 0,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "tokens": 0,
+        "chars": 0,
+        "usd": 0.0,
+        "errors": 0,
+        "last_call_ts": 0.0,
+    }
+
+
+def _norm_consumer(consumer: str | None) -> str:
+    cid = (consumer or "").strip()[:64]
+    if not cid or cid in ("anonymous", "*"):
+        return "anonymous"
+    return cid
 
 
 def load_usage(*, root: Path | None = None) -> dict[str, Any]:
@@ -116,6 +138,14 @@ def provider_usage(provider_id: str, *, root: Path | None = None) -> dict[str, A
     return dict(p)
 
 
+def consumer_usage(consumer: str, *, root: Path | None = None) -> dict[str, Any]:
+    """Today's usage for one consumer lane (n8n, gnom, …)."""
+    data = load_usage(root=root)
+    cid = _norm_consumer(consumer)
+    c = (data.get("consumers") or {}).get(cid) or _empty_consumer()
+    return dict(c)
+
+
 def record_usage(
     provider_id: str,
     *,
@@ -127,12 +157,15 @@ def record_usage(
     error: bool = False,
     root: Path | None = None,
     meta: dict[str, Any] | None = None,
+    consumer: str = "",
 ) -> dict[str, Any]:
     """
     Atomic-ish append to today's ledger.
 
     Operational counters only. ``meta`` is sanitized — no chat/transcript/content
     (see ops_boundary.sanitize_meta). This is not agent memory.
+
+    When ``consumer`` is set, also increments the per-consumer day envelope counters.
     """
     from tollgate.ops_boundary import sanitize_meta
 
@@ -141,6 +174,7 @@ def record_usage(
     tout = max(0, int(tokens_out or 0))
     ch = max(0, int(chars or 0))
     usd_v = max(0.0, float(usd or 0.0))
+    cid = _norm_consumer(consumer)
     if usd_v <= 0.0 and (tin or tout):
         try:
             from tollgate.cost import estimate_usd
@@ -161,6 +195,7 @@ def record_usage(
                         "ledger_corrupt",
                         provider=provider_id,
                         op=op,
+                        consumer=cid,
                         error=str(data.get("_corrupt_reason") or "corrupt"),
                         ok=False,
                         root=root,
@@ -197,6 +232,21 @@ def record_usage(
             for bad in ("content", "message", "messages", "prompt", "transcript", "query"):
                 p.pop(bad, None)
             providers[provider_id] = p
+
+            # Per-consumer lane (n8n / gnom / openai:… labels)
+            consumers = data.setdefault("consumers", {})
+            cu = consumers.get(cid) or _empty_consumer()
+            cu["calls"] = int(cu.get("calls") or 0) + 1
+            cu["tokens_in"] = int(cu.get("tokens_in") or 0) + tin
+            cu["tokens_out"] = int(cu.get("tokens_out") or 0) + tout
+            cu["tokens"] = int(cu.get("tokens") or 0) + tin + tout
+            cu["chars"] = int(cu.get("chars") or 0) + ch
+            cu["usd"] = float(cu.get("usd") or 0.0) + usd_v
+            if error:
+                cu["errors"] = int(cu.get("errors") or 0) + 1
+            cu["last_call_ts"] = time.time()
+            consumers[cid] = cu
+
             tot = data.setdefault("totals", _empty_day()["totals"])
             tot["calls"] = int(tot.get("calls") or 0) + 1
             tot["tokens_in"] = int(tot.get("tokens_in") or 0) + tin
@@ -214,6 +264,7 @@ def record_usage(
                     "usage",
                     provider=provider_id,
                     op=op,
+                    consumer=cid,
                     tokens=tin + tout,
                     usd=usd_v,
                     ok=not error,
@@ -222,7 +273,10 @@ def record_usage(
                 )
             except Exception:  # noqa: BLE001
                 pass
-            return dict(p)
+            out = dict(p)
+            out["consumer"] = cid
+            out["consumer_usage"] = dict(cu)
+            return out
 
 
 def extract_tokens_from_result(result: Any) -> tuple[int, int, int]:
@@ -278,5 +332,6 @@ def usage_summary(*, root: Path | None = None) -> dict[str, Any]:
         "updated_at": data.get("updated_at"),
         "totals": data.get("totals") or {},
         "providers": data.get("providers") or {},
+        "consumers": data.get("consumers") or {},
         "path": str(usage_path(root)),
     }

@@ -18,6 +18,7 @@ def routed_chat(
     temperature: float = 0.7,
     tokens_est: int = 0,
     agent_id: str = "gnom",
+    consumer: str = "",
     job_id: str = "",
     session_id: str = "",
     request_class: str = "interactive",
@@ -29,6 +30,7 @@ def routed_chat(
 
     If provider is empty, uses KeysService.route(intent).
     Always goes through gateway admission + metering.
+    ``consumer`` sets the budget envelope lane (falls back to agent_id).
     """
     from tollgate import get_keys_service
 
@@ -81,6 +83,7 @@ def routed_chat(
 
     ctx = RequestContext(
         agent_id=agent_id,
+        consumer=(consumer or agent_id or "")[:64],
         job_id=job_id,
         session_id=session_id,
         request_class=rclass,

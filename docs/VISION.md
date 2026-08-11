@@ -84,11 +84,11 @@ Lives with the **own-repo** gateway (SQLite first; Redis only if multi-host).
 |-------|---------|--------|
 | 0 | Control plane in gnom-hub (distill, cost_guard, MCP, admit/circuit) | **done** |
 | 1 | Extractable package + standalone HTTP `/v1/*` | **done (v0.1)** — `keys.server_v1` as Tollgate |
-| 2 | Seal all Gnom spend through Tollgate | next |
-| 3 | Consumer API keys + per-consumer budgets | next |
-| 4 | **Own repo `tollgate`** + CI + version tags | planned |
-| 5 | n8n: HTTP workflows → community node | docs: `N8N.md` |
-| 6 | Optional OpenAI-compatible proxy | planned |
+| 2 | Seal all Gnom spend through Tollgate | **done** (client + tools + UI) |
+| 3 | Consumer API keys + per-consumer budgets | **done** (hash auth + envelopes) |
+| 4 | **Own repo `tollgate`** + CI + version tags | **done** |
+| 5 | n8n: HTTP workflows → community node | docs: `N8N.md` + OpenAI drop-in |
+| 6 | Optional OpenAI-compatible proxy | **done** (`/v1/chat/completions`) |
 | 7 | Optional quality/semantic routing | later |
 
 ---

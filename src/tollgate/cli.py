@@ -21,6 +21,26 @@ def main(argv: list[str] | None = None) -> None:
     cadd.add_argument("--secret", default="", help="optional fixed secret")
     cadd.add_argument("--label", default="", help="display label")
 
+    cbud = sub.add_parser(
+        "consumer-budget",
+        help="Set / list per-consumer day envelopes (keys_app.json consumer_envelopes)",
+    )
+    cbud.add_argument(
+        "id",
+        nargs="?",
+        default="",
+        help="consumer id (omit with --list)",
+    )
+    cbud.add_argument("--list", action="store_true", help="list all envelopes + usage")
+    cbud.add_argument("--max-calls-day", type=int, default=None, dest="max_calls_day")
+    cbud.add_argument("--max-tokens-day", type=int, default=None, dest="max_tokens_day")
+    cbud.add_argument("--max-usd-day", type=float, default=None, dest="max_usd_day")
+    cbud.add_argument(
+        "--clear",
+        action="store_true",
+        help="remove envelope for this consumer (fall back to _default)",
+    )
+
     padd = sub.add_parser("provider-add", help="Scaffold distill JSON for a new provider")
     padd.add_argument("id", help="provider id (e.g. azure_openai)")
     padd.add_argument("--title", default="", help="display title")
@@ -150,6 +170,80 @@ def main(argv: list[str] | None = None) -> None:
                 f"\nUse header: X-Consumer-Key: {out['id']}:{out['secret']}",
                 file=sys.stderr,
             )
+        return
+
+    if args.cmd == "consumer-budget":
+        from tollgate.app_config import load_config, save_config
+        from tollgate.limits import check_consumer_limits, consumer_envelope
+        from tollgate.paths import pin_data_home_env
+        from tollgate.usage_ledger import consumer_usage, load_usage
+
+        pin_data_home_env()
+        if args.list or not args.id:
+            cfg = load_config(force=True)
+            envs = dict(cfg.get("consumer_envelopes") or {})
+            day = load_usage()
+            used = day.get("consumers") or {}
+            rows = []
+            ids = set(envs.keys()) | set(used.keys())
+            for cid in sorted(ids):
+                if cid.startswith("_") and cid != "_default":
+                    continue
+                rows.append(
+                    {
+                        "id": cid,
+                        "envelope": envs.get(cid) or {},
+                        "usage": used.get(cid) or {},
+                        "limits": check_consumer_limits(cid) if cid != "_default" else None,
+                    }
+                )
+            print(json.dumps({"ok": True, "envelopes": rows, "raw": envs}, indent=2, default=str))
+            return
+        cid = (args.id or "").strip()[:64]
+        if not cid or cid == "anonymous":
+            print(json.dumps({"ok": False, "error": "invalid consumer id"}))
+            raise SystemExit(1)
+        cfg = load_config(force=True)
+        envs = dict(cfg.get("consumer_envelopes") or {})
+        if args.clear:
+            envs.pop(cid, None)
+            cfg["consumer_envelopes"] = envs
+            save_config(cfg)
+            print(json.dumps({"ok": True, "id": cid, "cleared": True}, indent=2))
+            return
+        block = dict(envs.get(cid) or {})
+        if args.max_calls_day is not None:
+            block["max_calls_day"] = int(args.max_calls_day)
+        if args.max_tokens_day is not None:
+            block["max_tokens_day"] = int(args.max_tokens_day)
+        if args.max_usd_day is not None:
+            block["max_usd_day"] = float(args.max_usd_day)
+        if not block:
+            print(
+                json.dumps(
+                    {
+                        "ok": False,
+                        "error": "pass --max-usd-day / --max-calls-day / --max-tokens-day or --clear",
+                    }
+                )
+            )
+            raise SystemExit(1)
+        envs[cid] = block
+        cfg["consumer_envelopes"] = envs
+        save_config(cfg)
+        print(
+            json.dumps(
+                {
+                    "ok": True,
+                    "id": cid,
+                    "envelope": consumer_envelope(cid),
+                    "usage": consumer_usage(cid),
+                    "limits": check_consumer_limits(cid),
+                },
+                indent=2,
+                default=str,
+            )
+        )
         return
 
     if args.cmd == "provider-add":

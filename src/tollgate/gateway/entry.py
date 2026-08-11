@@ -51,7 +51,7 @@ def gateway_call(
                 "admit_deny",
                 provider=provider,
                 op=op,
-                consumer=str(ctx.agent_id or ""),
+                consumer=ctx.consumer_id(),
                 error=reason,
                 ok=False,
                 extra={"error_class": decision.code.value},
@@ -73,7 +73,7 @@ def gateway_call(
         from tollgate.response_cache import cache_eligible, get as cache_get, make_key, put as cache_put
 
         if cache_eligible(provider, op, ctx=ctx):
-            consumer = str(ctx.agent_id or "")
+            consumer = ctx.consumer_id()
             cache_key = make_key(provider, op, kwargs, consumer=consumer)
             hit = cache_get(cache_key)
             if hit is not None:
@@ -95,6 +95,7 @@ def gateway_call(
             op,
             tokens_est=tokens_est,
             chars_est=chars_est,
+            consumer=ctx.consumer_id(),
             **kwargs,
         )
     except PolicyDeny as e:

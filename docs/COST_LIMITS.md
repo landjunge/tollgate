@@ -100,6 +100,32 @@ curl -s -X POST http://127.0.0.1:8787/v1/config \
 
 Planned: hashed consumer keys + admin scope before public multi-tenant.
 
+## Per-consumer envelopes (n8n vs Gnom)
+
+Provider caps and `max_usd_day_global` still apply. Additionally, each **consumer lane**
+(header `X-Consumer-Key` / open-mode label) can have its own day envelope:
+
+```json
+{
+  "consumer_envelopes": {
+    "_default": { "max_calls_day": 0, "max_tokens_day": 0, "max_usd_day": 0 },
+    "n8n":  { "max_calls_day": 200, "max_tokens_day": 500000, "max_usd_day": 0.5 },
+    "gnom": { "max_calls_day": 5000, "max_usd_day": 3.0 }
+  }
+}
+```
+
+`0` / omit = no consumer-level cap. Ledger tracks `keys_usage.json → consumers.<id>`.
+
+```bash
+tollgate consumer-budget n8n --max-usd-day 0.5 --max-calls-day 200
+tollgate consumer-budget --list
+curl -s localhost:8787/v1/budget -H 'X-Consumer-Key: n8n' | jq .consumer_limits
+```
+
+Works in **open mode** (label only) and **auth mode** (id:secret). Admission denies with
+`consumer <id> max_*_day reached` before the provider call.
+
 ## Prefer instead of Google
 
 - **OpenCode Zen free** (`deepseek-v4-flash-free`, …)
