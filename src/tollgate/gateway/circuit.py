@@ -5,6 +5,8 @@ Prevents thundering herd and cascading failures (Portkey/LiteLLM pattern).
 
 State is persisted under ``User/circuits.json`` with a cross-process file lock
 so multi-worker uvicorn (and multiple consumers) share open/closed state.
+
+Defaults (cooldown, threshold, jitter range) come from keys_app.json → circuits.
 """
 
 from __future__ import annotations
@@ -23,11 +25,53 @@ from tollgate.paths import user_dir
 
 CIRCUITS_NAME = "circuits.json"
 
+# Fallback defaults when config is unavailable (must match app_config DEFAULT)
+_DEFAULT_COOLDOWN_S = 30.0
+_DEFAULT_HARD_COOLDOWN_S = 300.0
+_DEFAULT_FAILURE_THRESHOLD = 5
+_DEFAULT_HALF_OPEN_NEEDED = 1
+_DEFAULT_JITTER_MIN = 0.8
+_DEFAULT_JITTER_MAX = 1.2
+
 
 class CircuitState(str, Enum):
     CLOSED = "closed"  # normal
     OPEN = "open"  # fail fast
     HALF_OPEN = "half_open"  # single canary
+
+
+def _circuit_defaults() -> dict[str, Any]:
+    """Live defaults from keys_app.json circuits block (safe fallbacks)."""
+    try:
+        from tollgate.app_config import load_config
+
+        cfg = load_config() or {}
+        c = cfg.get("circuits") or {}
+        if not isinstance(c, dict):
+            c = {}
+    except Exception:  # noqa: BLE001
+        c = {}
+
+    jmin = float(c.get("jitter_min", _DEFAULT_JITTER_MIN))
+    jmax = float(c.get("jitter_max", _DEFAULT_JITTER_MAX))
+    # Safety: keep a usable range even if config is inverted/broken
+    if jmin <= 0:
+        jmin = _DEFAULT_JITTER_MIN
+    if jmax <= 0:
+        jmax = _DEFAULT_JITTER_MAX
+    if jmin > jmax:
+        jmin, jmax = jmax, jmin
+
+    return {
+        "cooldown_s": float(c.get("cooldown_s", _DEFAULT_COOLDOWN_S)),
+        "hard_cooldown_s": float(c.get("hard_cooldown_s", _DEFAULT_HARD_COOLDOWN_S)),
+        "failure_threshold": int(c.get("failure_threshold", _DEFAULT_FAILURE_THRESHOLD)),
+        "half_open_successes_needed": int(
+            c.get("half_open_successes_needed", _DEFAULT_HALF_OPEN_NEEDED)
+        ),
+        "jitter_min": jmin,
+        "jitter_max": jmax,
+    }
 
 
 @dataclass
@@ -39,21 +83,38 @@ class Circuit:
     failures: int = 0
     successes: int = 0
     opened_at: float = 0.0
-    cooldown_s: float = 30.0
-    failure_threshold: int = 5
-    half_open_successes_needed: int = 1
+    cooldown_s: float = _DEFAULT_COOLDOWN_S
+    hard_cooldown_s: float = _DEFAULT_HARD_COOLDOWN_S
+    failure_threshold: int = _DEFAULT_FAILURE_THRESHOLD
+    half_open_successes_needed: int = _DEFAULT_HALF_OPEN_NEEDED
+    jitter_min: float = _DEFAULT_JITTER_MIN
+    jitter_max: float = _DEFAULT_JITTER_MAX
     last_error: str = ""
 
     @property
     def key(self) -> str:
         return f"{self.provider}|{self.model or '*'}|{self.key_ref or '*'}"
 
+    def _jitter_factor(self) -> float:
+        """Multiplicative factor in [jitter_min, jitter_max] (clamped)."""
+        lo = float(self.jitter_min)
+        hi = float(self.jitter_max)
+        if lo <= 0:
+            lo = _DEFAULT_JITTER_MIN
+        if hi <= 0:
+            hi = _DEFAULT_JITTER_MAX
+        if lo > hi:
+            lo, hi = hi, lo
+        if lo == hi:
+            return lo
+        return lo + (hi - lo) * random.random()
+
     def allow(self) -> bool:
         now = time.time()
         if self.state == CircuitState.CLOSED:
             return True
         if self.state == CircuitState.OPEN:
-            wait = self.cooldown_s * (0.8 + 0.4 * random.random())
+            wait = self.cooldown_s * self._jitter_factor()
             if now - self.opened_at >= wait:
                 self.state = CircuitState.HALF_OPEN
                 return True
@@ -84,7 +145,7 @@ class Circuit:
             self.state = CircuitState.OPEN
             self.opened_at = time.time()
             if hard:
-                self.cooldown_s = max(self.cooldown_s, 300.0)
+                self.cooldown_s = max(self.cooldown_s, float(self.hard_cooldown_s))
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -96,8 +157,12 @@ class Circuit:
             "failures": self.failures,
             "successes": self.successes,
             "cooldown_s": self.cooldown_s,
+            "hard_cooldown_s": self.hard_cooldown_s,
             "opened_at": self.opened_at,
             "failure_threshold": self.failure_threshold,
+            "half_open_successes_needed": self.half_open_successes_needed,
+            "jitter_min": self.jitter_min,
+            "jitter_max": self.jitter_max,
             "last_error": self.last_error,
         }
 
@@ -108,6 +173,15 @@ class Circuit:
             state = CircuitState(st)
         except ValueError:
             state = CircuitState.CLOSED
+        defaults = _circuit_defaults()
+        jmin = float(d.get("jitter_min", defaults["jitter_min"]))
+        jmax = float(d.get("jitter_max", defaults["jitter_max"]))
+        if jmin <= 0:
+            jmin = defaults["jitter_min"]
+        if jmax <= 0:
+            jmax = defaults["jitter_max"]
+        if jmin > jmax:
+            jmin, jmax = jmax, jmin
         return cls(
             provider=str(d.get("provider") or "unknown"),
             model=str(d.get("model") or ""),
@@ -116,8 +190,19 @@ class Circuit:
             failures=int(d.get("failures") or 0),
             successes=int(d.get("successes") or 0),
             opened_at=float(d.get("opened_at") or 0.0),
-            cooldown_s=float(d.get("cooldown_s") or 30.0),
-            failure_threshold=int(d.get("failure_threshold") or 5),
+            cooldown_s=float(d.get("cooldown_s") or defaults["cooldown_s"]),
+            hard_cooldown_s=float(
+                d.get("hard_cooldown_s") or defaults["hard_cooldown_s"]
+            ),
+            failure_threshold=int(
+                d.get("failure_threshold") or defaults["failure_threshold"]
+            ),
+            half_open_successes_needed=int(
+                d.get("half_open_successes_needed")
+                or defaults["half_open_successes_needed"]
+            ),
+            jitter_min=jmin,
+            jitter_max=jmax,
             last_error=str(d.get("last_error") or "")[:200],
         )
 
@@ -190,8 +275,17 @@ class CircuitRegistry:
         k = f"{provider}|{model or '*'}|{key_ref or '*'}"
         with self._lock:
             if k not in self._circuits:
+                d = _circuit_defaults()
                 self._circuits[k] = Circuit(
-                    provider=provider, model=model, key_ref=key_ref
+                    provider=provider,
+                    model=model,
+                    key_ref=key_ref,
+                    cooldown_s=d["cooldown_s"],
+                    hard_cooldown_s=d["hard_cooldown_s"],
+                    failure_threshold=d["failure_threshold"],
+                    half_open_successes_needed=d["half_open_successes_needed"],
+                    jitter_min=d["jitter_min"],
+                    jitter_max=d["jitter_max"],
                 )
             return self._circuits[k]
 

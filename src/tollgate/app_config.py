@@ -47,6 +47,20 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "anomaly_burn_factor: soft_warn if spend ≫ linear day pace (no auto config change)."
         ),
     },
+    # Circuit breaker defaults (per provider|model|key_ref)
+    "circuits": {
+        "failure_threshold": 5,
+        "cooldown_s": 30.0,
+        "hard_cooldown_s": 300.0,
+        "half_open_successes_needed": 1,
+        # Multiplicative jitter on OPEN→HALF_OPEN wait: cooldown * [min, max]
+        "jitter_min": 0.8,
+        "jitter_max": 1.2,
+        "notes": (
+            "jitter_min/max spread canary wake-ups to avoid thundering herd. "
+            "hard_cooldown_s applies on AUTH_DEAD (and other hard failures)."
+        ),
+    },
     # Per-consumer day envelopes (n8n / gnom / …). 0 or omit = no consumer-level cap.
     # Provider + global cost_guard still apply. Open mode uses X-Consumer-Key as label.
     "consumer_envelopes": {
