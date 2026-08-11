@@ -1,13 +1,21 @@
 {
+  "schema_version": 1,
   "id": "telegram",
   "title": "Telegram Bot API",
   "distilled_at": "2026-08-11",
-  "sources": ["https://core.telegram.org/bots/api"],
+  "sources": [
+    "https://core.telegram.org/bots/api"
+  ],
   "openai_compatible": false,
   "auth": {
     "type": "path_token",
-    "env": ["TELEGRAM_BOT_TOKEN"],
-    "meta_env": ["TELEGRAM_ALLOWED_CHAT_IDS", "TELEGRAM_HOME_CHANNEL"],
+    "env": [
+      "TELEGRAM_BOT_TOKEN"
+    ],
+    "meta_env": [
+      "TELEGRAM_ALLOWED_CHAT_IDS",
+      "TELEGRAM_HOME_CHANNEL"
+    ],
     "summary": "bot token in getMe URL path"
   },
   "base_urls": {
@@ -30,8 +38,18 @@
     "401": "unauthorized bot token"
   },
   "ops": [
-    { "name": "status", "maps_to": "getMe", "args": ["live"] },
-    { "name": "research", "maps_to": "distill", "args": [] }
+    {
+      "name": "status",
+      "maps_to": "getMe",
+      "args": [
+        "live"
+      ]
+    },
+    {
+      "name": "research",
+      "maps_to": "distill",
+      "args": []
+    }
   ],
   "gotchas": [
     "TELEGRAM_ALLOWED_CHAT_IDS allowlist when enabled",
@@ -41,6 +59,8 @@
     "probe": "GET https://api.telegram.org/bot<token>/getMe",
     "probe_kind": "free",
     "probe_cost": "none",
-    "capabilities": ["optional"]
+    "capabilities": [
+      "optional"
+    ]
   }
 }

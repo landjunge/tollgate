@@ -1,4 +1,5 @@
 {
+  "schema_version": 1,
   "id": "minimax",
   "title": "MiniMax API",
   "distilled_at": "2026-08-11",
@@ -11,8 +12,12 @@
     "type": "bearer",
     "header": "Authorization",
     "scheme": "Bearer",
-    "env": ["MINIMAX_API_KEY"],
-    "meta_env": ["MINIMAX_GROUP_ID"],
+    "env": [
+      "MINIMAX_API_KEY"
+    ],
+    "meta_env": [
+      "MINIMAX_GROUP_ID"
+    ],
     "summary": "Authorization: Bearer <MINIMAX_API_KEY>"
   },
   "base_urls": {
@@ -55,7 +60,9 @@
     {
       "name": "status",
       "maps_to": "probe files/list",
-      "args": ["live"],
+      "args": [
+        "live"
+      ],
       "notes": "Presence alone is NOT ready — require live probe"
     },
     {
@@ -63,7 +70,11 @@
       "maps_to": "GET /files/list on intl+cn",
       "args": []
     },
-    { "name": "research", "maps_to": "distill", "args": [] }
+    {
+      "name": "research",
+      "maps_to": "distill",
+      "args": []
+    }
   ],
   "gotchas": [
     "2049 → ready=false always",
@@ -74,6 +85,10 @@
     "probe": "GET /files/list (intl + CN)",
     "probe_kind": "free",
     "probe_cost": "none",
-    "capabilities": ["llm", "media", "tts"]
+    "capabilities": [
+      "llm",
+      "media",
+      "tts"
+    ]
   }
 }

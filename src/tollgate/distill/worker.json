@@ -1,14 +1,20 @@
 {
+  "schema_version": 1,
   "id": "worker",
   "title": "DeepSeek workers (same API)",
   "distilled_at": "2026-08-11",
-  "sources": ["https://api-docs.deepseek.com/"],
+  "sources": [
+    "https://api-docs.deepseek.com/"
+  ],
   "openai_compatible": true,
   "auth": {
     "type": "bearer",
     "header": "Authorization",
     "scheme": "Bearer",
-    "env": ["WORKER_API_KEY", "DEEPSEEK_API_KEY"],
+    "env": [
+      "WORKER_API_KEY",
+      "DEEPSEEK_API_KEY"
+    ],
     "summary": "Bearer WORKER_API_KEY (fallback DEEPSEEK_API_KEY)"
   },
   "base_urls": {
@@ -30,7 +36,10 @@
       "purpose": "Worker agent turns"
     }
   ],
-  "models": ["deepseek-v4-flash", "deepseek-v4-pro"],
+  "models": [
+    "deepseek-v4-flash",
+    "deepseek-v4-pro"
+  ],
   "limits": {
     "kind": "concurrency",
     "note": "Same DeepSeek backend as system key unless separate account",
@@ -40,9 +49,23 @@
     "401": "invalid key"
   },
   "ops": [
-    { "name": "status", "maps_to": "GET /models", "args": ["live"] },
-    { "name": "models", "maps_to": "GET /models", "args": [] },
-    { "name": "research", "maps_to": "distill", "args": [] }
+    {
+      "name": "status",
+      "maps_to": "GET /models",
+      "args": [
+        "live"
+      ]
+    },
+    {
+      "name": "models",
+      "maps_to": "GET /models",
+      "args": []
+    },
+    {
+      "name": "research",
+      "maps_to": "distill",
+      "args": []
+    }
   ],
   "gotchas": [
     "Not an isolated quota if WORKER_API_KEY == DEEPSEEK_API_KEY"
@@ -51,7 +74,10 @@
     "probe": "GET /models",
     "probe_kind": "free",
     "probe_cost": "none",
-    "capabilities": ["llm", "paid_llm"],
+    "capabilities": [
+      "llm",
+      "paid_llm"
+    ],
     "default_model": "deepseek-v4-flash"
   }
 }

@@ -1,4 +1,5 @@
 {
+  "schema_version": 1,
   "id": "brave",
   "title": "Brave Search API",
   "distilled_at": "2026-08-11",
@@ -11,7 +12,9 @@
   "auth": {
     "type": "header_token",
     "header": "X-Subscription-Token",
-    "env": ["BRAVE_API_KEY"],
+    "env": [
+      "BRAVE_API_KEY"
+    ],
     "key_prefix": "BSA",
     "summary": "X-Subscription-Token: <BRAVE_API_KEY>"
   },
@@ -67,21 +70,34 @@
     {
       "name": "status",
       "maps_to": "GET /res/v1/web/search?count=1",
-      "args": ["live"],
+      "args": [
+        "live"
+      ],
       "notes": "live probe costs 1 request unless cached"
     },
     {
       "name": "search",
       "maps_to": "GET /res/v1/web/search",
-      "args": ["query", "count", "country", "search_lang"]
+      "args": [
+        "query",
+        "count",
+        "country",
+        "search_lang"
+      ]
     },
     {
       "name": "quota",
       "maps_to": "GET /res/v1/web/search?count=1",
-      "args": ["force"],
+      "args": [
+        "force"
+      ],
       "notes": "Parse rate headers; cache 60s"
     },
-    { "name": "research", "maps_to": "distill", "args": [] }
+    {
+      "name": "research",
+      "maps_to": "distill",
+      "args": []
+    }
   ],
   "gotchas": [
     "Do not burst; space ≥1s on low plans",
@@ -92,6 +108,8 @@
     "probe": "GET /res/v1/web/search?q=…&count=1",
     "probe_kind": "metered",
     "probe_cost": "1 successful request against monthly quota",
-    "capabilities": ["search"]
+    "capabilities": [
+      "search"
+    ]
   }
 }

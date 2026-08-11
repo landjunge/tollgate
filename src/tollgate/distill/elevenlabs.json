@@ -1,4 +1,5 @@
 {
+  "schema_version": 1,
   "id": "elevenlabs",
   "title": "ElevenLabs API",
   "distilled_at": "2026-08-11",
@@ -11,7 +12,9 @@
   "auth": {
     "type": "header_token",
     "header": "xi-api-key",
-    "env": ["ELEVENLABS_API_KEY"],
+    "env": [
+      "ELEVENLABS_API_KEY"
+    ],
     "key_prefix": "sk_",
     "summary": "xi-api-key: <ELEVENLABS_API_KEY>"
   },
@@ -59,26 +62,38 @@
     {
       "name": "status",
       "maps_to": "GET /v1/user/subscription + budget",
-      "args": ["live"]
+      "args": [
+        "live"
+      ]
     },
     {
       "name": "subscription",
       "maps_to": "GET /v1/user/subscription",
-      "args": ["force"]
+      "args": [
+        "force"
+      ]
     },
     {
       "name": "budget",
       "maps_to": "subscription + floor math",
-      "args": ["cost"],
+      "args": [
+        "cost"
+      ],
       "notes": "cost = estimated chars for next call"
     },
     {
       "name": "ensure_budget",
       "maps_to": "budget",
-      "args": ["cost"],
+      "args": [
+        "cost"
+      ],
       "notes": "raises if not allowed"
     },
-    { "name": "research", "maps_to": "distill", "args": [] }
+    {
+      "name": "research",
+      "maps_to": "distill",
+      "args": []
+    }
   ],
   "gotchas": [
     "Key scopes in dashboard can block TTS even with credits",
@@ -89,7 +104,9 @@
     "probe": "GET /v1/user/subscription",
     "probe_kind": "free",
     "probe_cost": "none (read subscription)",
-    "capabilities": ["tts"],
+    "capabilities": [
+      "tts"
+    ],
     "meta_env": [
       "ELEVENLABS_MIN_REMAINING",
       "ELEVENLABS_VOICE_ID",

@@ -64,6 +64,7 @@ def scaffold_provider(
         preset["summary"] = f"{preset.get('header')}: <{env}>"
 
     data: dict[str, Any] = {
+        "schema_version": 1,
         "id": pid,
         "title": title or pid.replace("_", " ").title(),
         "distilled_at": date.today().isoformat(),

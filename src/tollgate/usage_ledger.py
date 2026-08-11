@@ -13,6 +13,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from tollgate.filelock import FileLock
 from tollgate.paths import user_dir
 
 _LOCK = threading.RLock()
@@ -61,22 +62,31 @@ def _empty_provider() -> dict[str, Any]:
 def load_usage(*, root: Path | None = None) -> dict[str, Any]:
     path = usage_path(root)
     with _LOCK:
-        if not path.is_file():
-            return _empty_day()
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except Exception:  # noqa: BLE001
-            return _empty_day()
-        if not isinstance(data, dict):
-            return _empty_day()
-        # rollover
-        if data.get("day") != _today():
-            data = _empty_day()
-            _write(path, data)
-        return data
+        with FileLock(path):
+            return _load_unlocked(path)
+
+
+def _load_unlocked(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        return _empty_day()
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        return _empty_day()
+    if not isinstance(data, dict):
+        return _empty_day()
+    if data.get("day") != _today():
+        data = _empty_day()
+        _write_unlocked(path, data)
+    return data
 
 
 def _write(path: Path, data: dict[str, Any]) -> None:
+    with FileLock(path):
+        _write_unlocked(path, data)
+
+
+def _write_unlocked(path: Path, data: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     data["updated_at"] = datetime.now(timezone.utc).isoformat()
     tmp = path.with_suffix(".json.tmp")
@@ -123,46 +133,46 @@ def record_usage(
         except Exception:  # noqa: BLE001
             usd_v = 0.0
     safe_meta = sanitize_meta(meta)
+    # One cross-process critical section (avoid nested FileLock deadlocks)
     with _LOCK:
-        data = load_usage(root=root)
-        if data.get("day") != _today():
-            data = _empty_day()
-        providers = data.setdefault("providers", {})
-        p = providers.get(provider_id) or _empty_provider()
-        p["calls"] = int(p.get("calls") or 0) + 1
-        p["tokens_in"] = int(p.get("tokens_in") or 0) + tin
-        p["tokens_out"] = int(p.get("tokens_out") or 0) + tout
-        p["tokens"] = int(p.get("tokens") or 0) + tin + tout
-        p["chars"] = int(p.get("chars") or 0) + ch
-        p["usd"] = float(p.get("usd") or 0.0) + usd_v
-        if error:
-            p["errors"] = int(p.get("errors") or 0) + 1
-        p["last_call_ts"] = time.time()
-        by_op = p.setdefault("by_op", {})
-        slot = by_op.get(op) or {"calls": 0, "tokens": 0, "chars": 0, "usd": 0.0}
-        slot["calls"] = int(slot.get("calls") or 0) + 1
-        slot["tokens"] = int(slot.get("tokens") or 0) + tin + tout
-        slot["chars"] = int(slot.get("chars") or 0) + ch
-        slot["usd"] = float(slot.get("usd") or 0.0) + usd_v
-        by_op[op] = slot
-        if safe_meta:
-            p["last_meta"] = safe_meta
-        # strip any previously smuggled forbidden keys
-        for bad in ("content", "message", "messages", "prompt", "transcript", "query"):
-            p.pop(bad, None)
-        providers[provider_id] = p
-        tot = data.setdefault("totals", _empty_day()["totals"])
-        tot["calls"] = int(tot.get("calls") or 0) + 1
-        tot["tokens_in"] = int(tot.get("tokens_in") or 0) + tin
-        tot["tokens_out"] = int(tot.get("tokens_out") or 0) + tout
-        tot["tokens"] = int(tot.get("tokens") or 0) + tin + tout
-        tot["chars"] = int(tot.get("chars") or 0) + ch
-        tot["usd"] = float(tot.get("usd") or 0.0) + usd_v
-        if error:
-            tot["errors"] = int(tot.get("errors") or 0) + 1
-
-        _write(path, data)
-        return dict(p)
+        with FileLock(path):
+            data = _load_unlocked(path)
+            if data.get("day") != _today():
+                data = _empty_day()
+            providers = data.setdefault("providers", {})
+            p = providers.get(provider_id) or _empty_provider()
+            p["calls"] = int(p.get("calls") or 0) + 1
+            p["tokens_in"] = int(p.get("tokens_in") or 0) + tin
+            p["tokens_out"] = int(p.get("tokens_out") or 0) + tout
+            p["tokens"] = int(p.get("tokens") or 0) + tin + tout
+            p["chars"] = int(p.get("chars") or 0) + ch
+            p["usd"] = float(p.get("usd") or 0.0) + usd_v
+            if error:
+                p["errors"] = int(p.get("errors") or 0) + 1
+            p["last_call_ts"] = time.time()
+            by_op = p.setdefault("by_op", {})
+            slot = by_op.get(op) or {"calls": 0, "tokens": 0, "chars": 0, "usd": 0.0}
+            slot["calls"] = int(slot.get("calls") or 0) + 1
+            slot["tokens"] = int(slot.get("tokens") or 0) + tin + tout
+            slot["chars"] = int(slot.get("chars") or 0) + ch
+            slot["usd"] = float(slot.get("usd") or 0.0) + usd_v
+            by_op[op] = slot
+            if safe_meta:
+                p["last_meta"] = safe_meta
+            for bad in ("content", "message", "messages", "prompt", "transcript", "query"):
+                p.pop(bad, None)
+            providers[provider_id] = p
+            tot = data.setdefault("totals", _empty_day()["totals"])
+            tot["calls"] = int(tot.get("calls") or 0) + 1
+            tot["tokens_in"] = int(tot.get("tokens_in") or 0) + tin
+            tot["tokens_out"] = int(tot.get("tokens_out") or 0) + tout
+            tot["tokens"] = int(tot.get("tokens") or 0) + tin + tout
+            tot["chars"] = int(tot.get("chars") or 0) + ch
+            tot["usd"] = float(tot.get("usd") or 0.0) + usd_v
+            if error:
+                tot["errors"] = int(tot.get("errors") or 0) + 1
+            _write_unlocked(path, data)
+            return dict(p)
 
 
 def extract_tokens_from_result(result: Any) -> tuple[int, int, int]:

@@ -1,4 +1,5 @@
 {
+  "schema_version": 1,
   "id": "google",
   "title": "Google AI (Gemini / AI Studio / Vertex)",
   "distilled_at": "2026-08-11",
@@ -12,7 +13,11 @@
   "cost_warning": "VERY EASY TO OVERSPEND. Multiple products (AI Studio free tier, paid Gemini API, Vertex AI, Grounding, embeddings, multimodal). Billing is fragmented and opaque. Keep disabled unless intentional. Set max_usd_day + max_calls_day hard caps.",
   "auth": {
     "type": "api_key_or_adc",
-    "env": ["GOOGLE_API_KEY", "GEMINI_API_KEY", "GOOGLE_AI_API_KEY"],
+    "env": [
+      "GOOGLE_API_KEY",
+      "GEMINI_API_KEY",
+      "GOOGLE_AI_API_KEY"
+    ],
     "summary": "API key (AI Studio) or ADC for Vertex — complex dual path"
   },
   "base_urls": {
@@ -56,10 +61,16 @@
     {
       "name": "status",
       "maps_to": "presence + enabled flag",
-      "args": ["live"],
+      "args": [
+        "live"
+      ],
       "notes": "Default disabled; live probe optional later"
     },
-    { "name": "research", "maps_to": "distill", "args": [] }
+    {
+      "name": "research",
+      "maps_to": "distill",
+      "args": []
+    }
   ],
   "gotchas": [
     "AI Studio key ≠ Vertex project billing",
@@ -72,7 +83,11 @@
     "probe": "presence only unless explicitly enabled",
     "probe_kind": "free",
     "probe_cost": "none",
-    "capabilities": ["llm", "paid_llm", "media"],
+    "capabilities": [
+      "llm",
+      "paid_llm",
+      "media"
+    ],
     "default_enabled": false
   },
   "usd_estimate_per_1m_tokens": {

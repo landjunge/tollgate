@@ -13,6 +13,7 @@
 | [KEYS_MODULE.md](KEYS_MODULE.md) | Module map (legacy name) |
 | [PORTABLE.md](PORTABLE.md) | USB stick / no host paths |
 | [OPENAI.md](OPENAI.md) | OpenAI drop-in base_url |
+| [STABILITY.md](STABILITY.md) | Scale, multi-worker, schema version, deprecation |
 
 ## Rule (no more code thrash)
 

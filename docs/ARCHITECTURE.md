@@ -83,6 +83,14 @@ L7  Meter + Audit       token + $ dual meter; append-only events
 - Cost-velocity: burn ≫ daily/$ remaining → early trip.  
 - Google: `enabled=false` + high_risk + `max_usd_day` + global guard.
 
+## Scale & multi-worker
+
+See [STABILITY.md](STABILITY.md). Summary:
+
+- Ledger + circuits: **disk + file lock** (safe across uvicorn workers on one `TOLLGATE_HOME`)
+- Response cache: process-local only
+- Multi-host LB: **not** supported for global $ caps (needs Redis/Postgres later)
+
 ## HTTP surface & desk security (known gaps)
 
 | Endpoint | Status |

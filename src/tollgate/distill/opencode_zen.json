@@ -1,4 +1,5 @@
 {
+  "schema_version": 1,
   "id": "opencode_zen",
   "title": "OpenCode Zen Gateway",
   "distilled_at": "2026-08-11",
@@ -11,7 +12,10 @@
     "type": "bearer",
     "header": "Authorization",
     "scheme": "Bearer",
-    "env": ["OPENCODE_API_KEY", "OPENCODE_ZEN_API_KEY"],
+    "env": [
+      "OPENCODE_API_KEY",
+      "OPENCODE_ZEN_API_KEY"
+    ],
     "key_prefix": "sk-",
     "summary": "Authorization: Bearer <OPENCODE_API_KEY> (alias OPENCODE_ZEN_API_KEY)"
   },
@@ -77,7 +81,9 @@
     {
       "name": "status",
       "maps_to": "GET /models + optional free chat",
-      "args": ["live"]
+      "args": [
+        "live"
+      ]
     },
     {
       "name": "models",
@@ -87,10 +93,18 @@
     {
       "name": "chat",
       "maps_to": "POST /chat/completions",
-      "args": ["message", "model", "max_tokens"],
+      "args": [
+        "message",
+        "model",
+        "max_tokens"
+      ],
       "notes": "Default model deepseek-v4-flash-free"
     },
-    { "name": "research", "maps_to": "distill", "args": [] }
+    {
+      "name": "research",
+      "maps_to": "distill",
+      "args": []
+    }
   ],
   "gotchas": [
     "Cloudflare blocks default Python urllib without browser UA",
@@ -101,7 +115,11 @@
     "probe": "GET /models + POST chat free model",
     "probe_kind": "free",
     "probe_cost": "none for free models (cost field often \"0\")",
-    "capabilities": ["llm", "free_llm", "paid_llm"],
+    "capabilities": [
+      "llm",
+      "free_llm",
+      "paid_llm"
+    ],
     "default_model": "deepseek-v4-flash-free",
     "user_agent_required": true
   }

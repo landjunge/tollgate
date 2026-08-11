@@ -26,7 +26,10 @@ def load_distill(provider_id: str) -> dict[str, Any]:
         return {}
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else {}
+        if not isinstance(data, dict):
+            return {}
+        data.setdefault("schema_version", 1)
+        return data
     except Exception:  # noqa: BLE001
         return {}
 
