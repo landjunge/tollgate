@@ -11,6 +11,7 @@
 | [MCP.md](MCP.md) | stdio MCP + HTTP `/v1/*` |
 | [N8N.md](N8N.md) | n8n as consumer |
 | [KEYS_MODULE.md](KEYS_MODULE.md) | Module map (legacy name) |
+| [PORTABLE.md](PORTABLE.md) | USB stick / no host paths |
 
 ## Rule (no more code thrash)
 

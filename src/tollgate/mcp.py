@@ -1,19 +1,19 @@
 """
 stdio MCP server for Tollgate (keys admission + router).
 
-Run:
-  cd gnom-hub-v1 && PYTHONPATH=src .venv/bin/python -m tollgate.mcp
+Portable / USB::
 
-Cursor / Claude Desktop mcp.json example:
+  export TOLLGATE_HOME=…/WS-tollgate   # or TOLLGATE_PORTABLE=1
+  python -m tollgate
+
+Cursor mcp.json (no absolute machine paths)::
+
   {
     "mcpServers": {
       "tollgate": {
-        "command": "/Users/landjunge/gnom-hub-v1/.venv/bin/python",
-        "args": ["-m", "tollgate.mcp"],
-        "env": {
-          "PYTHONPATH": "/Users/landjunge/gnom-hub-v1/src",
-          "GNOM_WS": "/Users/landjunge/WS-gnom-hub-v1"
-        }
+        "command": "python",
+        "args": ["-m", "tollgate"],
+        "env": { "TOLLGATE_PORTABLE": "1" }
       }
     }
   }
@@ -36,43 +36,52 @@ from tollgate.mcp_tools import (
 )
 
 SERVER_NAME = "tollgate"
-SERVER_VERSION = "0.1.0"
+SERVER_VERSION = "0.1.1"
 PROTOCOL_VERSION = "2024-11-05"
 
 
+def _ok(req_id: Any, result: Any) -> dict[str, Any]:
+    return {"jsonrpc": "2.0", "id": req_id, "result": result}
+
+
+def _err(req_id: Any, code: int, message: str) -> dict[str, Any]:
+    return {
+        "jsonrpc": "2.0",
+        "id": req_id,
+        "error": {"code": code, "message": message},
+    }
+
+
 def _read_message() -> dict[str, Any] | None:
-    """Read one LSP/MCP-style Content-Length framed message, or a bare JSON line."""
-    # Support both Content-Length framing and newline-delimited JSON
+    """Read one JSON-RPC message (Content-Length framing or bare line)."""
     header = b""
     while True:
         ch = sys.stdin.buffer.read(1)
         if not ch:
             return None
         header += ch
-        if header.endswith(b"\r\n\r\n"):
+        if header.endswith(b"\r\n\r\n") or header.endswith(b"\n\n"):
             break
-        # bare JSON line (no headers) — if we hit { first
-        if header.startswith(b"{") and header.endswith(b"\n"):
+        # bare JSON line (no Content-Length)
+        if header.endswith(b"\n") and b"Content-Length" not in header:
+            line = header.decode("utf-8", errors="replace").strip()
+            if not line:
+                header = b""
+                continue
             try:
-                return json.loads(header.decode("utf-8"))
+                return json.loads(line)
             except json.JSONDecodeError:
                 return None
-        # safety
-        if len(header) > 65536:
-            return None
-
     # parse Content-Length
     text = header.decode("utf-8", errors="replace")
     length = 0
-    for line in text.split("\r\n"):
+    for line in text.splitlines():
         if line.lower().startswith("content-length:"):
             try:
                 length = int(line.split(":", 1)[1].strip())
             except ValueError:
                 length = 0
-    if length <= 0:
-        return None
-    body = sys.stdin.buffer.read(length)
+    body = sys.stdin.buffer.read(length) if length else b""
     if not body:
         return None
     try:
@@ -89,73 +98,47 @@ def _write_message(msg: dict[str, Any]) -> None:
     sys.stdout.buffer.flush()
 
 
-def _ok(req_id: Any, result: Any) -> dict[str, Any]:
-    return {"jsonrpc": "2.0", "id": req_id, "result": result}
-
-
-def _err(req_id: Any, code: int, message: str, data: Any = None) -> dict[str, Any]:
-    e: dict[str, Any] = {
-        "jsonrpc": "2.0",
-        "id": req_id,
-        "error": {"code": code, "message": message},
-    }
-    if data is not None:
-        e["error"]["data"] = data
-    return e
-
-
-def dispatch(body: dict[str, Any]) -> dict[str, Any] | None:
-    """Handle one request; notifications return None (no response)."""
-    req_id = body.get("id")
-    method = str(body.get("method") or "").strip()
-    params = body.get("params") if isinstance(body.get("params"), dict) else {}
-    is_notification = "id" not in body
+def dispatch(msg: dict[str, Any]) -> dict[str, Any] | None:
+    method = msg.get("method") or ""
+    req_id = msg.get("id")
+    params = msg.get("params") if isinstance(msg.get("params"), dict) else {}
+    is_notification = "id" not in msg
 
     if method == "initialize":
         return _ok(
             req_id,
             {
                 "protocolVersion": PROTOCOL_VERSION,
-                "capabilities": {
-                    "tools": {"listChanged": False},
-                    "resources": {"subscribe": False, "listChanged": False},
-                },
+                "capabilities": {"tools": {}, "resources": {}},
                 "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
             },
         )
-
-    if method in ("notifications/initialized", "initialized"):
+    if method == "notifications/initialized":
         return None
-
-    if method in ("ping",):
+    if method == "ping":
         return _ok(req_id, {})
-
-    if method in ("tools/list", "tools.list"):
-        return _ok(req_id, mcp_tools_list())
-
-    if method in ("tools/call", "tools.call"):
-        name = str(params.get("name") or "").strip()
-        arguments = params.get("arguments") or {}
-        if not isinstance(arguments, dict):
-            return _err(req_id, -32602, "arguments must be object")
-        if not name:
-            return _err(req_id, -32602, "name required")
+    if method == "tools/list":
+        return _ok(req_id, {"tools": mcp_tools_list()})
+    if method == "tools/call":
+        name = str(params.get("name") or "")
+        arguments = params.get("arguments") if isinstance(params.get("arguments"), dict) else {}
         out = mcp_call(name, arguments)
-        # MCP tools/call result shape
-        result = {
-            "content": out.get("content")
-            or [{"type": "text", "text": str(out)}],
-            "isError": bool(out.get("isError")),
-        }
-        return _ok(req_id, result)
-
-    if method in ("resources/list", "resources.list"):
-        return _ok(req_id, mcp_resources_list())
-
-    if method in ("resources/read", "resources.read"):
-        uri = str(params.get("uri") or "").strip()
-        if not uri:
-            return _err(req_id, -32602, "uri required")
+        if not out.get("ok"):
+            # MCP tools/call still returns content; surface error text
+            text = str(out.get("error") or out)
+        else:
+            text = json.dumps(out, ensure_ascii=False, default=str)
+        return _ok(
+            req_id,
+            {
+                "content": [{"type": "text", "text": text}],
+                "isError": not out.get("ok", True),
+            },
+        )
+    if method == "resources/list":
+        return _ok(req_id, {"resources": mcp_resources_list()})
+    if method == "resources/read":
+        uri = str(params.get("uri") or "")
         out = mcp_resource_read(uri)
         if not out.get("ok"):
             return _err(req_id, -32000, out.get("error") or "read failed")
@@ -169,9 +152,12 @@ def dispatch(body: dict[str, Any]) -> dict[str, Any] | None:
 
 def main() -> None:
     try:
-        from tollgate.paths import user_dir, data_home
-        from tollgate.secrets import ensure_env_from_key_txt, load_keys, parse_key_file
         import os
+
+        from tollgate.paths import data_home, pin_data_home_env, user_dir
+        from tollgate.secrets import ensure_env_from_key_txt, load_keys, parse_key_file
+
+        pin_data_home_env()
         ensure_env_from_key_txt()
         load_keys()
         for kp in (user_dir() / "Key.txt", data_home() / "User" / "Key.txt"):
@@ -179,7 +165,7 @@ def main() -> None:
                 for k, v in parse_key_file(kp.read_text(encoding="utf-8")).items():
                     os.environ.setdefault(k, v)
                 break
-    except Exception:
+    except Exception:  # noqa: BLE001
         pass
 
     sys.stderr.write(f"[{SERVER_NAME}] MCP stdio server ready\n")
@@ -193,7 +179,7 @@ def main() -> None:
             continue
         try:
             resp = dispatch(msg)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             resp = _err(msg.get("id"), -32603, f"internal error: {e}")
         if resp is not None:
             _write_message(resp)

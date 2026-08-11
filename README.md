@@ -15,15 +15,24 @@ Multi-consumer **API admission + key router** for AI agents, n8n, and local desk
 
 ```bash
 cd tollgate
-python3.11 -m venv .venv && .venv/bin/pip install -e ".[dev]"
+python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 
-# Point at secrets (Gnom WS still works)
-export TOLLGATE_HOME="$HOME/WS-gnom-hub-v1"   # or ~/.tollgate with User/Key.txt
-# or: export GNOM_WS="$HOME/WS-gnom-hub-v1"
+# Desk: ~/.tollgate  ·  USB stick: sibling WS-tollgate or TOLLGATE_HOME
+# export TOLLGATE_HOME=/path/to/WS-tollgate
+# export TOLLGATE_PORTABLE=1   # force stick layout off-USB
 
 ./scripts/run.sh
 # → http://127.0.0.1:8787/docs
 ```
+
+### USB / portable
+
+```bash
+./scripts/portable-setup.sh   # creates ../WS-tollgate/User + optional .venv
+./scripts/run.sh              # auto-detects /Volumes /media /mnt
+```
+
+See [docs/PORTABLE.md](docs/PORTABLE.md). No machine-local `/Users/…` paths required.
 
 ### HTTP (multi-consumer)
 
@@ -52,6 +61,9 @@ See `configs/mcp-tollgate.example.json` and `docs/MCP.md`.
 | `$TOLLGATE_HOME/User/Key.txt` | Provider secrets |
 | `$TOLLGATE_HOME/User/keys_app.json` | Limits, routing, cost_guard |
 | `$TOLLGATE_HOME/User/keys_usage.json` | Daily ledger |
+
+Defaults: portable/USB → sibling `WS-tollgate` or colocated `User/`; desk → `~/.tollgate`.  
+Compat: `GNOM_WS` still works.
 
 ## Docs
 

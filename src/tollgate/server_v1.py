@@ -29,9 +29,10 @@ from tollgate.gateway.entry import gateway_call
 
 def _bootstrap_env() -> None:
     try:
-        from tollgate.paths import data_home, user_dir
+        from tollgate.paths import data_home, pin_data_home_env, user_dir
         from tollgate.secrets import ensure_env_from_key_txt, load_keys, parse_key_file
 
+        pin_data_home_env()
         ensure_env_from_key_txt()
         load_keys()
         kp = user_dir() / "Key.txt"
@@ -94,15 +95,17 @@ class InvokeBody(BaseModel):
 @app.get("/v1/health")
 def health() -> dict[str, Any]:
     from tollgate.gateway.circuit import get_circuits
+    from tollgate.paths import path_snapshot
 
     ks = get_keys_service()
     return {
         "ok": True,
         "service": "tollgate",
         "product": "Tollgate",
-        "version": "0.1.0",
+        "version": "0.1.1",
         "extractable": True,
         "multi_consumer": True,
+        "portable": path_snapshot(),
         "app": ks.app_status(),
         "circuits": get_circuits().snapshot()[:30],
     }

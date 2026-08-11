@@ -10,9 +10,12 @@ No `gnom_hub.keys` module. Gnom is only a **client**.
 ## 1) Stdio MCP (Cursor / Claude Desktop / agents)
 
 ```bash
-# After: pip install -e .  (or pip install "tollgate @ git+https://github.com/landjunge/tollgate.git")
-export TOLLGATE_HOME="${TOLLGATE_HOME:-$HOME/.tollgate}"   # or WS with User/Key.txt
-# Optional gnom compat: export GNOM_WS="$HOME/WS-gnom-hub-v1"
+# After: pip install -e .  (or git+https://github.com/landjunge/tollgate.git)
+# Desk:   unset → ~/.tollgate
+# USB:    auto if repo under /Volumes|/media|/mnt, or:
+export TOLLGATE_PORTABLE=1
+# Explicit data root (best on multi-host stick):
+# export TOLLGATE_HOME=/path/to/WS-tollgate
 
 python -m tollgate
 # same: tollgate mcp
@@ -27,12 +30,14 @@ python -m tollgate
       "command": "python",
       "args": ["-m", "tollgate"],
       "env": {
-        "TOLLGATE_HOME": "${HOME}/.tollgate"
+        "TOLLGATE_PORTABLE": "1"
       }
     }
   }
 }
 ```
+
+USB details: [PORTABLE.md](PORTABLE.md).
 
 Repo example: [`configs/mcp-tollgate.example.json`](../configs/mcp-tollgate.example.json).
 
