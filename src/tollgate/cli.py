@@ -166,6 +166,17 @@ def main(argv: list[str] | None = None) -> None:
         help="machine-readable JSON (default is human text)",
     )
 
+    cert = sub.add_parser(
+        "certificate",
+        help="AI Reliability Report scorecard (PASS/FAIL for Protect·Route·Prove)",
+    )
+    cert.add_argument(
+        "--application",
+        default="",
+        help="label e.g. Customer Support Agent",
+    )
+    cert.add_argument("--json", action="store_true", help="JSON instead of text card")
+
     dem = sub.add_parser(
         "demo",
         help="Killer demo: agent tool-loop block + optional chaos DR proof",
@@ -484,6 +495,20 @@ def main(argv: list[str] | None = None) -> None:
         else:
             print(format_status_text())
         return
+
+    if args.cmd == "certificate":
+        from tollgate.certificate import build_certificate, format_certificate_text
+        from tollgate.paths import pin_data_home_env
+
+        pin_data_home_env()
+        cert_data = build_certificate(application=args.application or "")
+        if args.json:
+            print(json.dumps(cert_data, indent=2, default=str))
+        else:
+            print(format_certificate_text(cert_data))
+        # non-zero if protect hard-fails
+        overall = cert_data.get("overall")
+        raise SystemExit(1 if overall in ("NEEDS_PROTECT", "FROZEN") else 0)
 
     if args.cmd == "demo":
         import os

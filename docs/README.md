@@ -5,7 +5,8 @@
 
 | Doc | Topic |
 |-----|--------|
-| [GETTING_STARTED.md](GETTING_STARTED.md) | **5-minute setup** |
+| [TEN_MINUTE.md](TEN_MINUTE.md) | **Cold customer — first 10 minutes** |
+| [GETTING_STARTED.md](GETTING_STARTED.md) | Setup details |
 | [DEMO.md](DEMO.md) | **Killer demo — agent loop + DR proof** |
 | [MAP.md](MAP.md) | **Repo map — modules, HTTP, CLI, concepts** |
 | [VISION.md](VISION.md) | Product lock, multi-consumer |

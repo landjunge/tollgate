@@ -2,6 +2,14 @@
 
 All notable releases of [landjunge/tollgate](https://github.com/landjunge/tollgate).
 
+## 1.0.2 — 2026-08-11
+
+### Product / onboarding (not feature density)
+- **10-minute cold path:** `docs/TEN_MINUTE.md` + `./scripts/ten-minute.sh`
+- README leads with stranger install → Protect → Prove → scorecard
+- `tollgate certificate` — AI Reliability Report PASS/FAIL card (desk evidence)
+- Process lock: feedback > features until cold path is trivial
+
 ## 1.0.1 — 2026-08-11
 
 ### Added

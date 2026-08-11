@@ -201,7 +201,18 @@ from runaway costs and provider failures.
 - Feature soup without Protect · Route · Prove  
 - Mixing agent conversation memory into Tollgate (ops only)
 
+## Product process (after v1)
+
+**Next risk is feature density, not missing pillars.**
+
+1. Strangers pass [TEN_MINUTE.md](TEN_MINUTE.md)  
+2. Real n8n / agent-framework users give friction feedback  
+3. Only then: Pro (history, multi-desk) / Enterprise (SSO)  
+
+Long-term Prove extension (not now): **AI Reliability Certificate** as customer-facing evidence pack — today: `tollgate certificate` scorecard.
+
 ## See also
 
+- **[TEN_MINUTE.md](TEN_MINUTE.md)** — cold install test  
 - **[DEMO.md](DEMO.md)** — 30-second + live desk script  
 - [GETTING_STARTED.md](GETTING_STARTED.md) · [VISION.md](VISION.md) · [ARCHITECTURE.md](ARCHITECTURE.md)

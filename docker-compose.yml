@@ -1,7 +1,10 @@
-# Desk / home-lab drop-in
-#   docker compose up -d
+# Desk / home-lab drop-in — cold path after up:
+#   docker compose up -d --build
+#   docker compose exec tollgate tollgate demo --skip-chaos
+#   docker compose exec tollgate tollgate certificate
+#   open http://127.0.0.1:8787/dashboard
 #   export OPENAI_BASE_URL=http://127.0.0.1:8787/v1
-#   export OPENAI_API_KEY=local  # open mode until consumers.json is mounted
+#   export OPENAI_API_KEY=local
 services:
   tollgate:
     build: .
