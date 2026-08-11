@@ -139,6 +139,12 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
   .ob-actions { display:flex; gap:.5rem; justify-content:space-between; margin-top:1.1rem; flex-wrap:wrap; }
   .ob-check { margin:.4rem 0; font-size:.95rem; }
   .ob-check.ok { color:var(--ok); }
+  #blockModal {
+    display:none; position:fixed; inset:0; z-index:60; background:rgba(8,10,14,.88);
+    align-items:center; justify-content:center; padding:1rem;
+  }
+  #blockModal.open { display:flex; }
+  #blockModal .card { max-width:420px; width:100%; white-space:pre-wrap; font-family:ui-monospace,monospace; font-size:.88rem; }
 </style>
 </head>
 <body>
@@ -197,9 +203,17 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
     <div class="card" id="attention"><div class="empty">Loading…</div></div>
     <h2>Recommendations</h2>
     <div class="card" id="reco"><div class="empty">Loading…</div></div>
+    <h2>Where money goes</h2>
+    <div class="card" id="costSplit"><div class="empty">Loading…</div></div>
     <h2>Providers at a glance</h2>
     <div class="card" id="provGlance"><div class="empty">Loading…</div></div>
+    <div class="actions">
+      <button type="button" class="ghost" id="btnLoopTest">Test tool-loop block</button>
+      <button type="button" class="ghost" id="btnUnfreeze" style="display:none">Unfreeze admission</button>
+    </div>
   </section>
+
+  <div id="blockModal"><div class="card" id="blockModalBody"></div></div>
 
   <!-- AGENTS -->
   <section class="view" id="view-agents">
@@ -391,6 +405,31 @@ function renderOverview(ctrl, cert) {
     `<div class="reco ${r.level}">${r.text}${r.action && r.action.startsWith('#') ? ` <a href="${r.action}">Open →</a>` : (r.action ? `<div class="muted" style="margin-top:.25rem"><code>${r.action}</code></div>` : '')}</div>`
   ).join('');
 
+  // Cost split (where money goes)
+  const byAgent = (consumers||[]).filter(c => Number(c.usd||0) > 0).slice(0,8);
+  const byProv = (ctrl.providers||[]).filter(p => Number(p.usd||0) > 0).slice(0,8);
+  const totalUsd = Number(s.usd||0);
+  if (!byAgent.length && !byProv.length) {
+    $('costSplit').innerHTML = `<div class="empty">No spend yet today — good. Traffic will show by agent & provider.</div>`;
+  } else {
+    let html = `<div class="muted" style="margin-bottom:.5rem">Today ${money(totalUsd)}</div>`;
+    if (byAgent.length) {
+      html += `<div class="muted" style="font-size:.72rem;text-transform:uppercase;margin:.4rem 0">By agent</div>`;
+      html += byAgent.map(c => {
+        const share = totalUsd > 0 ? Math.round(100*Number(c.usd)/totalUsd) : 0;
+        return `<div class="row"><span>${c.consumer}</span><span>${money4(c.usd)} <span class="muted">(${share}%)</span></span></div>`;
+      }).join('');
+    }
+    if (byProv.length) {
+      html += `<div class="muted" style="font-size:.72rem;text-transform:uppercase;margin:.6rem 0 .4rem">By provider</div>`;
+      html += byProv.map(p => {
+        const share = totalUsd > 0 ? Math.round(100*Number(p.usd)/totalUsd) : 0;
+        return `<div class="row"><span>${p.provider}</span><span>${money4(p.usd)} <span class="muted">(${share}%)</span></span></div>`;
+      }).join('');
+    }
+    $('costSplit').innerHTML = html;
+  }
+
   const provs = (ctrl.providers||[]).filter(p => p.enabled !== false).slice(0,6);
   if (!provs.length) {
     $('provGlance').innerHTML = `<div class="empty">No provider traffic yet</div>`;
@@ -402,12 +441,19 @@ function renderOverview(ctrl, cert) {
       </div>`
     ).join('');
   }
+
+  // Unfreeze button
+  const uf = $('btnUnfreeze');
+  if (uf) uf.style.display = (ctrl.freeze && ctrl.freeze.frozen) ? '' : 'none';
 }
 
 function renderAgents(ctrl) {
   const list = ctrl.consumers || [];
   if (!list.length) {
-    $('agentsList').innerHTML = `<div class="card empty">No agent traffic yet. Set a lane:<br/><code>tollgate consumer-budget support-agent --max-usd-day 2 --max-tool-calls 20</code></div>`;
+    $('agentsList').innerHTML = `<div class="card empty">No agents yet.
+      <div class="actions"><button type="button" id="btnSetupAgents">Protect first agent</button></div></div>`;
+    const b = $('btnSetupAgents');
+    if (b) b.onclick = () => { OB.step = 0; renderObSteps(); showOnboard(true); };
     return;
   }
   $('agentsList').innerHTML = list.map((c,i) => {
@@ -425,7 +471,10 @@ function renderAgents(ctrl) {
           <b style="font-size:1.05rem">${c.consumer}</b>
           <div class="${stc}" style="margin-top:.25rem">● ${st}</div>
         </div>
-        <button class="ghost" data-agent="${i}">View</button>
+        <div style="display:flex;gap:.4rem">
+          <button class="ghost" data-loop="${c.consumer}">Test loop</button>
+          <button class="ghost" data-agent="${i}">View</button>
+        </div>
       </div>
       <div style="margin-top:.75rem">
         ${max ? `${money4(used)} / ${money(max)} budget` : `${money4(used)} spent (no day $ cap)`}
@@ -433,12 +482,22 @@ function renderAgents(ctrl) {
         <div class="muted" style="margin-top:.4rem;font-size:.85rem">${c.calls||0} requests · ${c.tokens||0} tokens · projected EOD ${money4(c.projected_usd_eod)}</div>
       </div>
       <div class="detail" id="agent-d-${i}">
-        <h2 style="margin-top:0">Protection</h2>
-        <div class="kv">
-          <div><b>Daily budget</b><br/>${max!=null?money(max):'—'}</div>
-          <div><b>Per request</b><br/>${c.max_usd_request!=null?money(c.max_usd_request):'—'}</div>
-          <div><b>Max tool calls</b><br/>${c.max_tool_calls??'—'}</div>
-          <div><b>Max req/min</b><br/>${c.max_requests_minute??'—'}</div>
+        <h2 style="margin-top:0">Edit protection</h2>
+        <div class="field-row">
+          <div class="field"><label>Daily budget $</label>
+            <input id="ed-day-${i}" type="number" step="0.5" value="${c.max_usd_day??''}"/></div>
+          <div class="field"><label>Max $ / task</label>
+            <input id="ed-req-${i}" type="number" step="0.1" value="${c.max_usd_request??''}"/></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Max tool calls</label>
+            <input id="ed-tools-${i}" type="number" step="1" value="${c.max_tool_calls??''}"/></div>
+          <div class="field"><label>Max req/min</label>
+            <input id="ed-rpm-${i}" type="number" step="1" value="${c.max_requests_minute??''}"/></div>
+        </div>
+        <div class="actions">
+          <button type="button" data-save="${i}" data-name="${c.consumer}">Save</button>
+          <button type="button" class="ghost" data-loop="${c.consumer}">Test tool-loop block</button>
         </div>
         <h2>Scopes</h2>
         <div class="muted" style="font-size:.9rem">
@@ -447,8 +506,7 @@ function renderAgents(ctrl) {
           Intents: ${(c.allowed_intents||[]).length ? c.allowed_intents.join(', ') : 'any'} ·
           Ops: ${(c.allowed_ops||[]).length ? c.allowed_ops.join(', ') : 'any'}
         </div>
-        <p class="muted" style="margin:.75rem 0 0;font-size:.85rem">Edit via CLI:<br/>
-        <code>tollgate consumer-budget ${c.consumer} --max-usd-day 2 --max-tool-calls 20</code></p>
+        <p id="ed-msg-${i}" class="muted" style="margin:.6rem 0 0;font-size:.85rem"></p>
       </div>
     </div>`;
   }).join('');
@@ -458,6 +516,12 @@ function renderAgents(ctrl) {
       el.classList.toggle('open');
       btn.textContent = el.classList.contains('open') ? 'Hide' : 'View';
     };
+  });
+  document.querySelectorAll('[data-loop]').forEach(btn => {
+    btn.onclick = () => simulateLoopBlock(btn.dataset.loop);
+  });
+  document.querySelectorAll('[data-save]').forEach(btn => {
+    btn.onclick = () => saveAgentProtection(Number(btn.dataset.save), btn.dataset.name);
   });
 }
 
@@ -639,6 +703,95 @@ $('btnChaos').onclick = async () => {
   }
 };
 
+// Persist API key label
+try {
+  const saved = localStorage.getItem('tollgate_api_key');
+  if (saved) $('apiKey').value = saved;
+} catch {}
+$('apiKey').addEventListener('change', () => {
+  try { localStorage.setItem('tollgate_api_key', key()); } catch {}
+});
+
+function showBlockModal(text) {
+  $('blockModalBody').textContent = text;
+  $('blockModal').classList.add('open');
+}
+$('blockModal').onclick = (e) => {
+  if (e.target.id === 'blockModal') $('blockModal').classList.remove('open');
+};
+
+async function simulateLoopBlock(consumer) {
+  const name = (consumer || '').trim() || 'support-agent';
+  showBlockModal('Testing tool-loop protection for ' + name + '…');
+  try {
+    const r = await fetch('/v1/invoke', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-Consumer-Key': name,
+        'Authorization': 'Bearer ' + name,
+      },
+      body: JSON.stringify({
+        provider: 'opencode_zen',
+        op: 'chat',
+        tool_calls_est: 999,
+        tokens_est: 10,
+        arguments: { message: 'ui loop test' },
+        agent_id: name,
+        request_class: 'interactive',
+      }),
+    });
+    const d = await r.json();
+    const msg = (d.blocked && d.blocked.message) || d.message || d.error || JSON.stringify(d, null, 2);
+    const header = d.ok === false
+      ? 'Aha — Protect works\n\n'
+      : 'Unexpected allow (raise max_tool_calls / set protection)\n\n';
+    showBlockModal(header + msg);
+    await loadAll();
+  } catch (e) {
+    showBlockModal('Test failed: ' + e.message);
+  }
+}
+
+async function saveAgentProtection(i, name) {
+  const msg = $('ed-msg-' + i);
+  try {
+    const day = Number($('ed-day-' + i).value);
+    const req = Number($('ed-req-' + i).value);
+    const tools = parseInt($('ed-tools-' + i).value, 10);
+    const rpm = parseInt($('ed-rpm-' + i).value, 10);
+    const env = {};
+    if (!Number.isNaN(day) && day >= 0) env.max_usd_day = day;
+    if (!Number.isNaN(req) && req >= 0) env.max_usd_request = req;
+    if (!Number.isNaN(tools) && tools >= 0) env.max_tool_calls = tools;
+    if (!Number.isNaN(rpm) && rpm >= 0) env.max_requests_minute = rpm;
+    await api('/v1/config', {
+      method: 'POST',
+      body: JSON.stringify({ consumer_envelopes: { [name]: env } }),
+    });
+    if (msg) { msg.textContent = 'Saved.'; msg.className = 'ok'; }
+    await loadAll();
+  } catch (e) {
+    if (msg) { msg.textContent = e.message; msg.className = 'bad'; }
+  }
+}
+
+$('btnLoopTest').onclick = () => {
+  const list = (CTRL && CTRL.consumers) || [];
+  const c = list.find(x => x.protected) || list[0];
+  const name = c ? c.consumer : (OB.name || 'support-agent');
+  simulateLoopBlock(name);
+};
+$('btnUnfreeze').onclick = async () => {
+  try {
+    await api('/v1/freeze', { method: 'POST', body: JSON.stringify({ frozen: false }) });
+    await loadAll();
+  } catch (e) {
+    alert('Unfreeze failed: ' + e.message);
+  }
+};
+
 // ── Onboarding: protect first agent in 4 steps ──────────────────────
 const OB = {
   step: 0,
@@ -717,8 +870,8 @@ function renderObSteps() {
       <div class="ob-check ok">✓ Tool-loop limit enabled</div>
       <div class="ob-check ok">✓ Rate limit enabled</div>
       <p class="muted" style="margin-top:.85rem;font-size:.9rem">
-        Next: run a failover test under <b>Prove</b>, or
-        <code>tollgate demo --skip-chaos</code> for the tool-loop Aha.
+        After Finish you can <b>Test tool-loop block</b> on Overview — the Protect Aha, no API keys needed.
+        Then open <b>Prove</b> for failover.
       </p>`;
   }
 }
@@ -784,6 +937,8 @@ $('obNext').onclick = async () => {
     await loadAll();
     location.hash = '#agents';
     onHash();
+    // Immediate Aha — tool loop block for the new lane
+    setTimeout(() => simulateLoopBlock(OB.name), 400);
   } catch (e) {
     $('obErr').style.display = '';
     $('obErr').textContent = 'Could not save protection: ' + e.message;

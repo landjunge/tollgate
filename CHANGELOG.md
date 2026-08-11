@@ -2,6 +2,15 @@
 
 All notable releases of [landjunge/tollgate](https://github.com/landjunge/tollgate).
 
+## 1.0.5 — 2026-08-11
+
+### WebUI polish (UX, not features)
+- **Test tool-loop block** in browser (Overview + Agents) → 🛑 modal
+- **Edit protection** on agent detail (save via `/v1/config`)
+- Cost split on Overview (by agent / provider)
+- Auto loop-test after onboarding finish; Unfreeze button when frozen
+- Persist API key label in localStorage
+
 ## 1.0.4 — 2026-08-11
 
 ### WebUI — first-agent onboarding
