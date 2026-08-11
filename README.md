@@ -83,9 +83,12 @@ export OPENAI_BASE_URL=http://127.0.0.1:8787/v1
 export OPENAI_API_KEY=n8n:secret   # open mode: any label works
 # POST /v1/chat/completions  ·  GET /v1/models  ·  stream: true → SSE
 docker compose up -d               # optional
+curl -s localhost:8787/metrics | head   # Prometheus
 ```
 
 → [docs/OPENAI.md](docs/OPENAI.md)
+
+Review-Liste: **OpenAI ✅ · Docker ✅ · Webhooks ✅ · Prometheus ✅** · Anthropic/n8n-Node/LiteLLM-Import → on demand.
 
 ## HTTP native (kurz)
 
