@@ -12,6 +12,7 @@ from tollgate.gateway.admit import admit
 from tollgate.gateway.circuit import get_circuits
 from tollgate.gateway.context import RequestContext, RequestClass
 from tollgate.gateway.errors import ErrorClass, PolicyDeny, classify_result
+from tollgate.redact import redact_secrets
 
 
 def gateway_call(
@@ -42,9 +43,24 @@ def gateway_call(
         ctx=ctx,
     )
     if not decision.allowed:
+        reason = redact_secrets(decision.reason or "denied")
+        try:
+            from tollgate.audit_log import append_audit
+
+            append_audit(
+                "admit_deny",
+                provider=provider,
+                op=op,
+                consumer=str(ctx.agent_id or ""),
+                error=reason,
+                ok=False,
+                extra={"error_class": decision.code.value},
+            )
+        except Exception:  # noqa: BLE001
+            pass
         return {
             "ok": False,
-            "error": decision.reason,
+            "error": reason,
             "error_class": decision.code.value,
             "admit": decision.as_dict(),
             "provider": provider,
@@ -82,19 +98,21 @@ def gateway_call(
             **kwargs,
         )
     except PolicyDeny as e:
+        err = redact_secrets(str(e))
         return {
             "ok": False,
-            "error": str(e),
+            "error": err,
             "error_class": e.code.value,
             "admit": decision.as_dict(),
             "provider": provider,
             "op": op,
         }
     except Exception as e:  # noqa: BLE001
-        get_circuits().failure(provider, model=mid, message=str(e))
+        err = redact_secrets(str(e))
+        get_circuits().failure(provider, model=mid, message=err)
         return {
             "ok": False,
-            "error": str(e),
+            "error": err,
             "error_class": ErrorClass.UNKNOWN.value,
             "admit": decision.as_dict(),
             "provider": provider,
@@ -127,9 +145,13 @@ def gateway_call(
             except Exception:  # noqa: BLE001
                 pass
     elif ec == ErrorClass.AUTH_DEAD:
-        circuits.failure(provider, model=mid, message=str(result.get("error")), hard=True)
+        circuits.failure(
+            provider, model=mid, message=redact_secrets(str(result.get("error"))), hard=True
+        )
     elif ec in (ErrorClass.RATE_LIMIT, ErrorClass.PROVIDER_DOWN):
-        circuits.failure(provider, model=mid, message=str(result.get("error")), hard=False)
+        circuits.failure(
+            provider, model=mid, message=redact_secrets(str(result.get("error"))), hard=False
+        )
     elif ec == ErrorClass.EDGE_BLOCK:
         circuits.failure(provider, model=mid, message="EDGE_BLOCK", hard=False)
 

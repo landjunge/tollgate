@@ -66,16 +66,32 @@ def load_usage(*, root: Path | None = None) -> dict[str, Any]:
             return _load_unlocked(path)
 
 
+def _corrupt_day(reason: str) -> dict[str, Any]:
+    """Fail-closed marker — never treat as empty (would reset budgets)."""
+    d = _empty_day()
+    d["_corrupt"] = True
+    d["_corrupt_reason"] = reason[:200]
+    return d
+
+
+def is_ledger_corrupt(data: dict[str, Any] | None) -> bool:
+    return bool(data and data.get("_corrupt"))
+
+
 def _load_unlocked(path: Path) -> dict[str, Any]:
     if not path.is_file():
         return _empty_day()
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:  # noqa: BLE001
-        return _empty_day()
+        raw = path.read_text(encoding="utf-8")
+        data = json.loads(raw)
+    except Exception as e:  # noqa: BLE001
+        return _corrupt_day(f"json_parse: {e}")
     if not isinstance(data, dict):
-        return _empty_day()
+        return _corrupt_day("not_an_object")
+    if data.get("_corrupt"):
+        return data
     if data.get("day") != _today():
+        # intentional day rollover — not corruption
         data = _empty_day()
         _write_unlocked(path, data)
     return data
@@ -137,6 +153,25 @@ def record_usage(
     with _LOCK:
         with FileLock(path):
             data = _load_unlocked(path)
+            if is_ledger_corrupt(data):
+                try:
+                    from tollgate.audit_log import append_audit
+
+                    append_audit(
+                        "ledger_corrupt",
+                        provider=provider_id,
+                        op=op,
+                        error=str(data.get("_corrupt_reason") or "corrupt"),
+                        ok=False,
+                        root=root,
+                    )
+                except Exception:  # noqa: BLE001
+                    pass
+                return {
+                    "ok": False,
+                    "error": "ledger corrupt — fail-closed (fix keys_usage.json)",
+                    "_corrupt": True,
+                }
             if data.get("day") != _today():
                 data = _empty_day()
             providers = data.setdefault("providers", {})
@@ -172,6 +207,21 @@ def record_usage(
             if error:
                 tot["errors"] = int(tot.get("errors") or 0) + 1
             _write_unlocked(path, data)
+            try:
+                from tollgate.audit_log import append_audit
+
+                append_audit(
+                    "usage",
+                    provider=provider_id,
+                    op=op,
+                    tokens=tin + tout,
+                    usd=usd_v,
+                    ok=not error,
+                    error="error" if error else "",
+                    root=root,
+                )
+            except Exception:  # noqa: BLE001
+                pass
             return dict(p)
 
 

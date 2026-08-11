@@ -45,11 +45,21 @@ Auto-created from `DEFAULT_CONFIG` (Google **enabled=false**).
 
 Patch via:
 
-- `POST /v1/config` (HTTP, loopback)
+- `GET /v1/config` — read policy
+- `POST /v1/config` — deep-merge patch (admin when auth mode; implemented in `server_v1.py`)
 - MCP `keys_config_patch`
 - Or edit the JSON on disk
 
 See [COST_LIMITS.md](COST_LIMITS.md).
+
+## Audit & ledger
+
+| File | Role |
+|------|------|
+| `User/keys_usage.json` | Daily **counters** (mutable RMW, file-locked) |
+| `User/audit.jsonl` | **Append-only** events (admit deny, usage) — never rewritten |
+| Fail-closed | Corrupt `keys_usage.json` → admit **denies** (does not reset budget to 0) |
+| Secrets | Error strings redacted before circuits/audit (`redact_secrets`) |
 
 ## Grades
 

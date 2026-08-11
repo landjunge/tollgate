@@ -27,6 +27,37 @@ def check_limits(
         # limits still apply if provider block exists
         pass
 
+    # Fail-closed if daily ledger unreadable (never treat as empty budget)
+    try:
+        from tollgate.usage_ledger import is_ledger_corrupt, load_usage
+
+        day = load_usage()
+        if is_ledger_corrupt(day):
+            return {
+                "allowed": False,
+                "reason": (
+                    "ledger corrupt/unreadable — fail-closed "
+                    f"({day.get('_corrupt_reason') or 'fix keys_usage.json'})"
+                ),
+                "remaining_calls": 0,
+                "remaining_tokens": 0,
+                "remaining_usd": 0.0,
+                "ledger_corrupt": True,
+                "soft_warn": False,
+                "wait_ms": 0,
+            }
+    except Exception as e:  # noqa: BLE001
+        return {
+            "allowed": False,
+            "reason": f"ledger unavailable — fail-closed ({e})",
+            "remaining_calls": 0,
+            "remaining_tokens": 0,
+            "remaining_usd": 0.0,
+            "ledger_corrupt": True,
+            "soft_warn": False,
+            "wait_ms": 0,
+        }
+
     # Cost guard first (high-risk list + max_usd_day)
     cg = check_cost_guard(provider_id, tokens_est=tokens_est)
     if not cg.get("allowed"):

@@ -71,7 +71,13 @@ class Circuit:
             self.failures = max(0, self.failures - 1)
 
     def record_failure(self, *, message: str = "", hard: bool = False) -> None:
-        self.last_error = (message or "")[:200]
+        try:
+            from tollgate.redact import redact_secrets
+
+            msg = redact_secrets(message or "")
+        except Exception:  # noqa: BLE001
+            msg = (message or "")[:200]
+        self.last_error = msg[:200]
         self.failures += 1
         self.successes = 0
         if hard or self.failures >= self.failure_threshold:

@@ -12,6 +12,8 @@ src/*.egg-info/
 .DS_Store
 User/
 consumers.json
+audit.jsonl
+circuits.json
 *.sqlite
 keys_usage.json
 *.log
