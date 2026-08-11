@@ -5,6 +5,8 @@
 
 | Doc | Topic |
 |-----|--------|
+| **[HILFE.md](HILFE.md)** | **Deutsche Hilfe & Handbuch** |
+| **[USER_GUIDE.md](USER_GUIDE.md)** | **English user handbook** |
 | [TEN_MINUTE.md](TEN_MINUTE.md) | **Cold customer — first 10 minutes** |
 | [GETTING_STARTED.md](GETTING_STARTED.md) | Setup details |
 | [DEMO.md](DEMO.md) | **Killer demo — agent loop + DR proof** |
@@ -20,6 +22,14 @@
 | [OPENAI.md](OPENAI.md) | OpenAI drop-in base_url |
 | [STABILITY.md](STABILITY.md) | Scale, multi-worker, schema version, deprecation |
 | [OPERATIONS.md](OPERATIONS.md) | doctor, deploy, auto-maintenance boundary |
+
+## CLI help
+
+```bash
+tollgate help
+tollgate help protect
+tollgate help troubleshoot
+```
 
 ## Search the repo
 

@@ -68,6 +68,7 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | `tollgate high-risk` | List/add/remove high-risk providers |
 | `tollgate doctor` | Self-diagnose install/config |
 | `tollgate suggest` | Ledger-based config proposals |
+| `tollgate help` | User help topics + handbook links |
 | `tollgate search` | Search repo modules / docs / routes |
 | `tollgate audit` | Query audit trail — who was denied and why |
 | `tollgate report` | Daily operator report Protect·Route·Prove |
@@ -75,6 +76,8 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | `tollgate alert` | Webhook test / event catalog |
 | `tollgate freeze` | Global admission kill switch |
 | `tollgate status` | Compact desk status one-glance |
+| `tollgate demo` | Killer demo: tool-loop block + chaos DR |
+| `tollgate certificate` | AI Reliability Report scorecard |
 | `tollgate circuits` | List or reset circuit breakers |
 
 ## Concepts → code
@@ -83,6 +86,8 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 |---------|------|
 | Protect · Route · Prove (product pillars) | `docs/PRODUCT.md` |
 | Killer demo — agent loop + DR proof | `docs/DEMO.md` |
+| Hilfe & Handbuch (Deutsch) | `docs/HILFE.md` |
+| User Guide (English) | `docs/USER_GUIDE.md` |
 | Agent protection (loop / $ / RPM hard stops) | `src/tollgate/agent_guard.py` |
 | Consumer day envelopes | `src/tollgate/limits.py` |
 | L4 Admission (fail-closed) | `src/tollgate/gateway/admit.py` |
@@ -132,8 +137,10 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | `audit_log.py` | Append-only operational audit trail. |
 | `auto_update.py` | Background auto-update of provider status / model caches. |
 | `base.py` | Shared helpers for the keys module (masking, env access). |
+| `block_view.py` | Product-facing "REQUEST BLOCKED" card — the Protect Aha moment. |
 | `brave.py` | Brave Search — X-Subscription-Token + rate-limit headers. |
 | `catalog.py` | Catalog of known key families and which env vars the hub owns. |
+| `certificate.py` | AI Reliability Report — scorecard for the 10-minute / CTO screen. |
 | `chaos.py` | Chaos / DR testing — prove failover works before production does. |
 | `chat_route.py` | Routed chat: intent → provider/model → gateway admit + call (+ failover). |
 | `chat_stream.py` | Real token streaming for OpenAI-compatible providers. |
@@ -143,7 +150,7 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | `consumers.py` | Multi-consumer identity for HTTP /v1. |
 | `control_plane.py` | AI traffic control plane — product pane over ledger + circuits. |
 | `cost.py` | USD cost estimates + generic high-risk provider guards. |
-| `dashboard_html.py` | Minimal control-plane HTML — Protect · Route · Prove. |
+| `dashboard_html.py` | Control Room WebUI — radical simple ops pane (not a config cemetery). |
 | `deepseek.py` | DeepSeek / Worker keys — OpenAI-compatible, concurrency-limited. |
 | `distill/loader.py` | Load provider distillates — single source of truth for keys functions. |
 | `distill/schema.py` | Lightweight distill schema — required fields for provider JSON. |
@@ -201,6 +208,7 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | [`docs/DEMO.md`](DEMO.md) | Demo: “My AI agent must never go out of control” |
 | [`docs/DESK.md`](DESK.md) | Desk runbook (Gnom + n8n + Tollgate) |
 | [`docs/GETTING_STARTED.md`](GETTING_STARTED.md) | Getting started in 5 minutes |
+| [`docs/HILFE.md`](HILFE.md) | Tollgate — Hilfe & Handbuch |
 | [`docs/KEYS_MODULE.md`](KEYS_MODULE.md) | Tollgate module map |
 | [`docs/MAP.md`](MAP.md) | MAP |
 | [`docs/MCP.md`](MCP.md) | Tollgate — MCP |
@@ -211,6 +219,8 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | [`docs/PRODUCT.md`](PRODUCT.md) | Tollgate product direction |
 | [`docs/README.md`](README.md) | Tollgate docs |
 | [`docs/STABILITY.md`](STABILITY.md) | Scale & future-proofing |
+| [`docs/TEN_MINUTE.md`](TEN_MINUTE.md) | 10-minute test (cold customer) |
+| [`docs/USER_GUIDE.md`](USER_GUIDE.md) | Tollgate — User Guide |
 | [`docs/VISION.md`](VISION.md) | Tollgate — Vision (locked) |
 | [`docs/providers/INDEX.md`](providers/INDEX.md) | Provider distill index |
 

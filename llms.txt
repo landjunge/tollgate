@@ -8,6 +8,7 @@
 ## Start here
 
 - [README](README.md) — 10-minute path first
+- [Help DE](docs/HILFE.md) · [User Guide EN](docs/USER_GUIDE.md)
 - [10-minute cold test](docs/TEN_MINUTE.md)
 - [Demo (killer use case)](docs/DEMO.md)
 - [Product wedge](docs/PRODUCT.md)

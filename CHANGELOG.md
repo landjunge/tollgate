@@ -2,6 +2,14 @@
 
 All notable releases of [landjunge/tollgate](https://github.com/landjunge/tollgate).
 
+## 1.0.6 — 2026-08-11
+
+### Documentation & help
+- `docs/HILFE.md` — detailed German handbook
+- `docs/USER_GUIDE.md` — detailed English handbook
+- CLI: `tollgate help [topic]` (start, protect, route, prove, ui, api, ops, …)
+- Docs index + dashboard footer + README links
+
 ## 1.0.5 — 2026-08-11
 
 ### WebUI polish (UX, not features)

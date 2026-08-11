@@ -66,6 +66,20 @@ CONCEPTS: list[dict[str, Any]] = [
         "keywords": "demo agent loop tool_calls max_tool_calls chaos prove aha support-agent",
     },
     {
+        "id": "hilfe",
+        "title": "Hilfe & Handbuch (Deutsch)",
+        "path": "docs/HILFE.md",
+        "summary": "Vollständige deutsche Benutzerhilfe: Install, Protect, UI, CLI, API, FAQ.",
+        "keywords": "hilfe handbuch dokumentation anleitung deutsch guide help",
+    },
+    {
+        "id": "user-guide",
+        "title": "User Guide (English)",
+        "path": "docs/USER_GUIDE.md",
+        "summary": "Full English handbook: install, protect, UI, CLI, API, troubleshoot.",
+        "keywords": "user guide handbook documentation help english manual",
+    },
+    {
         "id": "agent-protection",
         "title": "Agent protection (loop / $ / RPM hard stops)",
         "path": "src/tollgate/agent_guard.py",
@@ -367,6 +381,7 @@ CLI_COMMANDS: list[dict[str, str]] = [
     {"cmd": "high-risk", "summary": "List/add/remove high-risk providers"},
     {"cmd": "doctor", "summary": "Self-diagnose install/config"},
     {"cmd": "suggest", "summary": "Ledger-based config proposals"},
+    {"cmd": "help", "summary": "User help topics + handbook links"},
     {"cmd": "search", "summary": "Search repo modules / docs / routes"},
     {"cmd": "audit", "summary": "Query audit trail — who was denied and why"},
     {"cmd": "report", "summary": "Daily operator report Protect·Route·Prove"},

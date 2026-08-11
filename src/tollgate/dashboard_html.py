@@ -274,8 +274,10 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
   <footer>
     Safety layer for AI agents · not a gateway catalog ·
     <a href="/docs">API</a> ·
+    <a href="https://github.com/landjunge/tollgate/blob/main/docs/HILFE.md" target="_blank" rel="noopener">Hilfe</a> ·
+    <a href="https://github.com/landjunge/tollgate/blob/main/docs/USER_GUIDE.md" target="_blank" rel="noopener">User Guide</a> ·
     <a href="https://github.com/landjunge/tollgate">GitHub</a> ·
-    config via CLI <code>tollgate consumer-budget …</code>
+    <code>tollgate help</code>
   </footer>
 </main>
 <script>

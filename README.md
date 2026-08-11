@@ -40,8 +40,9 @@ docker compose exec tollgate tollgate demo --skip-chaos
 docker compose exec tollgate tollgate certificate
 ```
 
-**Stranger test doc:** [docs/TEN_MINUTE.md](docs/TEN_MINUTE.md)  
-**Full storyboard:** [docs/DEMO.md](docs/DEMO.md)
+**Stranger test:** [docs/TEN_MINUTE.md](docs/TEN_MINUTE.md)  
+**Full help:** [docs/HILFE.md](docs/HILFE.md) (DE) · [docs/USER_GUIDE.md](docs/USER_GUIDE.md) (EN)  
+**Demo:** [docs/DEMO.md](docs/DEMO.md) · `tollgate help`
 
 If that path is confusing, **stop shipping features** — fix the path.
 
@@ -105,11 +106,13 @@ export OPENAI_API_KEY=support-agent   # open mode label, or id:secret
 
 | Doc | When |
 |-----|------|
-| [TEN_MINUTE.md](docs/TEN_MINUTE.md) | **First visit** |
+| [HILFE.md](docs/HILFE.md) | **Hilfe (Deutsch)** |
+| [USER_GUIDE.md](docs/USER_GUIDE.md) | **User guide (English)** |
+| [TEN_MINUTE.md](docs/TEN_MINUTE.md) | First 10 minutes |
 | [DEMO.md](docs/DEMO.md) | Pitch / screen share |
 | [GETTING_STARTED.md](docs/GETTING_STARTED.md) | Setup details |
 | [MAP.md](docs/MAP.md) · `tollgate search` | Find code |
 | [N8N.md](docs/N8N.md) · [OPENAI.md](docs/OPENAI.md) | Integrations |
-| [CHANGELOG.md](CHANGELOG.md) | Releases · **v1.0.0** |
+| [CHANGELOG.md](CHANGELOG.md) | Releases · **v1.0.0+** |
 
 **License:** MIT · **Python:** ≥ 3.11 · **Repo:** [landjunge/tollgate](https://github.com/landjunge/tollgate)

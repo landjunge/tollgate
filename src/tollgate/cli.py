@@ -7,12 +7,198 @@ import json
 import sys
 
 
+def _format_help(topic: str = "") -> str:
+    """Human help text (mirrors docs/HILFE.md + USER_GUIDE.md)."""
+    t = (topic or "").strip().lower()
+    topics = {
+        "start": """
+# Start / install
+
+  python3 -m venv .venv && .venv/bin/pip install -e .
+  export TOLLGATE_HOME=$HOME/.tollgate
+  tollgate serve                    # http://127.0.0.1:8787
+  ./scripts/ten-minute.sh           # cold 10-minute path
+  ./scripts/desk-ready.sh           # doctor + server + smoke
+
+  Docker:  docker compose up -d --build
+  UI:      http://127.0.0.1:8787/dashboard
+  API:     http://127.0.0.1:8787/docs
+
+  Keys (optional for Protect demo): $TOLLGATE_HOME/User/Key.txt
+  Handbook: docs/HILFE.md · docs/USER_GUIDE.md · docs/TEN_MINUTE.md
+""",
+        "protect": """
+# Protect — agent must never go out of control
+
+  tollgate consumer-budget support-agent \\
+    --max-usd-day 2 --max-usd-request 0.5 \\
+    --max-tool-calls 20 --max-requests-minute 50
+
+  tollgate consumer-budget support-agent \\
+    --allow-provider opencode_zen --allow-intent free_llm --allow-op chat
+
+  # Tool-loop Aha (no spend required)
+  curl -s http://127.0.0.1:8787/v1/invoke \\
+    -H 'Content-Type: application/json' \\
+    -H 'X-Consumer-Key: support-agent' \\
+    -d '{"provider":"opencode_zen","op":"chat","tool_calls_est":99,"arguments":{"message":"x"}}'
+
+  tollgate freeze --reason "incident"   # kill switch
+  tollgate unfreeze
+  Dashboard: Overview → "Test tool-loop block"
+""",
+        "route": """
+# Route — health-aware failover
+
+  curl -s http://127.0.0.1:8787/v1/route \\
+    -H 'Content-Type: application/json' -H 'X-Consumer-Key: desk' \\
+    -d '{"intent":"free_llm","tokens_est":1000}'
+
+  tollgate circuits list
+  tollgate circuits reset deepseek
+  tollgate circuits reset --all
+""",
+        "prove": """
+# Prove — chaos / resilience / certificate
+
+  tollgate chaos test opencode_zen --requests 10
+  tollgate resilience
+  tollgate certificate --application "Support Agent"
+  tollgate demo                     # Protect + Prove live script
+
+  Dashboard → Prove → Run test
+""",
+        "ui": """
+# Control Room WebUI
+
+  http://127.0.0.1:8787/dashboard
+
+  Overview  — safe? broken? expensive? what to do?
+  Agents    — budgets, edit protection, loop test
+  Providers — health / latency / cost
+  Prove     — chaos test + certificate
+  Audit     — who was blocked
+
+  Badge: PROTECTED | ATTENTION | FROZEN
+  Setup wizard: first protected lane without CLI
+""",
+        "api": """
+# HTTP surfaces (base http://127.0.0.1:8787)
+
+  GET  /dashboard /docs /metrics
+  GET  /v1/health /v1/control /v1/status /v1/certificate
+  GET  /v1/audit /v1/budget /v1/resilience /v1/chaos
+  POST /v1/route /v1/invoke /v1/chat/completions /v1/messages
+  POST /v1/config /v1/chaos/test /v1/freeze /v1/circuits/reset
+
+  OpenAI drop-in:
+    export OPENAI_BASE_URL=http://127.0.0.1:8787/v1
+    export OPENAI_API_KEY=support-agent
+
+  Full OpenAPI: /docs  ·  Handbooks: docs/HILFE.md docs/USER_GUIDE.md
+""",
+        "ops": """
+# Operations
+
+  tollgate doctor
+  tollgate status
+  tollgate report --format md
+  tollgate audit --event admit_deny --limit 20
+  tollgate alert test
+  tollgate snapshot export -o desk.tgz
+  tollgate search circuit breaker
+
+  Webhook: TOLLGATE_ALERT_WEBHOOK or cost_guard.alert_webhook_url
+  Metrics auth: consumer key | TOLLGATE_METRICS_TOKEN | PUBLIC=1
+  Portable: docs/PORTABLE.md · docs/OPERATIONS.md
+""",
+        "troubleshoot": """
+# Troubleshooting
+
+  Server won't start     → tollgate doctor · free port 8787 · Python ≥ 3.11
+  401 Unauthorized       → auth mode needs id:secret · consumer-add
+  Always blocked         → envelope / freeze status / scopes
+  Chaos failed           → ≥2 providers in free_llm chain · keys
+  Stale dashboard        → hard refresh · check /v1/health version
+  Wrong data home        → tollgate paths · echo $TOLLGATE_HOME
+  Metrics 401            → token / consumer / TOLLGATE_METRICS_PUBLIC=1
+
+  Log (desk): /tmp/tollgate-desk.log
+""",
+        "commands": """
+# All CLI commands
+
+  serve mcp health control resilience chaos paths
+  consumer-add consumer-budget provider-add high-risk
+  doctor suggest status certificate demo
+  freeze unfreeze circuits alert snapshot
+  report audit search help
+
+  Examples:
+    tollgate consumer-budget support-agent --max-usd-day 2 --max-tool-calls 20
+    tollgate chaos test opencode_zen --requests 8
+    tollgate certificate
+    tollgate demo --skip-chaos
+""",
+    }
+    if t in topics:
+        return topics[t].strip() + "\n"
+    if t:
+        return (
+            f"Unknown topic: {t!r}\n\n"
+            + _format_help("")
+        )
+    return """
+Tollgate — safety layer for AI agents (Protect · Route · Prove)
+
+  “My AI agent must never go out of control.”
+
+Quick start
+  ./scripts/ten-minute.sh
+  tollgate serve
+  open http://127.0.0.1:8787/dashboard
+
+Help topics
+  tollgate help start          install & cold path
+  tollgate help protect        budgets, loops, freeze, scopes
+  tollgate help route          failover & circuits
+  tollgate help prove          chaos, resilience, certificate
+  tollgate help ui             Control Room WebUI
+  tollgate help api            HTTP / OpenAI drop-in
+  tollgate help ops            doctor, audit, snapshot, alerts
+  tollgate help troubleshoot   common failures
+  tollgate help commands       full command list
+
+Handbooks
+  docs/HILFE.md        German detailed help
+  docs/USER_GUIDE.md   English user guide
+  docs/TEN_MINUTE.md   10-minute stranger test
+  docs/DEMO.md         killer demo script
+  docs/PRODUCT.md      positioning
+
+Repo search
+  tollgate search <query>
+  tollgate search --map
+""".strip() + "\n"
+
+
 def main(argv: list[str] | None = None) -> None:
     p = argparse.ArgumentParser(
         prog="tollgate",
-        description="Tollgate — AI reliability & control plane for agents",
+        description=(
+            "Tollgate — safety layer for AI agents (Protect · Route · Prove). "
+            "Try: tollgate help"
+        ),
     )
     sub = p.add_subparsers(dest="cmd")
+    help_p = sub.add_parser("help", help="User help — topics and handbook links")
+    help_p.add_argument(
+        "topic",
+        nargs="?",
+        default="",
+        help="start|protect|route|prove|ui|api|ops|troubleshoot|commands",
+    )
+
     sub.add_parser("serve", help="Run HTTP server (uvicorn)")
     sub.add_parser("mcp", help="Run MCP stdio server")
     sub.add_parser("health", help="Print local health JSON (paths + auth mode)")
@@ -357,6 +543,10 @@ def main(argv: list[str] | None = None) -> None:
     )
 
     args = p.parse_args(argv)
+
+    if args.cmd == "help":
+        print(_format_help(getattr(args, "topic", "") or ""))
+        return
 
     if args.cmd == "mcp" or (args.cmd is None and len(sys.argv) == 1):
         from tollgate.mcp import main as mcp_main
