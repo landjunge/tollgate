@@ -270,7 +270,19 @@ The demo is **not invented**. It’s a path through existing features.
 
 ---
 
-## Live desk script (copy-paste)
+## Live desk script (one command)
+
+```bash
+# Starts server if needed, Protect Aha + Prove Aha
+./scripts/demo-agent-safety.sh
+
+# or
+tollgate demo
+tollgate demo --skip-chaos          # only tool-loop block
+SKIP_CHAOS=1 ./scripts/demo-agent-safety.sh
+```
+
+Manual (same story):
 
 ```bash
 export TOLLGATE_HOME=${TOLLGATE_HOME:-$HOME/.tollgate}
@@ -282,11 +294,11 @@ tollgate consumer-budget support-agent \
   --max-tool-calls 20 --max-requests-minute 50 \
   --allow-intent free_llm --allow-intent llm --allow-op chat
 
-# Aha 1 — loop blocked (no spend required)
+# Aha 1 — loop blocked (no spend required); body includes blocked.message
 curl -s http://127.0.0.1:8787/v1/invoke \
   -H 'Content-Type: application/json' \
   -H 'X-Consumer-Key: support-agent' \
-  -d '{"provider":"opencode_zen","op":"chat","arguments":{"message":"x"},"tool_calls_est":99,"agent_id":"support-agent"}' | jq .
+  -d '{"provider":"opencode_zen","op":"chat","arguments":{"message":"x"},"tool_calls_est":99,"agent_id":"support-agent"}' | jq .blocked
 
 tollgate audit --event admit_deny --limit 5
 
@@ -294,6 +306,18 @@ tollgate audit --event admit_deny --limit 5
 tollgate chaos test opencode_zen --requests 10
 tollgate resilience
 tollgate status
+```
+
+Deny payloads include a product card:
+
+```json
+"blocked": {
+  "headline": "REQUEST BLOCKED",
+  "consumer": "support-agent",
+  "reason": "max_tool_calls",
+  "tool_calls": { "est": 99, "max": 20 },
+  "message": "🛑 REQUEST BLOCKED\n…"
+}
 ```
 
 Dashboard: http://127.0.0.1:8787/dashboard  

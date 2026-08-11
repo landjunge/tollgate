@@ -110,6 +110,12 @@ def _tollgate_error_meta(result: dict[str, Any]) -> dict[str, Any]:
         "wait_ms": wait_ms if wait_ms > 0 else None,
         "retry_after_s": max(1, int(wait_ms / 1000)) if wait_ms > 0 else None,
     }
+    # Product Aha card (Protect)
+    blocked = result.get("blocked")
+    if isinstance(blocked, dict):
+        meta["blocked"] = blocked
+        if blocked.get("message"):
+            meta["message"] = blocked["message"]
     # drop Nones for compact payloads
     return {k: v for k, v in meta.items() if v is not None and v != ""}
 

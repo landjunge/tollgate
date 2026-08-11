@@ -374,6 +374,7 @@ CLI_COMMANDS: list[dict[str, str]] = [
     {"cmd": "alert", "summary": "Webhook test / event catalog"},
     {"cmd": "freeze", "summary": "Global admission kill switch"},
     {"cmd": "status", "summary": "Compact desk status one-glance"},
+    {"cmd": "demo", "summary": "Killer demo: tool-loop block + chaos DR"},
     {"cmd": "circuits", "summary": "List or reset circuit breakers"},
 ]
 

@@ -98,14 +98,38 @@ def gateway_call(
                 )
         except Exception:  # noqa: BLE001
             pass
-        return {
+        blocked = None
+        try:
+            from tollgate.block_view import build_block_card
+
+            lim = decision.limits if isinstance(decision.limits, dict) else {}
+            cl = lim.get("consumer_limits") if isinstance(lim.get("consumer_limits"), dict) else {}
+            blocked = build_block_card(
+                reason=reason,
+                consumer=ctx.consumer_id(),
+                provider=provider,
+                op=op,
+                protection=cl.get("protection") or lim.get("protection"),
+                limits=lim,
+                tool_calls_est=int(getattr(ctx, "tool_calls_est", 0) or 0),
+                tokens_est=int(tokens_est or 0),
+            )
+        except Exception:  # noqa: BLE001
+            blocked = None
+        out: dict[str, Any] = {
             "ok": False,
             "error": reason,
             "error_class": decision.code.value,
             "admit": decision.as_dict(),
             "provider": provider,
             "op": op,
+            "protection": (decision.limits or {}).get("protection"),
         }
+        if blocked:
+            out["blocked"] = blocked
+            out["message"] = blocked.get("message")
+        return out
+
 
     # Count against agent short-window protection after admit allows
     try:

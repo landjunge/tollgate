@@ -2,6 +2,13 @@
 
 All notable releases of [landjunge/tollgate](https://github.com/landjunge/tollgate).
 
+## 1.0.1 — 2026-08-11
+
+### Added
+- `./scripts/demo-agent-safety.sh` and `tollgate demo` — live two-Aha flow
+- Deny payloads include product card `blocked` / `message` (🛑 REQUEST BLOCKED)
+- OpenAI/Anthropic error.tollgate carries the same card
+
 ## 1.0.0 — 2026-08-11
 
 **First stable community release** — Protect · Route · Prove.

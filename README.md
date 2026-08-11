@@ -1,6 +1,6 @@
 # Tollgate
 
-**Pay the toll — or don't call.** · **v1.0.0**
+**Pay the toll — or don't call.** · **v1.0.1**
 
 # “My AI agent must never go out of control.”
 
@@ -23,19 +23,14 @@ Your agent  →  Tollgate  →  OpenAI / Anthropic / Zen / …
 1. **Agent tool-loop** → `🛑 BLOCKED` (`max_tool_calls`) — invoice never happens  
 2. **Primary outage** → failover + chaos test → **“Your agent survived.”**
 
-**Demo script:** [docs/DEMO.md](docs/DEMO.md) · **5 minutes:** [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)  
+**Run the demo:** `./scripts/demo-agent-safety.sh` or `tollgate demo`  
+**Story:** [docs/DEMO.md](docs/DEMO.md) · **5 minutes:** [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)  
 **Dashboard:** http://127.0.0.1:8787/dashboard · **Map:** [docs/MAP.md](docs/MAP.md)
 
 ```bash
 ./scripts/desk-ready.sh
-# Protect one agent lane (support / n8n / coding agent)
-tollgate consumer-budget support-agent \
-  --max-usd-day 2 --max-usd-request 0.5 --max-tool-calls 20 \
-  --allow-intent free_llm --allow-op chat
-# Prove DR
-tollgate chaos test opencode_zen --requests 10
-tollgate resilience
-tollgate status
+./scripts/demo-agent-safety.sh    # Aha #1 tool-loop block + Aha #2 chaos survive
+# tollgate demo --skip-chaos      # protect only
 ```
 
 ## Who it's for

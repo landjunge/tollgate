@@ -166,6 +166,26 @@ def main(argv: list[str] | None = None) -> None:
         help="machine-readable JSON (default is human text)",
     )
 
+    dem = sub.add_parser(
+        "demo",
+        help="Killer demo: agent tool-loop block + optional chaos DR proof",
+    )
+    dem.add_argument(
+        "--skip-chaos",
+        action="store_true",
+        help="only Protect Aha (no chaos test)",
+    )
+    dem.add_argument(
+        "--consumer",
+        default="support-agent",
+        help="agent lane id (default support-agent)",
+    )
+    dem.add_argument(
+        "--provider",
+        default="opencode_zen",
+        help="provider for chaos / invoke attempt (default opencode_zen)",
+    )
+
     frz = sub.add_parser(
         "freeze",
         help="Emergency kill switch — deny all billable admission",
@@ -464,6 +484,32 @@ def main(argv: list[str] | None = None) -> None:
         else:
             print(format_status_text())
         return
+
+    if args.cmd == "demo":
+        import os
+        import subprocess
+        from pathlib import Path
+
+        root = Path(__file__).resolve().parents[2]
+        script = root / "scripts" / "demo-agent-safety.sh"
+        if not script.is_file():
+            # installed wheel: fall back to in-process mini demo
+            from tollgate.paths import pin_data_home_env
+
+            pin_data_home_env()
+            print(
+                "demo script not found — run from repo checkout:\n"
+                "  ./scripts/demo-agent-safety.sh\n"
+                "or: docs/DEMO.md",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
+        env = os.environ.copy()
+        env["DEMO_CONSUMER"] = str(args.consumer or "support-agent")
+        env["DEMO_CHAOS_PROVIDER"] = str(args.provider or "opencode_zen")
+        if args.skip_chaos:
+            env["SKIP_CHAOS"] = "1"
+        raise SystemExit(subprocess.call(["bash", str(script)], env=env))
 
     if args.cmd in ("freeze", "unfreeze"):
         from tollgate.freeze import freeze_status, set_frozen
