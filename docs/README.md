@@ -14,6 +14,7 @@
 | [PORTABLE.md](PORTABLE.md) | USB stick / no host paths |
 | [OPENAI.md](OPENAI.md) | OpenAI drop-in base_url |
 | [STABILITY.md](STABILITY.md) | Scale, multi-worker, schema version, deprecation |
+| [OPERATIONS.md](OPERATIONS.md) | doctor, deploy, auto-maintenance boundary |
 
 ## Rule (no more code thrash)
 
