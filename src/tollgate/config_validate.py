@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class CostGuardModel(BaseModel):
@@ -20,6 +20,30 @@ class CostGuardModel(BaseModel):
     # anomaly: burn vs recent average (see cost.py)
     anomaly_burn_factor: float = Field(default=5.0, ge=1.0)
     notes: str = ""
+
+
+class CircuitsModel(BaseModel):
+    """Circuit-breaker defaults (OPEN cooldown + multiplicative jitter)."""
+
+    model_config = ConfigDict(extra="allow")
+
+    failure_threshold: int = Field(default=5, ge=1)
+    cooldown_s: float = Field(default=30.0, gt=0)
+    hard_cooldown_s: float = Field(default=300.0, gt=0)
+    half_open_successes_needed: int = Field(default=1, ge=1)
+    # Multiplicative factor on cooldown for OPEN→HALF_OPEN wake-up
+    jitter_min: float = Field(default=0.8, gt=0)
+    jitter_max: float = Field(default=1.2, gt=0)
+    notes: str = ""
+
+    @model_validator(mode="after")
+    def _jitter_order(self) -> CircuitsModel:
+        if self.jitter_min > self.jitter_max:
+            # Swap rather than reject — keep desk usable
+            lo, hi = self.jitter_max, self.jitter_min
+            object.__setattr__(self, "jitter_min", lo)
+            object.__setattr__(self, "jitter_max", hi)
+        return self
 
 
 class ProviderModel(BaseModel):
@@ -76,6 +100,7 @@ class KeysAppConfig(BaseModel):
     auto_failover: bool = True
     record_usage: bool = True
     cost_guard: CostGuardModel = Field(default_factory=CostGuardModel)
+    circuits: CircuitsModel = Field(default_factory=CircuitsModel)
     auto_update: AutoUpdateModel = Field(default_factory=AutoUpdateModel)
     response_cache: ResponseCacheModel = Field(default_factory=ResponseCacheModel)
     routing: RoutingModel = Field(default_factory=RoutingModel)
@@ -111,6 +136,11 @@ def validate_config_dict(cfg: dict[str, Any]) -> tuple[dict[str, Any] | None, li
                 f"providers.{pid}: high-risk and enabled but max_usd_day unset/0 "
                 "(set a tight dollar cap)"
             )
+    circ = data.get("circuits") or {}
+    jmin = float(circ.get("jitter_min") or 0)
+    jmax = float(circ.get("jitter_max") or 0)
+    if jmin <= 0 or jmax <= 0:
+        errs.append("circuits: jitter_min and jitter_max must be > 0")
     return data, errs
 
 
