@@ -171,5 +171,9 @@ https://github.com/landjunge/gnom-hub-v1"
 | Tollgate release | https://github.com/landjunge/tollgate/releases/tag/announce-public |
 | Gnom-Hub release | https://github.com/landjunge/gnom-hub-v1/releases/tag/announce-public |
 | Awesome AI Agents PR | https://github.com/aloth/awesome-ai-agents/pull/38 |
-| Awesome MCP Servers PR | (see open PRs from landjunge) |
+| Awesome LLMOps PR | https://github.com/tensorchord/Awesome-LLMOps/pull/735 |
+| Awesome AI Tools PR | https://github.com/mahseema/awesome-ai-tools/pull/1955 |
+| Awesome Selfhosted-data PR | https://github.com/awesome-selfhosted/awesome-selfhosted-data/pulls?q=is%3Apr+author%3Alandjunge |
+| Awesome MCP Servers PR | https://github.com/punkpeye/awesome-mcp-servers/pull/11967 |
+| Profile README | https://github.com/landjunge |
 | Profile README | https://github.com/landjunge |
