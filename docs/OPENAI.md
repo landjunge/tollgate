@@ -74,6 +74,20 @@ Optional body fields (Tollgate-only, SDKs ignore extras):
 
 Upstream mode admits first, then proxies token deltas, then meters usage (ledger + consumer envelope). Synthetic mode still runs a full completion and chunk-splits it for clients that only need `stream: true` compatibility.
 
+## Failover
+
+When `auto_failover` is true in `keys_app.json` (default) and the client did **not** pin `provider=…`:
+
+1. Router builds primary + up to 3 fallbacks under limits/circuits  
+2. `routed_chat` / stream setup **executes** the next candidate if the hop fails with a retriable class:
+
+| Retriable (hop) | Hard stop (no hop) |
+|-----------------|--------------------|
+| `PROVIDER_DOWN`, `RATE_LIMIT`, `EDGE_BLOCK`, `AUTH_DEAD`, empty completion | `BUDGET_HARD`, `POLICY_DENY` |
+
+Response includes `failover: { tried, winner, hops }`.  
+Streaming only fails over **before** the first SSE byte (no mid-stream provider switch).
+
 ## Auth
 
 Same as native API:

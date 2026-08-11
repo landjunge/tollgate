@@ -146,7 +146,7 @@ Code guards:
 2. ~~Admission + taxonomy + circuit~~ (foundation)  
 3. Seal all spend paths through gateway  
 4. **SQLite gateway memory** (ledger + circuits + optional cache) + agent_id/consumer  
-5. Real execute failover for LLM chat  
+5. ~~Real execute failover for LLM chat~~  
 6. ~~Own repo + CI~~ · ~~consumer API keys (hash + open mode)~~ · ~~USB portable~~  
 7. ~~OpenAI-compatible `/v1/chat/completions` + `/v1/models`~~ (SSE synthetic stream)  
 8. ~~Real token streaming~~ · ~~per-consumer budget envelopes~~  

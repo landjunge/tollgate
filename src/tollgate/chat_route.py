@@ -1,9 +1,15 @@
-"""Routed chat: intent → provider/model → gateway admit + call."""
+"""Routed chat: intent → provider/model → gateway admit + call (+ failover)."""
 
 from __future__ import annotations
 
 from typing import Any
 
+from tollgate.failover import (
+    annotate_failure,
+    annotate_success,
+    build_candidates,
+    is_retriable_failure,
+)
 from tollgate.gateway.context import RequestClass, RequestContext
 from tollgate.gateway.entry import gateway_call
 
@@ -28,12 +34,10 @@ def routed_chat(
     """
     High-level multi-consumer chat.
 
-    If provider is empty, uses KeysService.route(intent).
-    Always goes through gateway admission + metering.
-    ``consumer`` sets the budget envelope lane (falls back to agent_id).
+    If provider is empty, uses KeysService.route(intent) and — when
+    ``auto_failover`` is on — retries fallbacks on retriable provider errors.
+    Explicit ``provider=`` pins a single hop (no failover).
     """
-    from tollgate import get_keys_service
-
     if isinstance(messages, str):
         msgs: list[dict[str, str]] = [{"role": "user", "content": messages}]
     else:
@@ -43,38 +47,19 @@ def routed_chat(
     if not est:
         est = max(64, sum(len(str(m.get("content") or "")) for m in msgs) // 4 + int(max_tokens or 0))
 
-    pid = (provider or "").strip().lower()
-    mid = (model or "").strip()
-    if not pid:
-        intent_use = intent
-        if prefer_free is True and intent in ("llm", "paid_llm"):
-            intent_use = "free_llm"
-        route = get_keys_service().route(
-            intent_use,
-            tokens_est=est,
-            live=False,
-            prefer_free=prefer_free,
-        )
-        if not route.get("ok"):
-            return {
-                "ok": False,
-                "error": route.get("error") or "no provider for intent",
-                "route": route,
-            }
-        # route() nests primary under "route"; also accept flat provider/model
-        primary = route.get("route") if isinstance(route.get("route"), dict) else {}
-        pid = str(route.get("provider") or primary.get("provider") or "").strip().lower()
-        if not mid:
-            mid = str(route.get("model") or primary.get("model") or "").strip()
-        if not pid:
-            # last resort: first fallback
-            fb = route.get("fallbacks") or []
-            if fb and isinstance(fb[0], dict):
-                pid = str(fb[0].get("provider") or "").strip().lower()
-                if not mid:
-                    mid = str(fb[0].get("model") or "").strip()
-        if not pid:
-            return {"ok": False, "error": "router returned empty provider", "route": route}
+    built = build_candidates(
+        provider=provider,
+        model=model,
+        intent=intent,
+        tokens_est=est,
+        prefer_free=prefer_free,
+    )
+    if not built.get("ok"):
+        return {
+            "ok": False,
+            "error": built.get("error") or "no provider for intent",
+            "route": built.get("route"),
+        }
 
     try:
         rclass = RequestClass(request_class or "interactive")
@@ -89,13 +74,53 @@ def routed_chat(
         request_class=rclass,
         allow_paid_fallback=allow_paid_fallback,
     )
-    return gateway_call(
-        pid,
-        "chat",
-        ctx=ctx,
-        tokens_est=est,
-        model=mid,
-        messages=msgs,
-        max_tokens=max_tokens,
-        temperature=temperature,
-    )
+
+    tried: list[dict[str, Any]] = []
+    last: dict[str, Any] | None = None
+
+    for cand in built["candidates"]:
+        pid = str(cand.get("provider") or "").strip().lower()
+        mid = str(cand.get("model") or "").strip()
+        if not pid:
+            continue
+        result = gateway_call(
+            pid,
+            "chat",
+            ctx=ctx,
+            tokens_est=est,
+            model=mid,
+            messages=msgs,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        hop = {
+            "provider": pid,
+            "model": mid,
+            "ok": bool(result.get("ok")),
+            "error": result.get("error"),
+            "error_class": result.get("error_class"),
+        }
+        tried.append(hop)
+        last = result
+
+        if result.get("ok") and str(result.get("content") or "").strip():
+            return annotate_success(result, tried=tried, provider=pid, model=mid)
+
+        # empty completion: treat as fail + maybe hop
+        if result.get("ok") and not str(result.get("content") or "").strip():
+            hop["ok"] = False
+            hop["error"] = hop.get("error") or "empty completion"
+            hop["error_class"] = "EMPTY_COMPLETION"
+            last = {
+                **result,
+                "ok": False,
+                "error": "empty completion",
+                "error_class": "EMPTY_COMPLETION",
+            }
+
+        if not is_retriable_failure(last):
+            return annotate_failure(last, tried=tried)
+
+        # else: try next candidate
+
+    return annotate_failure(last, tried=tried)

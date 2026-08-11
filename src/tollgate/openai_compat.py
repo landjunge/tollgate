@@ -141,6 +141,7 @@ def to_openai_completion(
             "admit": (result.get("admit") or {}).get("code")
             if isinstance(result.get("admit"), dict)
             else None,
+            "failover": result.get("failover"),
         },
     }
 

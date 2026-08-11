@@ -14,6 +14,11 @@ import time
 import uuid
 from typing import Any, Iterator
 
+from tollgate.failover import (
+    annotate_failure,
+    build_candidates,
+    is_retriable_failure,
+)
 from tollgate.gateway.admit import admit
 from tollgate.gateway.circuit import get_circuits
 from tollgate.gateway.context import RequestClass, RequestContext
@@ -137,51 +142,6 @@ def _build_upstream(
     return None
 
 
-def _resolve_route(
-    *,
-    intent: str,
-    model: str,
-    provider: str,
-    tokens_est: int,
-    prefer_free: bool | None,
-) -> dict[str, Any]:
-    from tollgate import get_keys_service
-
-    pid = (provider or "").strip().lower()
-    mid = (model or "").strip()
-    if pid:
-        return {"ok": True, "provider": pid, "model": mid}
-
-    intent_use = intent
-    if prefer_free is True and intent in ("llm", "paid_llm"):
-        intent_use = "free_llm"
-    route = get_keys_service().route(
-        intent_use,
-        tokens_est=tokens_est,
-        live=False,
-        prefer_free=prefer_free,
-    )
-    if not route.get("ok"):
-        return {
-            "ok": False,
-            "error": route.get("error") or "no provider for intent",
-            "route": route,
-        }
-    primary = route.get("route") if isinstance(route.get("route"), dict) else {}
-    pid = str(route.get("provider") or primary.get("provider") or "").strip().lower()
-    if not mid:
-        mid = str(route.get("model") or primary.get("model") or "").strip()
-    if not pid:
-        fb = route.get("fallbacks") or []
-        if fb and isinstance(fb[0], dict):
-            pid = str(fb[0].get("provider") or "").strip().lower()
-            if not mid:
-                mid = str(fb[0].get("model") or "").strip()
-    if not pid:
-        return {"ok": False, "error": "router returned empty provider", "route": route}
-    return {"ok": True, "provider": pid, "model": mid, "route": route}
-
-
 def start_chat_stream(
     messages: list[dict[str, str]] | str,
     *,
@@ -203,11 +163,15 @@ def start_chat_stream(
     """
     Prepare a streaming chat response.
 
+    Failover: before the first client byte, try route fallbacks on admit /
+    missing-key / retriable synthetic failures. Mid-stream hops are not done
+    (SSE already open).
+
     Returns::
 
         {ok: False, error, error_class?, ...}
         {ok: True, mode: "upstream"|"synthetic", stream: Iterator[str],
-         provider, model, consumer, ...}
+         provider, model, consumer, failover?, ...}
     """
     if isinstance(messages, str):
         msgs: list[dict[str, str]] = [{"role": "user", "content": messages}]
@@ -218,18 +182,20 @@ def start_chat_stream(
     if not est:
         est = max(64, sum(len(str(m.get("content") or "")) for m in msgs) // 4 + int(max_tokens or 0))
 
-    resolved = _resolve_route(
-        intent=intent,
-        model=model,
+    built = build_candidates(
         provider=provider,
+        model=model,
+        intent=intent,
         tokens_est=est,
         prefer_free=prefer_free,
     )
-    if not resolved.get("ok"):
-        return resolved
+    if not built.get("ok"):
+        return {
+            "ok": False,
+            "error": built.get("error") or "no provider for intent",
+            "route": built.get("route"),
+        }
 
-    pid = str(resolved["provider"])
-    mid = str(resolved.get("model") or "")
     try:
         rclass = RequestClass(request_class or "interactive")
     except ValueError:
@@ -244,107 +210,164 @@ def start_chat_stream(
     )
     cid = ctx.consumer_id()
 
-    decision = admit(
-        pid,
-        op="chat",
-        tokens_est=est,
-        model=mid,
-        ctx=ctx,
-    )
-    if not decision.allowed:
-        reason = redact_secrets(decision.reason or "denied")
-        try:
-            from tollgate.audit_log import append_audit
+    tried: list[dict[str, Any]] = []
+    last_err: dict[str, Any] | None = None
 
-            append_audit(
-                "admit_deny",
-                provider=pid,
-                op="chat",
-                consumer=cid,
-                error=reason,
-                ok=False,
-                extra={"error_class": decision.code.value, "stream": True},
+    for cand in built["candidates"]:
+        pid = str(cand.get("provider") or "").strip().lower()
+        mid = str(cand.get("model") or "").strip()
+        if not pid:
+            continue
+
+        decision = admit(
+            pid,
+            op="chat",
+            tokens_est=est,
+            model=mid,
+            ctx=ctx,
+        )
+        if not decision.allowed:
+            reason = redact_secrets(decision.reason or "denied")
+            hop = {
+                "provider": pid,
+                "model": mid,
+                "ok": False,
+                "error": reason,
+                "error_class": decision.code.value,
+            }
+            tried.append(hop)
+            last_err = {
+                "ok": False,
+                "error": reason,
+                "error_class": decision.code.value,
+                "admit": decision.as_dict(),
+                "provider": pid,
+                "op": "chat",
+            }
+            try:
+                from tollgate.audit_log import append_audit
+
+                append_audit(
+                    "admit_deny",
+                    provider=pid,
+                    op="chat",
+                    consumer=cid,
+                    error=reason,
+                    ok=False,
+                    extra={"error_class": decision.code.value, "stream": True},
+                )
+            except Exception:  # noqa: BLE001
+                pass
+            if not is_retriable_failure(last_err):
+                return annotate_failure(last_err, tried=tried)
+            continue
+
+        # Synthetic path: full completion then fake SSE
+        if force_synthetic() or not can_upstream_stream(pid):
+            from tollgate.gateway.entry import gateway_call
+
+            result = gateway_call(
+                pid,
+                "chat",
+                ctx=ctx,
+                tokens_est=est,
+                model=mid,
+                messages=msgs,
+                max_tokens=max_tokens,
+                temperature=temperature,
             )
-        except Exception:  # noqa: BLE001
-            pass
-        return {
-            "ok": False,
-            "error": reason,
-            "error_class": decision.code.value,
-            "admit": decision.as_dict(),
-            "provider": pid,
-            "op": "chat",
-        }
+            if not result.get("ok"):
+                hop = {
+                    "provider": pid,
+                    "model": mid,
+                    "ok": False,
+                    "error": result.get("error"),
+                    "error_class": result.get("error_class"),
+                }
+                tried.append(hop)
+                last_err = result
+                if not is_retriable_failure(result):
+                    return annotate_failure(result, tried=tried)
+                continue
+            completion = to_openai_completion(
+                result,
+                model=requested_model or mid or "tollgate",
+                consumer=cid,
+            )
+            tried.append({"provider": pid, "model": mid, "ok": True, "mode": "synthetic"})
+            return {
+                "ok": True,
+                "mode": "synthetic",
+                "provider": pid,
+                "model": mid or result.get("model"),
+                "consumer": cid,
+                "admit": decision.as_dict(),
+                "failover": {"tried": tried, "winner": pid, "hops": len(tried)},
+                "stream": stream_sse_chunks(completion),
+            }
 
-    # Synthetic path: full completion then fake SSE
-    if force_synthetic() or not can_upstream_stream(pid):
-        from tollgate.gateway.entry import gateway_call
-
-        result = gateway_call(
+        up = _build_upstream(
             pid,
-            "chat",
-            ctx=ctx,
-            tokens_est=est,
             model=mid,
             messages=msgs,
             max_tokens=max_tokens,
             temperature=temperature,
         )
-        if not result.get("ok"):
-            return result
-        completion = to_openai_completion(
-            result,
-            model=requested_model or mid or "tollgate",
-            consumer=cid,
-        )
-        return {
-            "ok": True,
-            "mode": "synthetic",
-            "provider": pid,
-            "model": mid or result.get("model"),
-            "consumer": cid,
-            "admit": decision.as_dict(),
-            "stream": stream_sse_chunks(completion),
-        }
+        if not up or up.get("error"):
+            from tollgate.gateway.entry import gateway_call
 
-    up = _build_upstream(
-        pid,
-        model=mid,
-        messages=msgs,
-        max_tokens=max_tokens,
-        temperature=temperature,
-    )
-    if not up or up.get("error"):
-        # key missing etc. — try non-stream gateway for clear error
-        from tollgate.gateway.entry import gateway_call
+            # missing key / build fail — try gateway chat, then hop if retriable
+            result = gateway_call(
+                pid,
+                "chat",
+                ctx=ctx,
+                tokens_est=est,
+                model=mid,
+                messages=msgs,
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+            if result.get("ok"):
+                completion = to_openai_completion(
+                    result,
+                    model=requested_model or mid or "tollgate",
+                    consumer=cid,
+                )
+                tried.append(
+                    {"provider": pid, "model": mid, "ok": True, "mode": "synthetic"}
+                )
+                return {
+                    "ok": True,
+                    "mode": "synthetic",
+                    "provider": pid,
+                    "model": mid,
+                    "consumer": cid,
+                    "failover": {"tried": tried, "winner": pid, "hops": len(tried)},
+                    "stream": stream_sse_chunks(completion),
+                }
+            hop = {
+                "provider": pid,
+                "model": mid,
+                "ok": False,
+                "error": (up or {}).get("error") or result.get("error"),
+                "error_class": result.get("error_class") or "UNKNOWN",
+            }
+            tried.append(hop)
+            last_err = result if result else {"ok": False, "error": hop["error"]}
+            if not is_retriable_failure(last_err):
+                return annotate_failure(last_err, tried=tried)
+            continue
 
-        result = gateway_call(
-            pid,
-            "chat",
-            ctx=ctx,
-            tokens_est=est,
-            model=mid,
-            messages=msgs,
-            max_tokens=max_tokens,
-            temperature=temperature,
-        )
-        if not result.get("ok"):
-            return result
-        completion = to_openai_completion(
-            result,
-            model=requested_model or mid or "tollgate",
-            consumer=cid,
-        )
-        return {
-            "ok": True,
-            "mode": "synthetic",
-            "provider": pid,
-            "model": mid,
-            "consumer": cid,
-            "stream": stream_sse_chunks(completion),
-        }
+        # Winner for upstream stream
+        mid = str(up.get("model") or mid)
+        display_model = requested_model or mid or "tollgate"
+        tried.append({"provider": pid, "model": mid, "ok": True, "mode": "upstream"})
+        win_pid, win_mid, win_decision, win_up = pid, mid, decision, up
+        break
+    else:
+        return annotate_failure(last_err, tried=tried)
 
-    mid = str(up.get("model") or mid)
+    pid, mid, decision, up = win_pid, win_mid, win_decision, win_up
     display_model = requested_model or mid or "tollgate"
 
     def gen() -> Iterator[str]:
@@ -501,6 +524,7 @@ def start_chat_stream(
                     "stream_mode": "upstream",
                     "saw_content": saw_content,
                     "soft_degrade": decision.soft_degrade,
+                    "failover_hops": len(tried),
                 },
             }
         )
@@ -530,7 +554,7 @@ def start_chat_stream(
                 tokens=prompt_tokens + completion_tokens,
                 ok=not upstream_err,
                 error=upstream_err or "",
-                extra={"stream": True},
+                extra={"stream": True, "failover_hops": len(tried)},
             )
         except Exception:  # noqa: BLE001
             pass
@@ -542,5 +566,6 @@ def start_chat_stream(
         "model": mid,
         "consumer": cid,
         "admit": decision.as_dict(),
+        "failover": {"tried": tried, "winner": pid, "hops": len(tried)},
         "stream": gen(),
     }
