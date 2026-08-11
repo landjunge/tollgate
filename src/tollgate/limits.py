@@ -27,7 +27,7 @@ def check_limits(
         # limits still apply if provider block exists
         pass
 
-    # Cost guard first (Google high-risk, max_usd_day)
+    # Cost guard first (high-risk list + max_usd_day)
     cg = check_cost_guard(provider_id, tokens_est=tokens_est)
     if not cg.get("allowed"):
         return {
@@ -37,6 +37,7 @@ def check_limits(
             "remaining_tokens": 0,
             "remaining_usd": cg.get("remaining_usd"),
             "high_risk": cg.get("high_risk"),
+            "soft_warn": False,
             "wait_ms": 0,
         }
 
@@ -133,6 +134,9 @@ def check_limits(
         "remaining_chars": (max_chars - chars) if max_chars else None,
         "remaining_usd": cg.get("remaining_usd"),
         "high_risk": cg.get("high_risk"),
+        "soft_warn": bool(cg.get("soft_warn")),
+        "soft_reason": cg.get("soft_reason"),
+        "budget_ratio": cg.get("budget_ratio"),
         "used": {
             "calls": calls,
             "tokens": tokens,

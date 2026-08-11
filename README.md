@@ -2,99 +2,126 @@
 
 **Pay the toll — or don't call.**
 
-Multi-consumer **API admission + key router** for AI agents, n8n, and local desks.
+Local, multi-consumer **API admission gate** for AI agents.  
+One place holds secrets, budgets, and routing — so Gnom, n8n, Cursor/MCP, and anything else never each invent their own spend logic.
 
-- Budgets (calls / tokens / chars / USD)
-- Circuit breakers + error taxonomy
-- Distill-backed provider specs (not code thrash)
-- Google/Gemini **disabled by default** (bill-shock guard)
-- HTTP `/v1/*` + MCP stdio
-- Shared control plane for **Gnom, n8n, Cursor, other agents**
+> As soon as you run **more than one** AI tool against paid keys, you need an instance that never puts secrets in agent memory and never spends more than you allowed — no matter which tool calls.
+
+## Who it's for
+
+| Audience | Why |
+|----------|-----|
+| Solo builders with several local agents | Shared keys without bill-shock loops |
+| n8n power users | No native LLM budget gate in n8n |
+| MCP users (Cursor / Claude Desktop) | One admission plane, not N auth setups |
+| Agencies (with care) | Need real consumer secrets first — we have hashed keys |
+
+**Not competing for:** full LiteLLM/Portkey cloud parity. Differentiator = **local, MCP-native, pre-admission, USB-portable**.
+
+## vs LiteLLM / Portkey / OpenRouter
+
+| | **Tollgate** | LiteLLM Proxy | Portkey | OpenRouter alone |
+|--|--------------|---------------|---------|------------------|
+| Runs fully local | ✅ | ✅ (self-host) | Cloud-first | Cloud API |
+| Pre-admission $ hard deny | ✅ core | optional | policies | no local budget |
+| Secrets never in agent | ✅ vault | yes | yes | keys in each client |
+| Distill-as-data (provider facts) | ✅ JSON SSoT | code/config mix | dashboard | catalog |
+| MCP stdio first-class | ✅ | via adapters | — | — |
+| USB / portable desk | ✅ | DIY | — | — |
+| Multi-tenant SaaS | ❌ not the goal | partial | ✅ | N/A |
+| Huge provider catalog | thin + scaffold | large | large | large |
+
+Steal ideas, not the stack — see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Quick start
 
 ```bash
 cd tollgate
 python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
-
-# Desk: ~/.tollgate  ·  USB stick: sibling WS-tollgate or TOLLGATE_HOME
-# export TOLLGATE_HOME=/path/to/WS-tollgate
-# export TOLLGATE_PORTABLE=1   # force stick layout off-USB
-
+./scripts/portable-setup.sh   # optional USB sibling WS-tollgate
+# put keys in $TOLLGATE_HOME/User/Key.txt  (see Key.txt.example)
 ./scripts/run.sh
-# → http://127.0.0.1:8787/docs
+# → http://127.0.0.1:8787/docs   ← OpenAPI SSoT for request shapes
 ```
 
-### USB / portable
+### Consumer auth (share with n8n / second host)
 
 ```bash
-./scripts/portable-setup.sh   # creates ../WS-tollgate/User + optional .venv
-./scripts/run.sh              # auto-detects /Volumes /media /mnt
+tollgate consumer-add n8n
+tollgate consumer-add desk --admin
+# Header: X-Consumer-Key: n8n:<secret>
+# Open mode if no consumers.json (local desk only)
 ```
 
-See [docs/PORTABLE.md](docs/PORTABLE.md). No machine-local `/Users/…` paths required.
-
-### HTTP (multi-consumer)
-
-Kurzüberblick — **aktuelle Signaturen:** `http://127.0.0.1:8787/docs` (OpenAPI/Swagger, SSoT).
-
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | `/v1/health` | Liveness + portable + auth mode |
-| GET | `/v1/auth` | Whether consumer secrets are required |
-| POST | `/v1/route` | intent → provider/model |
-| POST | `/v1/invoke` | admit + call + meter |
-| GET | `/v1/budget` | remaining limits |
-| GET | `/v1/providers` | inventory grades (masked) |
-| GET/POST | `/v1/config` | policy (admin when auth on) |
-
-Header: `X-Consumer-Key: n8n` (open mode) or `n8n:<secret>` after `tollgate consumer-add n8n`.
-
-Contract tests in `tests/test_contract_v1.py` fire these paths in CI.
-
-### MCP
+### High-risk providers (not just Google)
 
 ```bash
-PYTHONPATH=src TOLLGATE_HOME=… .venv/bin/python -m tollgate
+tollgate high-risk list
+tollgate high-risk add azure_openai   # disabled until enabled=true + $ caps
+tollgate provider-add azure_openai --base-url https://… --high-risk --env-key AZURE_OPENAI_API_KEY
 ```
 
-See `configs/mcp-tollgate.example.json` and `docs/MCP.md`.
+Config: `cost_guard.high_risk_providers` + distill `high_risk: true`.
 
-## Config
+### Soft budget warnings
 
-| File | Role |
+At 80% of day budget (configurable), admit returns soft pressure and can POST to a webhook:
+
+```json
+"cost_guard": {
+  "soft_warn_ratio": 0.8,
+  "alert_webhook_url": "https://your-n8n-or-telegram-hook"
+}
+```
+
+Or env: `TOLLGATE_ALERT_WEBHOOK=…`
+
+## HTTP (kurz)
+
+**Signaturen:** laufender Server → `/docs` (nicht die Tabelle pflegen).
+
+| Path | Zweck |
+|------|--------|
+| `GET /v1/health` | portable + auth mode |
+| `POST /v1/route` | intent → provider |
+| `POST /v1/invoke` | admit + call + meter |
+| `GET|POST /v1/config` | policy (admin when auth on) |
+
+Contract tests: `tests/test_contract_v1.py`.
+
+## MCP
+
+```bash
+python -m tollgate
+```
+
+See `configs/mcp-tollgate.example.json` and [docs/MCP.md](docs/MCP.md).
+
+## Config layout
+
+| Path | Role |
 |------|------|
-| `$TOLLGATE_HOME/User/Key.txt` | Provider secrets |
-| `$TOLLGATE_HOME/User/keys_app.json` | Limits, routing, cost_guard |
-| `$TOLLGATE_HOME/User/keys_usage.json` | Daily ledger |
+| `$TOLLGATE_HOME/User/Key.txt` | Secrets |
+| `$TOLLGATE_HOME/User/keys_app.json` | Limits, high_risk list, routing |
+| `$TOLLGATE_HOME/User/keys_usage.json` | Ledger |
+| `$TOLLGATE_HOME/User/consumers.json` | Hashed consumer secrets |
 
-Defaults: portable/USB → sibling `WS-tollgate` or colocated `User/`; desk → `~/.tollgate`.  
-Compat: `GNOM_WS` still works.
+Portable/USB: [docs/PORTABLE.md](docs/PORTABLE.md).
 
-## Docs
+## Docs & quality gates
 
-- [VISION.md](docs/VISION.md)
-- [ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- [COST_LIMITS.md](docs/COST_LIMITS.md)
-- [MCP.md](docs/MCP.md)
-- [N8N.md](docs/N8N.md)
-- [PORTABLE.md](docs/PORTABLE.md)
+- [VISION.md](docs/VISION.md) · [ARCHITECTURE.md](docs/ARCHITECTURE.md) · [COST_LIMITS.md](docs/COST_LIMITS.md) · [N8N.md](docs/N8N.md)
 
 ```bash
-./scripts/check_docs_drift.sh    # old paths/ports in docs
-./scripts/check_migration.sh     # green/yellow/red per doc
-pytest -q                        # includes contract + distill schema
+./scripts/check_docs_drift.sh
+./scripts/check_migration.sh
+pytest -q
 ```
 
-## Relation to Gnom-Hub
+## Gnom
 
-Gnom is a **client**. This repo is the **product**.
+Gnom is **one client**. Install Tollgate; do not re-embed the keys tree.
 
 ```python
 from tollgate import routed_chat, gateway_search, get_keys_service
-
-routed_chat("hello", intent="free_llm", agent_id="gnom")
-gateway_search("brave through tollgate")
 ```
-
-Gnom installs Tollgate via git dependency and routes Brave / budgets / free LLM through this gateway.

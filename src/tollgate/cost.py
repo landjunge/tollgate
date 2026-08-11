@@ -1,11 +1,11 @@
-"""USD cost estimates + high-risk provider guards (Google etc.)."""
+"""USD cost estimates + generic high-risk provider guards."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from tollgate.distill.loader import load_distill
 from tollgate.app_config import load_config, provider_cfg
+from tollgate.distill.loader import load_distill
 from tollgate.usage_ledger import load_usage, provider_usage
 
 # Fallback rough USD per 1M tokens (input/output) when distill lacks rates
@@ -23,14 +23,35 @@ _FALLBACK_RATES: dict[str, tuple[float, float]] = {
 }
 
 
-def is_high_risk(provider_id: str) -> bool:
-    d = load_distill(provider_id)
-    if d.get("high_risk"):
-        return True
+def high_risk_ids() -> set[str]:
+    """Union of config list + any distill marked high_risk."""
     cfg = load_config()
     guard = cfg.get("cost_guard") or {}
-    risky = guard.get("high_risk_providers") or ["google", "gemini", "vertex"]
-    return (provider_id or "").strip().lower() in {str(x).lower() for x in risky}
+    out = {str(x).strip().lower() for x in (guard.get("high_risk_providers") or []) if x}
+    try:
+        from tollgate.distill.loader import list_distill_ids
+
+        for pid in list_distill_ids():
+            d = load_distill(pid)
+            if d.get("high_risk"):
+                out.add(pid)
+    except Exception:  # noqa: BLE001
+        pass
+    return out
+
+
+def is_high_risk(provider_id: str) -> bool:
+    pid = (provider_id or "").strip().lower()
+    if not pid:
+        return False
+    d = load_distill(pid)
+    if d.get("high_risk"):
+        return True
+    # also honor provider_cfg.high_risk flag
+    pcfg = provider_cfg(pid)
+    if bool(pcfg.get("high_risk")):
+        return True
+    return pid in high_risk_ids()
 
 
 def estimate_usd(
@@ -88,8 +109,9 @@ def check_cost_guard(
             return {
                 "allowed": False,
                 "reason": (
-                    f"{pid} is HIGH RISK (can bill hard — e.g. Google/Gemini). "
-                    "Kept disabled. Enable only in keys_app.json with tight max_usd_day."
+                    f"{pid} is HIGH RISK (listed in cost_guard.high_risk_providers "
+                    "or distill high_risk=true). Disabled until providers."
+                    f"{pid}.enabled=true with tight max_usd_day."
                 ),
                 "high_risk": True,
                 "remaining_usd": 0.0,
@@ -131,6 +153,27 @@ def check_cost_guard(
     elif rem_g is not None:
         remaining = rem_g
 
+    # Soft warn: approaching budget (does not deny)
+    soft_warn = False
+    soft_reason = ""
+    ratio = float(guard.get("soft_warn_ratio") or 0.8)
+    floor_rem = float(guard.get("soft_warn_remaining_usd") or 0.5)
+    for label, used_v, max_v in (
+        (pid, used, max_p),
+        ("global", used_global, max_g),
+    ):
+        if max_v <= 0:
+            continue
+        frac = used_v / max_v if max_v else 0.0
+        rem = max_v - used_v
+        if frac >= ratio or rem <= floor_rem:
+            soft_warn = True
+            soft_reason = (
+                f"{label} budget pressure: used ${used_v:.4f}/{max_v:.4f} "
+                f"({frac:.0%}), remaining ${rem:.4f}"
+            )
+            break
+
     return {
         "allowed": True,
         "reason": None,
@@ -140,4 +183,11 @@ def check_cost_guard(
         "est_usd": est,
         "max_usd_day": max_p or None,
         "max_usd_day_global": max_g or None,
+        "soft_warn": soft_warn,
+        "soft_reason": soft_reason or None,
+        "budget_ratio": (
+            (used / max_p)
+            if max_p > 0
+            else ((used_global / max_g) if max_g > 0 else None)
+        ),
     }

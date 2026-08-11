@@ -33,11 +33,16 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "enabled": True,
         "max_usd_day_global": 5.0,
         "require_explicit_enable_for_high_risk": True,
+        # Any id listed here (or distill high_risk=true) needs explicit enable
         "high_risk_providers": ["google", "gemini", "vertex"],
+        # Soft pressure: fraction of day budget used → warn / webhook (not deny)
+        "soft_warn_ratio": 0.8,
+        "soft_warn_remaining_usd": 0.5,
+        # Optional webhook (Telegram bot URL, n8n, Discord, …) on soft/hard events
+        "alert_webhook_url": "",
         "notes": (
-            "Google/Gemini/Vertex are complex and easy to overspend. "
-            "They stay disabled until you set providers.google.enabled=true "
-            "AND tight max_usd_day / max_calls_day."
+            "high_risk_providers are OFF until providers.<id>.enabled=true "
+            "with tight max_usd_day. Add azure_openai / anthropic / etc. as needed."
         ),
     },
     "auto_update": {

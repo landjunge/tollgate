@@ -14,11 +14,33 @@ def main(argv: list[str] | None = None) -> None:
     sub.add_parser("mcp", help="Run MCP stdio server")
     sub.add_parser("health", help="Print local health JSON (paths + auth mode)")
     sub.add_parser("paths", help="Print portable path snapshot")
+
     cadd = sub.add_parser("consumer-add", help="Add HTTP consumer (id:secret)")
     cadd.add_argument("id", help="consumer id (e.g. n8n, gnom)")
     cadd.add_argument("--admin", action="store_true", help="allow /v1/config")
     cadd.add_argument("--secret", default="", help="optional fixed secret")
     cadd.add_argument("--label", default="", help="display label")
+
+    padd = sub.add_parser("provider-add", help="Scaffold distill JSON for a new provider")
+    padd.add_argument("id", help="provider id (e.g. azure_openai)")
+    padd.add_argument("--title", default="", help="display title")
+    padd.add_argument("--base-url", default="", dest="base_url")
+    padd.add_argument(
+        "--auth",
+        default="bearer",
+        choices=["bearer", "header_token", "xi_api_key"],
+    )
+    padd.add_argument("--env-key", default="", dest="env_key", help="e.g. AZURE_OPENAI_API_KEY")
+    padd.add_argument(
+        "--high-risk",
+        action="store_true",
+        help="mark high_risk (must enable explicitly + tight $ caps)",
+    )
+
+    risk = sub.add_parser("high-risk", help="List / set high_risk_providers in keys_app.json")
+    risk.add_argument("action", choices=["list", "add", "remove"])
+    risk.add_argument("provider", nargs="?", default="")
+
     args = p.parse_args(argv)
 
     if args.cmd == "mcp" or (args.cmd is None and len(sys.argv) == 1):
@@ -43,6 +65,7 @@ def main(argv: list[str] | None = None) -> None:
     if args.cmd == "health":
         from tollgate import get_keys_service
         from tollgate.consumers import auth_status
+        from tollgate.cost import high_risk_ids
         from tollgate.paths import path_snapshot, pin_data_home_env
 
         pin_data_home_env()
@@ -52,6 +75,7 @@ def main(argv: list[str] | None = None) -> None:
                     "ok": True,
                     "portable": path_snapshot(),
                     "auth": auth_status(),
+                    "high_risk_providers": sorted(high_risk_ids()),
                     "app": get_keys_service().app_status(),
                 },
                 indent=2,
@@ -84,6 +108,59 @@ def main(argv: list[str] | None = None) -> None:
                 f"\nUse header: X-Consumer-Key: {out['id']}:{out['secret']}",
                 file=sys.stderr,
             )
+        return
+
+    if args.cmd == "provider-add":
+        from tollgate.paths import pin_data_home_env
+        from tollgate.provider_scaffold import scaffold_provider
+
+        pin_data_home_env()
+        out = scaffold_provider(
+            args.id,
+            title=args.title,
+            base_url=args.base_url,
+            auth=args.auth,
+            env_key=args.env_key,
+            high_risk=bool(args.high_risk),
+        )
+        print(json.dumps(out, indent=2, default=str))
+        return
+
+    if args.cmd == "high-risk":
+        from tollgate.app_config import load_config, save_config
+        from tollgate.cost import high_risk_ids
+        from tollgate.paths import pin_data_home_env
+
+        pin_data_home_env()
+        if args.action == "list":
+            print(json.dumps({"high_risk_providers": sorted(high_risk_ids())}, indent=2))
+            return
+        pid = (args.provider or "").strip().lower()
+        if not pid:
+            print(json.dumps({"ok": False, "error": "provider id required"}))
+            return
+        cfg = load_config(force=True)
+        guard = dict(cfg.get("cost_guard") or {})
+        lst = [str(x).lower() for x in (guard.get("high_risk_providers") or [])]
+        if args.action == "add" and pid not in lst:
+            lst.append(pid)
+        if args.action == "remove":
+            lst = [x for x in lst if x != pid]
+        guard["high_risk_providers"] = lst
+        cfg["cost_guard"] = guard
+        save_config(cfg)
+        # ensure provider block exists disabled if high-risk add
+        if args.action == "add":
+            provs = dict(cfg.get("providers") or {})
+            block = dict(provs.get(pid) or {})
+            block.setdefault("enabled", False)
+            block.setdefault("high_risk", True)
+            block.setdefault("max_usd_day", 1.0)
+            block.setdefault("max_calls_day", 20)
+            provs[pid] = block
+            cfg["providers"] = provs
+            save_config(cfg)
+        print(json.dumps({"ok": True, "high_risk_providers": lst, "action": args.action, "provider": pid}, indent=2))
         return
 
     p.print_help()

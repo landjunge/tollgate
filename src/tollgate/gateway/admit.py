@@ -86,6 +86,29 @@ def admit(
         reason = str(lim.get("reason") or "limit denied")
         if lim.get("high_risk"):
             code = ErrorClass.POLICY_DENY
+            try:
+                from tollgate.alerts import maybe_alert
+
+                maybe_alert(
+                    "high_risk_block",
+                    provider=pid,
+                    message=reason,
+                    extra={"op": op, "agent": ctx.agent_id},
+                )
+            except Exception:  # noqa: BLE001
+                pass
+        else:
+            try:
+                from tollgate.alerts import maybe_alert
+
+                maybe_alert(
+                    "hard_deny",
+                    provider=pid,
+                    message=reason,
+                    extra={"op": op, "agent": ctx.agent_id, "limits": lim},
+                )
+            except Exception:  # noqa: BLE001
+                pass
         return AdmitDecision(
             allowed=False,
             code=code,
@@ -97,27 +120,55 @@ def admit(
     if not skip_circuit:
         circuits = get_circuits()
         if not circuits.allow(pid, model=model):
+            reason = f"circuit OPEN for {pid}/{model or '*'}"
+            try:
+                from tollgate.alerts import maybe_alert
+
+                maybe_alert("circuit_open", provider=pid, message=reason)
+            except Exception:  # noqa: BLE001
+                pass
             return AdmitDecision(
                 allowed=False,
                 code=ErrorClass.PROVIDER_DOWN,
-                reason=f"circuit OPEN for {pid}/{model or '*'}",
+                reason=reason,
                 limits=lim,
                 context=ctx,
             )
 
-    # Soft degrade hint when remaining budget is thin
-    soft = False
+    # Soft degrade: config soft_warn + thin remaining calls/usd
+    soft = bool(lim.get("soft_warn"))
+    soft_reason = str(lim.get("soft_reason") or "")
     rem_usd = lim.get("remaining_usd")
     if rem_usd is not None and float(rem_usd) < 0.25:
         soft = True
+        soft_reason = soft_reason or f"remaining_usd={rem_usd}"
     rem_calls = lim.get("remaining_calls")
     if rem_calls is not None and int(rem_calls) < 5:
         soft = True
+        soft_reason = soft_reason or f"remaining_calls={rem_calls}"
+
+    if soft:
+        try:
+            from tollgate.alerts import maybe_alert
+
+            maybe_alert(
+                "soft_budget",
+                provider=pid,
+                message=soft_reason or "soft budget pressure — prefer free/cheaper",
+                extra={
+                    "op": op,
+                    "agent": ctx.agent_id,
+                    "remaining_usd": rem_usd,
+                    "budget_ratio": lim.get("budget_ratio"),
+                },
+            )
+        except Exception:  # noqa: BLE001
+            pass
 
     return AdmitDecision(
         allowed=True,
         code=ErrorClass.BUDGET_SOFT if soft else ErrorClass.OK,
-        reason="ok" if not soft else "soft budget pressure — prefer free/cheaper",
+        reason="ok" if not soft else (soft_reason or "soft budget pressure — prefer free/cheaper"),
         soft_degrade=soft,
         limits=lim,
         context=ctx,

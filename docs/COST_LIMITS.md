@@ -15,10 +15,18 @@ From `DEFAULT_CONFIG` in `src/tollgate/app_config.py` (written into `keys_app.js
 | `providers.google.max_tokens_call` | **8_000** |
 | `cost_guard.max_usd_day_global` | **5.0** |
 | `cost_guard.require_explicit_enable_for_high_risk` | **true** |
-| `cost_guard.high_risk_providers` | `google`, `gemini`, `vertex` |
-| Routing | Google **not** in `free_llm` / default `llm` chain |
+| `cost_guard.high_risk_providers` | `google`, `gemini`, `vertex` (extend freely) |
+| `cost_guard.soft_warn_ratio` | **0.8** (soft pressure + optional webhook) |
+| `cost_guard.alert_webhook_url` | empty (or `TOLLGATE_ALERT_WEBHOOK`) |
+| Routing | high-risk ids **not** in `free_llm` by default |
 
-Router uses **`is_provider_enabled()`**, never “key present ⇒ enabled”.
+Router uses **`is_provider_enabled()`**, never “key present ⇒ enabled”.  
+High-risk is **generic**: config list ∪ distill `high_risk` ∪ `providers.<id>.high_risk`.
+
+```bash
+tollgate high-risk add azure_openai
+tollgate provider-add my_corp_llm --high-risk --auth bearer --env-key MY_CORP_KEY
+```
 
 ## Config file locations
 
