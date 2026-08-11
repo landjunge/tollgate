@@ -1,8 +1,10 @@
 # Cost limits (especially Google)
 
-Google/Gemini/Vertex are **easy to overspend**: many products, multimodal, grounding, long context, GCP billing attached quietly.
+Google/Gemini/Vertex are **easy to overspend**: multimodal, grounding, long context, GCP billing attached quietly.
 
-## Defaults (safe)
+## Defaults (safe) — code SSoT
+
+From `DEFAULT_CONFIG` in `src/tollgate/app_config.py` (written into `keys_app.json` on first load):
 
 | Setting | Value |
 |---------|--------|
@@ -10,25 +12,60 @@ Google/Gemini/Vertex are **easy to overspend**: many products, multimodal, groun
 | `providers.google.max_usd_day` | **1.0** |
 | `providers.google.max_calls_day` | **20** |
 | `providers.google.max_tokens_day` | **50_000** |
+| `providers.google.max_tokens_call` | **8_000** |
 | `cost_guard.max_usd_day_global` | **5.0** |
 | `cost_guard.require_explicit_enable_for_high_risk` | **true** |
-| Routing | Google **not** in free_llm / default llm chain |
+| `cost_guard.high_risk_providers` | `google`, `gemini`, `vertex` |
+| Routing | Google **not** in `free_llm` / default `llm` chain |
+
+Router uses **`is_provider_enabled()`**, never “key present ⇒ enabled”.
+
+## Config file locations
+
+| Env / path | Role |
+|------------|------|
+| `$TOLLGATE_HOME/User/keys_app.json` | Preferred |
+| `$GNOM_WS/User/keys_app.json` | Gnom-compat while migrating |
+| `~/.tollgate/User/keys_app.json` | Default home |
+| `$TOLLGATE_CONFIG` / `$GNOM_KEYS_CONFIG` | Absolute override path |
+
+Secrets stay in `User/Key.txt` — **not** in `keys_app.json`.
 
 ## Edit limits
 
-File: `WS-gnom-hub-v1/User/keys_app.json`
+### A) Edit the JSON file
 
-Or API:
+```json
+{
+  "cost_guard": { "max_usd_day_global": 3.0 },
+  "providers": {
+    "google": {
+      "enabled": false,
+      "max_usd_day": 0.5,
+      "max_calls_day": 10
+    }
+  }
+}
+```
+
+### B) HTTP (Tollgate **:8787** only)
+
+Server must be running: `tollgate serve` → bind **127.0.0.1** only unless you add real auth.
 
 ```bash
-# Cap global spend
-curl -s -X POST http://127.0.0.1:8080/api/keys/config \
+# Read (limits + routing — no API keys in this file)
+curl -s http://127.0.0.1:8787/v1/config | jq .
+
+# Cap global spend (deep-merge patch)
+curl -s -X POST http://127.0.0.1:8787/v1/config \
   -H 'Content-Type: application/json' \
+  -H 'X-Consumer-Key: desk' \
   -d '{"cost_guard":{"max_usd_day_global":3.0}}'
 
 # Enable Google only with hard caps (only if you really must)
-curl -s -X POST http://127.0.0.1:8080/api/keys/config \
+curl -s -X POST http://127.0.0.1:8787/v1/config \
   -H 'Content-Type: application/json' \
+  -H 'X-Consumer-Key: desk' \
   -d '{
     "providers": {
       "google": {
@@ -42,6 +79,19 @@ curl -s -X POST http://127.0.0.1:8080/api/keys/config \
   }'
 ```
 
+### C) MCP
+
+`keys_config_get` / `keys_config_patch` (same deep-merge semantics).
+
+## Security note (Phase 3 still open)
+
+| Endpoint | Risk today |
+|----------|------------|
+| `GET /v1/providers` | Key values **masked** in inventory cards |
+| `GET`/`POST` `/v1/config` | Returns **policy** (`keys_app.json`), not `Key.txt` secrets — but still desk-sensitive (budgets, enables). **No consumer admin scope yet.** Bind to loopback; do not expose on `0.0.0.0` without auth. |
+
+Planned: hashed consumer keys + admin scope before public multi-tenant.
+
 ## Prefer instead of Google
 
 - **OpenCode Zen free** (`deepseek-v4-flash-free`, …)
@@ -51,4 +101,4 @@ curl -s -X POST http://127.0.0.1:8080/api/keys/config \
 
 ## Distill
 
-Full warnings: `src/gnom_hub/keys/distill/google.json`
+Full warnings: [`src/tollgate/distill/google.json`](../src/tollgate/distill/google.json)

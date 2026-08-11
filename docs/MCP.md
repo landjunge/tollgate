@@ -1,98 +1,112 @@
-# Tollgate — MCP anbindung
+# Tollgate — MCP
 
-**Product:** Tollgate (future repo `tollgate`)
+**Product:** [landjunge/tollgate](https://github.com/landjunge/tollgate)  
+**Package entry:** `python -m tollgate` (or `tollgate mcp`)
 
-Über **drei MCP-Wege** erreichbar.
+No `gnom_hub.keys` module. Gnom is only a **client**.
 
-## 1) Stdio MCP Server (Cursor / Claude Desktop / Agents)
+---
+
+## 1) Stdio MCP (Cursor / Claude Desktop / agents)
 
 ```bash
-cd /Users/landjunge/gnom-hub-v1
-PYTHONPATH=src GNOM_WS=/Users/landjunge/WS-gnom-hub-v1 \
-  .venv/bin/python -m gnom_hub.keys.mcp
+# After: pip install -e .  (or pip install "tollgate @ git+https://github.com/landjunge/tollgate.git")
+export TOLLGATE_HOME="${TOLLGATE_HOME:-$HOME/.tollgate}"   # or WS with User/Key.txt
+# Optional gnom compat: export GNOM_WS="$HOME/WS-gnom-hub-v1"
+
+python -m tollgate
+# same: tollgate mcp
 ```
 
-### Cursor `mcp.json` Beispiel
+### Cursor `mcp.json` (no machine-local absolute paths)
 
 ```json
 {
   "mcpServers": {
     "tollgate": {
-      "command": "/Users/landjunge/gnom-hub-v1/.venv/bin/python",
-      "args": ["-m", "gnom_hub.keys.mcp"],
+      "command": "python",
+      "args": ["-m", "tollgate"],
       "env": {
-        "PYTHONPATH": "/Users/landjunge/gnom-hub-v1/src",
-        "GNOM_WS": "/Users/landjunge/WS-gnom-hub-v1"
+        "TOLLGATE_HOME": "${HOME}/.tollgate"
       }
     }
   }
 }
 ```
 
-Gleich mit `python -m gnom_hub.keys`. Config-Beispiel: `configs/mcp-gnom-keys.example.json` (server id `tollgate`).
+Repo example: [`configs/mcp-tollgate.example.json`](../configs/mcp-tollgate.example.json).
 
-### Tools (stdio)
+### Tools (stdio) — names match `src/tollgate/mcp_tools.py`
 
 | Tool | Zweck |
 |------|--------|
 | `keys_dashboard` | Grades, usage, smart route |
 | `keys_diagnose` | Issues + actions |
-| `keys_status` | Inventory / ein Provider |
-| `keys_route` | Intent → Provider + fallbacks |
-| `keys_preflight` | Spend-Gate |
-| `keys_usage` | Token/Call-Ledger heute |
-| `keys_config_get` / `keys_config_patch` | Config |
-| `keys_limits` | Restbudget Provider |
-| `keys_auto_update` | start/stop/once |
-| `keys_call` | generisch |
-| `keys_web_search` | Brave + Limits |
-| `keys_elevenlabs_budget` | TTS-Floor |
+| `keys_status` | Inventory / one provider |
+| `keys_route` | Intent → provider + fallbacks |
+| `keys_preflight` | Spend-gate before a call |
+| `keys_usage` | Today’s token/call ledger |
+| `keys_config_get` / `keys_config_patch` | Read / deep-merge `keys_app.json` |
+| `keys_limits` | Remaining budget for a provider |
+| `keys_auto_update` | start / stop / once |
+| `keys_call` | Generic provider op |
+| `keys_web_search` | Brave via admission |
+| `keys_elevenlabs_budget` | TTS floor (`ELEVENLABS_MIN_REMAINING`) |
 | `keys_zen_chat` | OpenCode Zen free chat |
-| `keys_research` | Offline-Research |
+| `keys_research` | Offline distill research |
 
 ### Resources
 
 | URI | Inhalt |
 |-----|--------|
-| `keys://app/config` | keys_app.json |
-| `keys://app/usage` | keys_usage.json |
+| `keys://app/config` | `keys_app.json` |
+| `keys://app/usage` | `keys_usage.json` |
 | `keys://app/dashboard` | Dashboard snapshot |
 | `keys://app/research` | Research notes |
 
 ---
 
-## 2) Hub HTTP MCP-lite (läuft mit Gnom :8080)
+## 2) HTTP surface (Tollgate server, **:8787**)
 
-| Endpoint | |
-|----------|--|
-| `GET /api/mcp/tools` | alle Hub-Tools inkl. keys_* |
-| `GET /api/mcp/tools?scope=keys` | nur Keys-Tools |
-| `GET /api/mcp/keys/tools` | dasselbe |
-| `POST /api/mcp/keys/call` | `{ "name": "keys_route", "arguments": {…} }` |
-| `GET /api/mcp/keys/resources` | Resources list |
-| `GET /api/mcp/keys/resources/read?uri=keys://app/usage` | Resource read |
-| `POST /api/mcp` | JSON-RPC; mit `"params":{"scope":"keys"}` nur Keys |
-
-Beispiel:
+Run:
 
 ```bash
-curl -s http://127.0.0.1:8080/api/mcp/keys/tools | jq '.tools[].name'
-
-curl -s -X POST http://127.0.0.1:8080/api/mcp/keys/call \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"keys_route","arguments":{"intent":"free_llm"}}'
+tollgate serve
+# → http://127.0.0.1:8787/docs
 ```
 
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/v1/health` | Liveness + circuits |
+| `GET` | `/v1/providers` | Inventory grades (masked keys) |
+| `GET` | `/v1/budget` | Remaining limits |
+| `POST` | `/v1/route` | intent → provider/model |
+| `POST` | `/v1/invoke` | admit + call + meter |
+| `GET` | `/v1/usage` | Daily ledger |
+| `GET` / `POST` | `/v1/config` | Read / deep-merge config (**desk-local; not for public bind**) |
+
+Header: `X-Consumer-Key: n8n` (placeholder until hashed consumer secrets).
+
+```bash
+curl -s http://127.0.0.1:8787/v1/health | jq .
+curl -s -X POST http://127.0.0.1:8787/v1/route \
+  -H 'Content-Type: application/json' \
+  -H 'X-Consumer-Key: cursor' \
+  -d '{"intent":"free_llm"}'
+```
+
+> **Not** Gnom hub `:8080` `/api/mcp/keys/*`. That was the old in-hub surface. Prefer this product’s `/v1/*` or stdio MCP.
+
 ---
 
-## 3) Hub ToolRegistry (Pipeline / Telegram / SPA)
+## 3) Gnom as client (optional)
 
-Beim Hub-Start: `register_keys_mcp_on_registry(self.tools)`  
-→ alle keys_* Tools erscheinen in `/api/mcp/tools` und `/api/tools/call`.
+Gnom may still expose hub tools that **delegate** into Tollgate after `pip install tollgate`.  
+That is integration, not ownership — implement against `from tollgate import …`, not a forked keys tree.
 
 ---
 
-## Token-Zählung über MCP
+## Metering through MCP
 
-`keys_zen_chat`, `keys_web_search`, `keys_call` laufen durch `KeysService.call` →  
-**Limits + usage_today + limits_remaining** in der Antwort.
+`keys_zen_chat`, `keys_web_search`, and `keys_call` go through `KeysService.call` / gateway →  
+**limits + usage + circuit feedback** on the response.

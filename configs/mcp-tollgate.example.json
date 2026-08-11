@@ -1,11 +1,10 @@
 {
   "mcpServers": {
     "tollgate": {
-      "command": "/Users/landjunge/tollgate/.venv/bin/python",
+      "command": "python",
       "args": ["-m", "tollgate"],
       "env": {
-        "PYTHONPATH": "/Users/landjunge/tollgate/src",
-        "TOLLGATE_HOME": "/Users/landjunge/WS-gnom-hub-v1"
+        "TOLLGATE_HOME": "${HOME}/.tollgate"
       }
     }
   }

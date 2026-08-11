@@ -191,10 +191,45 @@ def usage() -> dict[str, Any]:
     return get_keys_service().usage()
 
 
+class ConfigPatchBody(BaseModel):
+    """Deep-merge patch into keys_app.json (policy only — not Key.txt secrets)."""
+
+    model_config = {"extra": "allow"}
+
+
 @app.get("/v1/config")
-def config_get() -> dict[str, Any]:
-    # Phase 3: require consumer admin scope
-    return get_keys_service().get_config()
+def config_get(
+    x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+) -> dict[str, Any]:
+    """
+    Read keys_app.json policy (budgets, routing, enables).
+
+    Does not include Key.txt API secrets. Still desk-sensitive —
+    Phase 3: require consumer admin scope. Bind to 127.0.0.1 until then.
+    """
+    out = get_keys_service().get_config()
+    out["consumer"] = _consumer_from_header(x_consumer_key)
+    out["warning"] = (
+        "policy config only (no Key.txt secrets); bind loopback until admin auth"
+    )
+    return out
+
+
+@app.post("/v1/config")
+def config_patch(
+    body: dict[str, Any],
+    x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+) -> dict[str, Any]:
+    """Deep-merge patch into keys_app.json. Same security caveats as GET."""
+    if not isinstance(body, dict) or not body:
+        raise HTTPException(status_code=400, detail="JSON object patch required")
+    # Drop accidental wrapper keys if a client POSTs {config: {...}}
+    patch = body.get("config") if isinstance(body.get("config"), dict) and len(body) == 1 else body
+    if not isinstance(patch, dict):
+        raise HTTPException(status_code=400, detail="invalid patch")
+    out = get_keys_service().set_config(patch)
+    out["consumer"] = _consumer_from_header(x_consumer_key)
+    return out
 
 
 @app.get("/")
@@ -203,6 +238,18 @@ def root() -> dict[str, Any]:
         "service": "tollgate",
         "product": "Tollgate",
         "docs": "/docs",
-        "vision": "docs/keys/VISION.md",
-        "v1": ["/v1/health", "/v1/route", "/v1/invoke", "/v1/budget", "/v1/providers"],
+        "repo": "https://github.com/landjunge/tollgate",
+        "vision": "docs/VISION.md",
+        "architecture": "docs/ARCHITECTURE.md",
+        "mcp": "docs/MCP.md",
+        "cost_limits": "docs/COST_LIMITS.md",
+        "v1": [
+            "/v1/health",
+            "/v1/route",
+            "/v1/invoke",
+            "/v1/budget",
+            "/v1/providers",
+            "/v1/usage",
+            "/v1/config",
+        ],
     }

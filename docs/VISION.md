@@ -1,7 +1,7 @@
 # Tollgate — Vision (locked)
 
-**Product / repo name:** **Tollgate**  
-**Status:** agreed 2026-08-11 · **name locked**  
+**Product / repo:** **[landjunge/tollgate](https://github.com/landjunge/tollgate)**  
+**Status:** agreed 2026-08-11 · **name locked** · own repo shipped  
 **One-liner:** Die Mautstelle für AI-API-Calls — Admission, Budgets, Routing. Gnom ist *ein* Client, nicht der Eigentümer der Wahrheit.
 
 **Why Tollgate:** Every request passes a controlled gate; hard caps prevent bill shock; multi-consumer lanes (Gnom, n8n, agents) share one ledger.

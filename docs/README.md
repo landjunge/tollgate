@@ -1,49 +1,44 @@
-# Keys provider documentation (distilled)
+# Tollgate docs
 
-**Source of truth for functions:**  
-`src/gnom_hub/keys/distill/*.json`
+**Repo:** https://github.com/landjunge/tollgate  
+**Package path for provider truth:** `src/tollgate/distill/*.json`
 
-Human-readable companions live here under `providers/`.
+| Doc | Topic |
+|-----|--------|
+| [VISION.md](VISION.md) | Product lock, multi-consumer |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 7 layers, circuits, taxonomy |
+| [COST_LIMITS.md](COST_LIMITS.md) | Google off, budgets, `/v1/config` |
+| [MCP.md](MCP.md) | stdio MCP + HTTP `/v1/*` |
+| [N8N.md](N8N.md) | n8n as consumer |
+| [KEYS_MODULE.md](KEYS_MODULE.md) | Module map (legacy name) |
 
 ## Rule (no more code thrash)
 
 | Do | Don't |
 |----|--------|
-| Update distill JSON when APIs change | Invent endpoints inside random .py files |
-| Add `ops[]` for new Hub/MCP functions | Copy-paste limits into 5 modules |
+| Update distill JSON when APIs change | Invent endpoints inside random `.py` files |
+| Add `ops[]` for new MCP functions | Copy-paste limits into 5 modules |
 | Bump `distilled_at` | Rewrite router/service for every doc tweak |
-| Keep MD in sync optionally | Hand-edit `research_notes.py` facts |
 
 ## Providers
 
-| ID | Distill JSON | Topic |
-|----|--------------|--------|
-| deepseek | `distill/deepseek.json` | OpenAI-compat chat, concurrency |
-| worker | `distill/worker.json` | Same API, worker key |
-| brave | `distill/brave.json` | Search + rate headers |
-| elevenlabs | `distill/elevenlabs.json` | Credits / TTS floor |
-| openrouter | `distill/openrouter.json` | Credits, :free caps, key chain |
-| nvidia | `distill/nvidia.json` | NIM catalog |
-| minimax | `distill/minimax.json` | Regions, error 2049 |
-| opencode_zen | `distill/opencode_zen.json` | Free models, Cloudflare UA |
-| telegram | `distill/telegram.json` | Optional bot |
-
-## How handlers use this
+| ID | Distill JSON |
+|----|----------------|
+| deepseek | `src/tollgate/distill/deepseek.json` |
+| worker | `src/tollgate/distill/worker.json` |
+| brave | `src/tollgate/distill/brave.json` |
+| elevenlabs | `src/tollgate/distill/elevenlabs.json` |
+| openrouter | `src/tollgate/distill/openrouter.json` |
+| nvidia | `src/tollgate/distill/nvidia.json` |
+| minimax | `src/tollgate/distill/minimax.json` |
+| opencode_zen | `src/tollgate/distill/opencode_zen.json` |
+| google | `src/tollgate/distill/google.json` (high_risk, off by default) |
+| telegram | `src/tollgate/distill/telegram.json` |
 
 ```python
-from gnom_hub.keys.distill.loader import load_distill, research_view, ops_for
+from tollgate.distill.loader import load_distill, research_view, ops_for
 
 spec = load_distill("brave")
 for op in ops_for("brave"):
     print(op["name"], "→", op["maps_to"])
 ```
-
-MCP: `keys_research` / `keys_call op=research` returns `research_view(id)`.
-
-## Updating a provider
-
-1. Open official docs (listed in `sources[]`)
-2. Edit **only** `distill/<id>.json`
-3. Optionally refresh `docs/keys/providers/<id>.md`
-4. Run: `pytest tests/test_keys_distill.py -q`
-5. Touch Python handlers **only** if a new op type is required

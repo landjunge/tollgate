@@ -1,6 +1,6 @@
 # Tollgate — Masterpiece Architecture
 
-**Product:** Tollgate (future own repo `tollgate`)  
+**Product:** [landjunge/tollgate](https://github.com/landjunge/tollgate)  
 **Status:** living design (2026-08-11)  
 **Team research:** industry gateways (LiteLLM, Portkey, OpenRouter, CF AI Gateway) + failure-mode analysis + current module audit.
 
@@ -82,6 +82,17 @@ L7  Meter + Audit       token + $ dual meter; append-only events
 - Dual meter: **tokens** and **USD** (estimate; reconcile when usage present).  
 - Cost-velocity: burn ≫ daily/$ remaining → early trip.  
 - Google: `enabled=false` + high_risk + `max_usd_day` + global guard.
+
+## HTTP surface & desk security (known gaps)
+
+| Endpoint | Status |
+|----------|--------|
+| `/v1/providers` | Inventory grades; key material **masked** |
+| `/v1/config` GET/POST | Policy file only (`keys_app.json`) — **not** `Key.txt`. No admin auth yet. Bind **127.0.0.1** until Phase 3 consumer scopes |
+| `/v1/invoke` | Spend path; needs consumer secrets before public multi-tenant |
+| MCP stdio | Local process; inherits user secrets from env / `TOLLGATE_HOME` |
+
+Documented so agents do not assume “own repo ⇒ safe on 0.0.0.0”.
 
 ## Anti-patterns (banned)
 
