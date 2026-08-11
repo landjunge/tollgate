@@ -79,7 +79,7 @@ _bootstrap_env()
 
 app = FastAPI(
     title="Tollgate",
-    version="1.0.2",
+    version="1.0.3",
     description=(
         "Tollgate — AI reliability & control plane. "
         "Protect · Route · Prove (chaos failover tests). "
@@ -147,7 +147,7 @@ def health() -> dict[str, Any]:
         "ok": not fr.get("frozen"),
         "service": "tollgate",
         "product": "Tollgate",
-        "version": "1.0.2",
+        "version": "1.0.3",
         "extractable": True,
         "multi_consumer": True,
         "portable": path_snapshot(),
@@ -329,6 +329,52 @@ def chaos_status_http(
 
     out = chaos_status()
     out["consumer"] = auth["consumer"]
+    return out
+
+
+class ChaosTestBody(BaseModel):
+    provider: str = "opencode_zen"
+    requests: int = Field(8, ge=1, le=50)
+    intent: str = "free_llm"
+    live_chat: bool = False
+
+
+@app.post("/v1/chaos/test")
+def chaos_test_http(
+    body: ChaosTestBody,
+    x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+    x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> dict[str, Any]:
+    """Run failover chaos test (Prove) — admin when auth mode."""
+    auth = _require(
+        x_consumer_key, x_consumer_id, need_admin=True, authorization=authorization
+    )
+    from tollgate.chaos import run_failover_test
+
+    rep = run_failover_test(
+        body.provider,
+        intent=body.intent or "free_llm",
+        requests=int(body.requests or 8),
+        live_chat=bool(body.live_chat),
+    )
+    rep["viewer"] = auth["consumer"]
+    return rep
+
+
+@app.get("/v1/certificate")
+def certificate_http(
+    application: str = Query(""),
+    x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+    x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> dict[str, Any]:
+    """AI Reliability Report scorecard for the Control Room UI."""
+    auth = _require(x_consumer_key, x_consumer_id, authorization=authorization)
+    from tollgate.certificate import build_certificate
+
+    out = build_certificate(application=application or "")
+    out["viewer"] = auth["consumer"]
     return out
 
 

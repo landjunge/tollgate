@@ -164,11 +164,26 @@ def consumer_burn(*, root: Any = None) -> list[dict[str, Any]]:
                 "usd": round(used_usd, 6),
                 "max_usd_day": max_usd or None,
                 "max_calls_day": max_calls or None,
+                "max_usd_request": float(env.get("max_usd_request") or 0) or None,
+                "max_usd_hour": float(env.get("max_usd_hour") or 0) or None,
+                "max_requests_minute": int(env.get("max_requests_minute") or 0) or None,
+                "max_tool_calls": int(env.get("max_tool_calls") or 0) or None,
+                "allowed_providers": list(env.get("allowed_providers") or []),
+                "blocked_providers": list(env.get("blocked_providers") or []),
+                "allowed_intents": list(env.get("allowed_intents") or []),
+                "allowed_ops": list(env.get("allowed_ops") or []),
                 "remaining_usd": lim.get("remaining_usd"),
                 "remaining_calls": lim.get("remaining_calls"),
                 "projected_usd_eod": round(projected, 4),
                 "status": status,
                 "allowed": bool(lim.get("allowed", True)),
+                "protected": bool(
+                    max_usd
+                    or max_calls
+                    or env.get("max_tool_calls")
+                    or env.get("max_usd_request")
+                    or env.get("max_requests_minute")
+                ),
             }
         )
 

@@ -1,217 +1,602 @@
-"""Minimal control-plane HTML — Protect · Route · Prove."""
+"""Control Room WebUI — radical simple ops pane (not a config cemetery).
+
+Screens: Overview · Agents · Providers · Prove · Audit
+Question: Is my AI safe, does it work, what must I do?
+"""
 
 from __future__ import annotations
 
-DASHBOARD_HTML = """<!DOCTYPE html>
+# Single-page app (no build). Fetches /v1/control, /v1/audit, /v1/certificate, chaos.
+
+DASHBOARD_HTML = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Tollgate — Protect · Route · Prove</title>
+<title>Tollgate — Control Room</title>
 <style>
-  :root { --bg:#0f1115; --card:#1a1d24; --fg:#e8eaed; --muted:#9aa0a6; --ok:#3dd68c; --warn:#f5a524; --bad:#f31260; --acc:#6c8cff; }
-  * { box-sizing: border-box; }
-  body { margin:0; font-family: ui-sans-serif, system-ui, sans-serif; background:var(--bg); color:var(--fg); }
-  header { padding:1.25rem 1.5rem; border-bottom:1px solid #2a2f3a; }
-  header h1 { margin:0; font-size:1.25rem; letter-spacing:.02em; }
-  header p { margin:.35rem 0 0; color:var(--muted); font-size:.9rem; max-width:52rem; }
-  main { padding:1.25rem 1.5rem 3rem; max-width:1100px; margin:0 auto; }
-  .headline { background:linear-gradient(135deg,#1e2430,#151922); border:1px solid #2a2f3a; border-radius:12px; padding:1.1rem 1.25rem; font-size:1.05rem; margin-bottom:1rem; font-weight:600; }
-  .promise { color:var(--muted); font-size:.9rem; margin:-.4rem 0 1.25rem; }
-  .top { display:grid; grid-template-columns: 160px 1fr; gap:1rem; margin-bottom:1.25rem; align-items:center; }
-  @media (max-width:700px){ .top { grid-template-columns:1fr; } }
-  .ring-wrap { background:var(--card); border:1px solid #2a2f3a; border-radius:12px; padding:1rem; text-align:center; }
+  :root {
+    --bg:#0c0e12; --panel:#141820; --line:#252b36; --fg:#e8eaed;
+    --muted:#8b93a7; --ok:#3dd68c; --warn:#f5a524; --bad:#f31260;
+    --acc:#6c8cff; --chip:#1c2230;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    background:var(--bg); color:var(--fg); min-height:100vh; }
+  a { color:var(--acc); text-decoration:none; }
+  button { font:inherit; cursor:pointer; border:0; border-radius:8px;
+    background:var(--acc); color:#fff; padding:.5rem 1rem; font-weight:600; }
+  button.ghost { background:transparent; border:1px solid var(--line); color:var(--fg); }
+  button:disabled { opacity:.5; cursor:wait; }
+  header {
+    display:flex; align-items:center; justify-content:space-between; gap:1rem;
+    padding:.9rem 1.25rem; border-bottom:1px solid var(--line);
+    position:sticky; top:0; background:rgba(12,14,18,.92); backdrop-filter:blur(8px); z-index:10;
+  }
+  .brand { font-weight:700; letter-spacing:.04em; font-size:1rem; }
+  .brand span { color:var(--muted); font-weight:500; margin-left:.5rem; font-size:.85rem; }
+  .badge {
+    display:inline-flex; align-items:center; gap:.4rem;
+    padding:.28rem .7rem; border-radius:999px; font-size:.75rem; font-weight:700;
+    letter-spacing:.04em; background:var(--chip); border:1px solid var(--line);
+  }
+  .badge.ok { color:var(--ok); border-color:#245c42; }
+  .badge.warn { color:var(--warn); border-color:#6a4a12; }
+  .badge.bad, .badge.frozen { color:var(--bad); border-color:#6a1a35; }
+  .dot { width:8px; height:8px; border-radius:50%; background:currentColor; }
+  nav { display:flex; gap:.15rem; flex-wrap:wrap; padding:.5rem 1.25rem; border-bottom:1px solid var(--line); }
+  nav a {
+    color:var(--muted); padding:.45rem .8rem; border-radius:8px; font-size:.9rem; font-weight:600;
+  }
+  nav a:hover { color:var(--fg); background:var(--chip); }
+  nav a.active { color:var(--fg); background:var(--panel); border:1px solid var(--line); }
+  main { max-width:980px; margin:0 auto; padding:1.25rem 1.25rem 3rem; }
+  .view { display:none; }
+  .view.active { display:block; }
+  h2 { font-size:.75rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:1.4rem 0 .6rem; }
+  h1.page { font-size:1.35rem; margin:0 0 .35rem; }
+  .sub { color:var(--muted); margin:0 0 1.2rem; font-size:.95rem; }
+  .card {
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:1.1rem 1.2rem; margin-bottom:.85rem;
+  }
+  .hero {
+    display:grid; grid-template-columns:160px 1fr; gap:1.25rem; align-items:center;
+  }
+  @media (max-width:700px){ .hero { grid-template-columns:1fr; } nav{overflow-x:auto;} }
+  .ring-box { position:relative; width:130px; height:130px; margin:0 auto; }
   .ring {
-    --p: 0;
-    width:120px; height:120px; border-radius:50%; margin:0 auto .5rem;
-    background: conic-gradient(var(--acc) calc(var(--p) * 1%), #2a2f3a 0);
+    --p:0; width:130px; height:130px; border-radius:50%;
+    background: conic-gradient(var(--acc) calc(var(--p) * 1%), var(--line) 0);
     display:grid; place-items:center;
   }
-  .ring::before {
-    content:""; width:88px; height:88px; border-radius:50%; background:var(--card);
+  .ring::before { content:""; width:96px; height:96px; border-radius:50%; background:var(--panel); }
+  .ring-box .val { position:absolute; inset:0; display:grid; place-items:center; font-size:1.7rem; font-weight:800; }
+  .ring-label { text-align:center; margin-top:.4rem; font-size:.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+  .grade { font-weight:700; font-size:.95rem; margin-top:.2rem; text-align:center; }
+  .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:.6rem; }
+  @media (max-width:560px){ .stats { grid-template-columns:1fr; } }
+  .stat b { display:block; font-size:1.2rem; }
+  .stat span { color:var(--muted); font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; }
+  .row {
+    display:flex; justify-content:space-between; align-items:center; gap:1rem;
+    padding:.7rem 0; border-bottom:1px solid var(--line); font-size:.95rem;
   }
-  .ring-label { position:absolute; font-size:1.4rem; font-weight:700; }
-  .ring-box { position:relative; display:inline-grid; place-items:center; }
-  .ring-box .ring { grid-area:1/1; }
-  .ring-box .val { grid-area:1/1; font-size:1.35rem; font-weight:700; z-index:1; }
-  .ring-sub { color:var(--muted); font-size:.75rem; text-transform:uppercase; letter-spacing:.04em; }
-  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:.75rem; }
-  .stat { background:var(--card); border-radius:10px; padding:.85rem 1rem; border:1px solid #2a2f3a; }
-  .stat b { display:block; font-size:1.25rem; }
-  .stat span { color:var(--muted); font-size:.7rem; text-transform:uppercase; letter-spacing:.04em; }
-  h2 { font-size:.95rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin:1.5rem 0 .6rem; }
-  .attn, .dr { background:var(--card); border:1px solid #2a2f3a; border-radius:10px; padding:.5rem 0; margin-bottom:1rem; }
-  .attn div, .dr div { padding:.45rem 1rem; border-bottom:1px solid #2a2f3a; font-size:.9rem; }
-  .attn div:last-child, .dr div:last-child { border-bottom:none; }
-  .dims { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:.5rem; margin:.75rem 0; }
-  .dim { background:#12151c; border-radius:8px; padding:.5rem .7rem; font-size:.85rem; }
-  .dim b { float:right; }
-  .bar { height:4px; background:#2a2f3a; border-radius:2px; margin-top:.35rem; overflow:hidden; }
-  .bar i { display:block; height:100%; background:var(--acc); }
-  table { width:100%; border-collapse:collapse; background:var(--card); border-radius:10px; overflow:hidden; border:1px solid #2a2f3a; }
-  th, td { text-align:left; padding:.55rem .75rem; border-bottom:1px solid #2a2f3a; font-size:.9rem; }
-  th { color:var(--muted); font-weight:600; font-size:.75rem; text-transform:uppercase; }
-  tr:last-child td { border-bottom:none; }
-  .pill { display:inline-block; padding:.12rem .45rem; border-radius:999px; font-size:.75rem; background:#2a2f3a; }
-  .ok { color:var(--ok); } .warn { color:var(--warn); } .bad,.error { color:var(--bad); }
+  .row:last-child { border-bottom:0; }
+  .muted { color:var(--muted); }
+  .ok { color:var(--ok); } .warn { color:var(--warn); } .bad { color:var(--bad); }
+  .pill { display:inline-block; padding:.1rem .45rem; border-radius:999px; font-size:.72rem; background:var(--chip); }
+  table { width:100%; border-collapse:collapse; font-size:.9rem; }
+  th, td { text-align:left; padding:.55rem .35rem; border-bottom:1px solid var(--line); }
+  th { color:var(--muted); font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; }
+  tr:last-child td { border-bottom:0; }
+  tr.click { cursor:pointer; }
+  tr.click:hover td { background:rgba(108,140,255,.06); }
+  .detail { display:none; margin-top:.5rem; padding:.85rem; background:#0f1218; border-radius:10px; border:1px solid var(--line); }
+  .detail.open { display:block; }
+  .kv { display:grid; grid-template-columns:1fr 1fr; gap:.35rem .75rem; font-size:.9rem; }
+  .kv b { color:var(--muted); font-weight:500; }
+  .actions { display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.85rem; }
+  .reco { border-left:3px solid var(--warn); padding-left:.85rem; margin:.55rem 0; }
+  .reco.ok { border-color:var(--ok); }
+  .reco.bad { border-color:var(--bad); }
   footer { margin-top:2rem; color:var(--muted); font-size:.8rem; }
-  a { color:var(--acc); }
-  button { background:var(--acc); color:#fff; border:0; border-radius:8px; padding:.45rem .9rem; cursor:pointer; font-weight:600; }
-  code { background:#12151c; padding:.1rem .35rem; border-radius:4px; font-size:.8rem; }
+  code { background:#0f1218; padding:.1rem .35rem; border-radius:4px; font-size:.82rem; }
+  .empty { color:var(--muted); padding:.5rem 0; }
+  .bar { height:6px; background:var(--line); border-radius:3px; overflow:hidden; margin-top:.35rem; }
+  .bar i { display:block; height:100%; background:var(--acc); }
+  .bar.warn i { background:var(--warn); }
+  .bar.bad i { background:var(--bad); }
+  .auth-bar { font-size:.8rem; color:var(--muted); }
+  .auth-bar input { background:#0f1218; border:1px solid var(--line); color:var(--fg);
+    border-radius:6px; padding:.25rem .5rem; width:11rem; }
 </style>
 </head>
 <body>
 <header>
-  <h1>Tollgate</h1>
-  <p id="promise">Safety layer for AI agents — Protect · Route · Prove · never out of control</p>
-</header>
-<main>
-  <div class="headline" id="headline">Loading…</div>
-  <div class="attn" id="freezeBanner" style="display:none;border-color:var(--bad);margin-bottom:1rem"></div>
-  <p class="promise" id="tagline"></p>
-  <div class="top">
-    <div class="ring-wrap">
-      <div class="ring-box">
-        <div class="ring" id="ring" style="--p:0"></div>
-        <div class="val" id="ringVal">—</div>
-      </div>
-      <div class="ring-sub">AI Resilience</div>
-      <div id="avail" class="ring-sub" style="margin-top:.35rem"></div>
+  <div class="brand">TOLLGATE <span id="dayLabel"></span></div>
+  <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
+    <div class="auth-bar" title="Open mode: any label. Auth mode: id:secret">
+      key <input id="apiKey" placeholder="desk" value="desk"/>
     </div>
-    <div class="grid" id="stats"></div>
+    <div class="badge ok" id="statusBadge"><span class="dot"></span><span id="statusText">…</span></div>
   </div>
-  <div class="dims" id="dims"></div>
-  <h2>Disaster recovery (Prove)</h2>
-  <div class="dr" id="dr"><div>—</div></div>
-  <h2>Needs attention</h2>
-  <div class="attn" id="attention"><div>—</div></div>
-  <h2>Recent denies (Protect)</h2>
-  <table><thead><tr><th>When</th><th>Agent</th><th>Provider</th><th>Why</th></tr></thead>
-  <tbody id="denies"></tbody></table>
-  <h2>Chaos test history</h2>
-  <table><thead><tr><th>When</th><th>Provider</th><th>Result</th><th>OK / Fail</th></tr></thead>
-  <tbody id="history"></tbody></table>
-  <h2>Agents / consumers</h2>
-  <table><thead><tr><th>Agent</th><th>USD today</th><th>Projected EOD</th><th>Budget</th><th>Status</th></tr></thead>
-  <tbody id="consumers"></tbody></table>
-  <h2>Provider health</h2>
-  <table><thead><tr><th>Provider</th><th>Status</th><th>Success</th><th>Latency</th><th>USD day</th><th>Score</th><th>Circuit</th></tr></thead>
-  <tbody id="providers"></tbody></table>
-  <footer id="foot"></footer>
-  <p style="margin-top:1rem">
-    <button onclick="load()">Refresh</button>
-    · <a href="/docs">API</a>
-    · <a href="/v1/control">JSON</a>
-    · <a href="/v1/report?format=md">Report</a>
-    · <a href="/v1/resilience">Resilience</a>
-    · <a href="/v1/chaos">Chaos</a>
-  </p>
-  <p class="promise">CLI: <code>tollgate report</code> · <code>tollgate audit --event admit_deny</code> · <code>tollgate chaos test opencode_zen</code></p>
+</header>
+<nav>
+  <a href="#overview" data-view="overview" class="active">Overview</a>
+  <a href="#agents" data-view="agents">Agents</a>
+  <a href="#providers" data-view="providers">Providers</a>
+  <a href="#prove" data-view="prove">Prove</a>
+  <a href="#audit" data-view="audit">Audit</a>
+</nav>
+<main>
+  <!-- OVERVIEW -->
+  <section class="view active" id="view-overview">
+    <h1 class="page">Control Room</h1>
+    <p class="sub">Is your AI safe, does it work, and what must you do?</p>
+    <div class="card hero">
+      <div>
+        <div class="ring-box">
+          <div class="ring" id="ring" style="--p:0"></div>
+          <div class="val" id="ringVal">—</div>
+        </div>
+        <div class="ring-label">AI Reliability</div>
+        <div class="grade" id="grade">—</div>
+      </div>
+      <div>
+        <div class="stats" id="stats"></div>
+        <p class="muted" style="margin:.9rem 0 0;font-size:.9rem" id="headline"></p>
+      </div>
+    </div>
+    <h2>Needs attention</h2>
+    <div class="card" id="attention"><div class="empty">Loading…</div></div>
+    <h2>Recommendations</h2>
+    <div class="card" id="reco"><div class="empty">Loading…</div></div>
+    <h2>Providers at a glance</h2>
+    <div class="card" id="provGlance"><div class="empty">Loading…</div></div>
+  </section>
+
+  <!-- AGENTS -->
+  <section class="view" id="view-agents">
+    <h1 class="page">Agents</h1>
+    <p class="sub">Who is protected, who burns $, who is about to break limits.</p>
+    <div id="agentsList"><div class="card empty">Loading…</div></div>
+  </section>
+
+  <!-- PROVIDERS -->
+  <section class="view" id="view-providers">
+    <h1 class="page">Providers</h1>
+    <p class="sub">Which provider works best right now — not a config cemetery.</p>
+    <div class="card">
+      <table>
+        <thead><tr><th>Provider</th><th>Health</th><th>Success</th><th>Latency</th><th>Cost day</th><th>Circuit</th></tr></thead>
+        <tbody id="provTable"></tbody>
+      </table>
+    </div>
+    <div id="provDetail"></div>
+  </section>
+
+  <!-- PROVE -->
+  <section class="view" id="view-prove">
+    <h1 class="page">Prove</h1>
+    <p class="sub">Is your AI infrastructure actually resilient — or only configured?</p>
+    <div class="card" id="proveScore"></div>
+    <div class="card">
+      <h2 style="margin-top:0">Provider failover test</h2>
+      <p class="muted" id="proveLast">Last test: —</p>
+      <div class="actions">
+        <label class="muted">Provider
+          <input id="chaosProvider" value="opencode_zen" style="margin-left:.35rem;background:#0f1218;border:1px solid var(--line);color:var(--fg);border-radius:6px;padding:.3rem .5rem"/>
+        </label>
+        <button id="btnChaos">Run test</button>
+        <button class="ghost" id="btnCert">Refresh certificate</button>
+      </div>
+      <pre id="proveOut" class="muted" style="margin-top:1rem;white-space:pre-wrap;font-size:.85rem"></pre>
+    </div>
+    <div class="card" id="certCard"></div>
+  </section>
+
+  <!-- AUDIT -->
+  <section class="view" id="view-audit">
+    <h1 class="page">Audit</h1>
+    <p class="sub">What did Tollgate allow, block, or fail over — ops only, no secrets.</p>
+    <div class="actions" style="margin-bottom:.75rem">
+      <button class="ghost" id="btnAudit">Refresh</button>
+      <button class="ghost" id="btnAuditDenies">Denies only</button>
+    </div>
+    <div class="card">
+      <table>
+        <thead><tr><th>When</th><th>Agent</th><th>Event</th><th>Provider</th><th>Detail</th></tr></thead>
+        <tbody id="auditTable"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    Safety layer for AI agents · not a gateway catalog ·
+    <a href="/docs">API</a> ·
+    <a href="https://github.com/landjunge/tollgate">GitHub</a> ·
+    config via CLI <code>tollgate consumer-budget …</code>
+  </footer>
 </main>
 <script>
-function cls(s){ if(!s) return ''; if(['healthy','ok','idle'].includes(s)) return 'ok'; if(['warn','likely_over','degraded','half_open'].includes(s)) return 'warn'; return 'bad'; }
-function when(ts){ if(!ts) return '—'; try { return new Date(ts*1000).toLocaleString(); } catch(e){ return String(ts); } }
-async function load(){
-  const r = await fetch('/v1/control');
-  const d = await r.json();
-  document.getElementById('headline').textContent = d.headline || '—';
-  document.getElementById('tagline').textContent = d.tagline || d.promise || '';
-  if (d.promise) document.getElementById('promise').textContent = d.promise;
-  const fb = document.getElementById('freezeBanner');
-  if (d.freeze && d.freeze.frozen) {
-    fb.style.display = 'block';
-    fb.innerHTML = `<div class="error">⛔ ADMISSION FROZEN — ${d.freeze.reason||'kill switch'} · <code>tollgate unfreeze</code> or POST /v1/freeze</div>`;
-  } else {
-    fb.style.display = 'none';
-    fb.innerHTML = '';
-  }
-  const s = d.summary || {};
-  const res = d.resilience || {};
-  const score = res.score!=null ? Number(res.score) : null;
-  const ring = document.getElementById('ring');
-  if (score!=null) {
-    ring.style.setProperty('--p', Math.max(0, Math.min(100, score)));
-    document.getElementById('ringVal').textContent = score.toFixed(0);
-  } else {
-    document.getElementById('ringVal').textContent = '—';
-  }
-  document.getElementById('avail').textContent =
-    res.availability_estimate_pct!=null ? ('~'+res.availability_estimate_pct+'% est.') : '';
-  document.getElementById('stats').innerHTML = [
-    ['Spent today', '$'+(s.usd||0).toFixed(2)],
-    ['Agent stops', s.agent_protection_blocks ?? 0],
-    ['Provider errors', s.errors ?? 0],
-    ['Agents protected', s.consumers_protected ?? 0],
-    ['Calls', s.calls ?? 0],
-    ['Policy', res.policy_compliant===true?'OK':(res.policy_compliant===false?'⚠':'—')]
-  ].map(([k,v]) => `<div class="stat"><b>${v}</b><span>${k}</span></div>`).join('');
-  const dims = res.dimensions || {};
-  document.getElementById('dims').innerHTML = Object.keys(dims).map(k => {
-    const v = Number(dims[k])||0;
-    return `<div class="dim">${k.replace(/_/g,' ')} <b>${v.toFixed(0)}</b><div class="bar"><i style="width:${Math.min(100,v)}%"></i></div></div>`;
-  }).join('');
-  // DR panel
-  const last = res.last_chaos_report || (d.chaos&&d.chaos.last_report) || null;
-  const active = (res.active_chaos||[]).concat((d.chaos&&d.chaos.active)||[]);
-  const recovering = res.recovering || (d.chaos&&d.chaos.recovering) || [];
-  let dr = [];
-  if (last) {
-    dr.push(`<div class="${last.survived?'ok':'bad'}">${last.survived?'✓':'⛔'} Last DR: <b>${last.chaos_provider||'?'}</b> — ${last.message|| (last.survived?'survived':'failed')} · ${last.successful||0}/${last.requests_tested||0} routes · recovery ${last.recovery_time_ms_best??'—'}ms</div>`);
-  } else {
-    dr.push(`<div class="warn">⚠ No chaos test yet — run <code>tollgate chaos test &lt;provider&gt;</code></div>`);
-  }
-  if (active.length) active.forEach(a => dr.push(`<div class="warn">⚠ Chaos ACTIVE on <b>${a.provider}</b></div>`));
-  if (recovering.length) recovering.forEach(a => dr.push(`<div class="warn">↻ Gradual recovery: <b>${a.provider}</b> (${a.duration_s}s ramp)</div>`));
-  if (res.policy) {
-    const p = res.policy;
-    dr.push(`<div>Policy: fallbacks≥${p.required_fallbacks} · max failover ${p.max_failover_time_s}s · recovery ramp ${p.gradual_recovery_s}s · target ${p.availability_target}%</div>`);
-  }
-  document.getElementById('dr').innerHTML = dr.join('');
-  const att = d.attention || [];
-  document.getElementById('attention').innerHTML = att.length
-    ? att.map(a => `<div class="${a.level||''}">${a.level==='ok'?'✓':(a.level==='error'?'⛔':'⚠')} ${a.message||''}</div>`).join('')
-    : '<div class="ok">✓ Nothing urgent — agents under control</div>';
-  const denies = d.recent_denies || [];
-  document.getElementById('denies').innerHTML = denies.length
-    ? denies.map(x => `
-      <tr>
-        <td>${when(x.ts)}</td>
-        <td>${x.consumer||'—'}</td>
-        <td>${x.provider||'—'}</td>
-        <td class="warn">${(x.protection ? ('['+x.protection+'] ') : '') + (x.error||x.reason||'deny')}</td>
-      </tr>`).join('')
-    : '<tr><td colspan="4" class="ok">No admit denies in recent audit — gate is quiet</td></tr>';
-  const hist = (d.chaos && d.chaos.history) || [];
-  document.getElementById('history').innerHTML = hist.length
-    ? hist.slice().reverse().map(h => `
-      <tr>
-        <td>${when(h.finished_at)}</td>
-        <td>${h.chaos_provider||'—'}</td>
-        <td class="${h.survived?'ok':'bad'}">${h.survived?'survived':'failed'}</td>
-        <td>${h.successful??'—'}/${(h.successful||0)+(h.failed||0) || '—'}</td>
-      </tr>`).join('')
-    : '<tr><td colspan="4">No tests yet</td></tr>';
-  document.getElementById('consumers').innerHTML = (d.consumers||[]).map(c => `
-    <tr>
-      <td>${c.consumer}</td>
-      <td>$${(c.usd||0).toFixed(4)}</td>
-      <td>$${(c.projected_usd_eod||0).toFixed(4)}</td>
-      <td>${c.max_usd_day!=null ? '$'+c.max_usd_day : (c.max_calls_day!=null ? c.max_calls_day+' calls' : '—')}</td>
-      <td class="${cls(c.status)}">${c.status}</td>
-    </tr>`).join('') || '<tr><td colspan="5">No agent traffic yet</td></tr>';
-  document.getElementById('providers').innerHTML = (d.providers||[]).map(p => `
-    <tr>
-      <td>${p.provider}</td>
-      <td class="${cls(p.status)}">${p.status}</td>
-      <td>${p.success_rate==null ? '—' : (p.success_rate*100).toFixed(1)+'%'}</td>
-      <td>${p.latency_ms_avg==null ? '—' : p.latency_ms_avg.toFixed(0)+' ms'}</td>
-      <td>$${(p.usd||0).toFixed(4)}</td>
-      <td>${p.score}</td>
-      <td><span class="pill">${p.circuit}</span></td>
-    </tr>`).join('') || '<tr><td colspan="7">No provider traffic yet</td></tr>';
-  document.getElementById('foot').textContent = 'Day '+(d.day||'')+' · '+((d.pillars||[]).join(' · '));
+const $ = (id) => document.getElementById(id);
+function key() { return ($('apiKey').value || 'desk').trim(); }
+function headers() {
+  const k = key();
+  return {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    'X-Consumer-Key': k,
+    'Authorization': 'Bearer ' + k,
+  };
 }
-load(); setInterval(load, 15000);
+function cls(s) {
+  s = (s||'').toLowerCase();
+  if (['ok','healthy','pass','protected','closed'].includes(s)) return 'ok';
+  if (['warn','likely_over','degraded','half_open','approaching','ready','not_run'].includes(s)) return 'warn';
+  return 'bad';
+}
+function money(n) { return '$' + (Number(n||0)).toFixed(2); }
+function money4(n) { return '$' + (Number(n||0)).toFixed(4); }
+function pct(n) { return n==null ? '—' : (Number(n)*100).toFixed(1)+'%'; }
+function when(ts) {
+  if (ts==null || ts==='') return '—';
+  try {
+    const t = Number(ts) > 1e12 ? Number(ts) : Number(ts)*1000;
+    return new Date(t).toLocaleString();
+  } catch { return String(ts); }
+}
+function grade(score) {
+  if (score==null) return '—';
+  if (score >= 85) return {t:'GOOD', c:'ok'};
+  if (score >= 65) return {t:'FAIR', c:'warn'};
+  return {t:'WEAK', c:'bad'};
+}
+
+let CTRL = null;
+let CERT = null;
+
+async function api(path, opts={}) {
+  const r = await fetch(path, { ...opts, headers: { ...headers(), ...(opts.headers||{}) } });
+  if (!r.ok) {
+    const t = await r.text();
+    throw new Error(r.status + ' ' + t.slice(0,180));
+  }
+  const ct = r.headers.get('content-type')||'';
+  if (ct.includes('json')) return r.json();
+  return r.text();
+}
+
+function setStatus(ctrl) {
+  const fr = ctrl.freeze || {};
+  const att = ctrl.attention || [];
+  const urgent = att.filter(a => a.level === 'error' || a.level === 'warn');
+  const badge = $('statusBadge');
+  const text = $('statusText');
+  badge.className = 'badge';
+  if (fr.frozen) {
+    badge.classList.add('frozen');
+    text.textContent = 'FROZEN';
+  } else if (urgent.some(a => a.level === 'error')) {
+    badge.classList.add('bad');
+    text.textContent = 'ATTENTION';
+  } else if (urgent.length) {
+    badge.classList.add('warn');
+    text.textContent = 'ATTENTION';
+  } else {
+    badge.classList.add('ok');
+    text.textContent = 'PROTECTED';
+  }
+}
+
+function renderOverview(ctrl, cert) {
+  const s = ctrl.summary || {};
+  const res = ctrl.resilience || {};
+  const score = res.score != null ? Number(res.score) : null;
+  const g = grade(score);
+  $('ring').style.setProperty('--p', score==null ? 0 : Math.max(0, Math.min(100, score)));
+  $('ringVal').textContent = score==null ? '—' : Math.round(score);
+  $('grade').innerHTML = `<span class="${g.c}">${g.t}</span>`;
+  $('dayLabel').textContent = ctrl.day ? '· ' + ctrl.day : '';
+  $('headline').textContent = ctrl.headline || '';
+  $('stats').innerHTML = [
+    ['Spent today', money(s.usd)],
+    ['Requests', String(s.calls ?? 0)],
+    ['Success', s.errors!=null && s.calls ? pct(1 - (s.errors/(s.calls||1))) : '—'],
+    ['Agent stops', String(s.agent_protection_blocks ?? 0)],
+    ['Circuits open', String(s.circuits_open ?? 0)],
+    ['Agents protected', String(s.consumers_protected ?? 0)],
+  ].map(([k,v]) => `<div class="stat"><b>${v}</b><span>${k}</span></div>`).join('');
+
+  const att = ctrl.attention || [];
+  if (!att.length) {
+    $('attention').innerHTML = `<div class="ok">✓ Nothing urgent — agents under control</div>`;
+  } else {
+    $('attention').innerHTML = `<div class="muted" style="margin-bottom:.5rem">${att.length} thing(s) need attention</div>` +
+      att.map(a => {
+        const c = a.level==='ok'?'ok':(a.level==='error'?'bad':'warn');
+        const mark = a.level==='ok'?'✓':(a.level==='error'?'⛔':'⚠');
+        return `<div class="row"><span class="${c}">${mark} ${a.message||''}</span><span class="muted">${a.code||''}</span></div>`;
+      }).join('');
+  }
+
+  // Recommendations (actionable)
+  const recos = [];
+  if (ctrl.freeze && ctrl.freeze.frozen) {
+    recos.push({level:'bad', text:'Admission is frozen — no billable traffic.', action:'tollgate unfreeze'});
+  }
+  const consumers = ctrl.consumers || [];
+  consumers.filter(c => !c.protected && c.consumer).forEach(c => {
+    recos.push({level:'warn', text:`Agent «${c.consumer}» has weak or no spend/loop limits.`, action:`tollgate consumer-budget ${c.consumer} --max-usd-day 2 --max-tool-calls 20`});
+  });
+  consumers.filter(c => c.status==='warn' || c.status==='likely_over' || c.status==='over_budget').forEach(c => {
+    recos.push({level: c.status==='over_budget'?'bad':'warn', text:`«${c.consumer}» spend ${money4(c.usd)}` + (c.max_usd_day?` / ${money(c.max_usd_day)}`:'') + ` (${c.status})`, action:'#agents'});
+  });
+  const last = (ctrl.chaos||{}).last_report;
+  if (!last) {
+    recos.push({level:'warn', text:'Failover has never been tested (Prove).', action:'#prove'});
+  } else if (last.survived === false) {
+    recos.push({level:'bad', text:`Last DR test failed for ${last.chaos_provider}.`, action:'#prove'});
+  }
+  if (!recos.length) {
+    recos.push({level:'ok', text:'Settings look reasonable for a protected desk.', action:''});
+  }
+  $('reco').innerHTML = recos.map(r =>
+    `<div class="reco ${r.level}">${r.text}${r.action && r.action.startsWith('#') ? ` <a href="${r.action}">Open →</a>` : (r.action ? `<div class="muted" style="margin-top:.25rem"><code>${r.action}</code></div>` : '')}</div>`
+  ).join('');
+
+  const provs = (ctrl.providers||[]).filter(p => p.enabled !== false).slice(0,6);
+  if (!provs.length) {
+    $('provGlance').innerHTML = `<div class="empty">No provider traffic yet</div>`;
+  } else {
+    $('provGlance').innerHTML = provs.map(p =>
+      `<div class="row">
+        <span><b>${p.provider}</b> <span class="pill ${cls(p.status)}">${p.status}</span></span>
+        <span class="muted">${pct(p.success_rate)} · ${p.latency_ms_avg!=null?Math.round(p.latency_ms_avg)+'ms':'—'} · ${money4(p.usd)}</span>
+      </div>`
+    ).join('');
+  }
+}
+
+function renderAgents(ctrl) {
+  const list = ctrl.consumers || [];
+  if (!list.length) {
+    $('agentsList').innerHTML = `<div class="card empty">No agent traffic yet. Set a lane:<br/><code>tollgate consumer-budget support-agent --max-usd-day 2 --max-tool-calls 20</code></div>`;
+    return;
+  }
+  $('agentsList').innerHTML = list.map((c,i) => {
+    const max = c.max_usd_day;
+    const used = Number(c.usd||0);
+    const ratio = max ? Math.min(100, (used/max)*100) : 0;
+    const barC = c.status==='over_budget'||c.status==='blocked'?'bad':(c.status==='warn'||c.status==='likely_over'?'warn':'');
+    const st = c.protected
+      ? (c.status==='ok' ? 'Protected' : c.status)
+      : 'Unprotected';
+    const stc = c.protected && c.status==='ok' ? 'ok' : cls(c.status);
+    return `<div class="card">
+      <div class="row" style="border:0;padding:0">
+        <div>
+          <b style="font-size:1.05rem">${c.consumer}</b>
+          <div class="${stc}" style="margin-top:.25rem">● ${st}</div>
+        </div>
+        <button class="ghost" data-agent="${i}">View</button>
+      </div>
+      <div style="margin-top:.75rem">
+        ${max ? `${money4(used)} / ${money(max)} budget` : `${money4(used)} spent (no day $ cap)`}
+        ${max ? `<div class="bar ${barC}"><i style="width:${ratio}%"></i></div>` : ''}
+        <div class="muted" style="margin-top:.4rem;font-size:.85rem">${c.calls||0} requests · ${c.tokens||0} tokens · projected EOD ${money4(c.projected_usd_eod)}</div>
+      </div>
+      <div class="detail" id="agent-d-${i}">
+        <h2 style="margin-top:0">Protection</h2>
+        <div class="kv">
+          <div><b>Daily budget</b><br/>${max!=null?money(max):'—'}</div>
+          <div><b>Per request</b><br/>${c.max_usd_request!=null?money(c.max_usd_request):'—'}</div>
+          <div><b>Max tool calls</b><br/>${c.max_tool_calls??'—'}</div>
+          <div><b>Max req/min</b><br/>${c.max_requests_minute??'—'}</div>
+        </div>
+        <h2>Scopes</h2>
+        <div class="muted" style="font-size:.9rem">
+          Allowed providers: ${(c.allowed_providers||[]).length ? c.allowed_providers.join(', ') : 'any'}<br/>
+          Blocked: ${(c.blocked_providers||[]).length ? c.blocked_providers.join(', ') : '—'}<br/>
+          Intents: ${(c.allowed_intents||[]).length ? c.allowed_intents.join(', ') : 'any'} ·
+          Ops: ${(c.allowed_ops||[]).length ? c.allowed_ops.join(', ') : 'any'}
+        </div>
+        <p class="muted" style="margin:.75rem 0 0;font-size:.85rem">Edit via CLI:<br/>
+        <code>tollgate consumer-budget ${c.consumer} --max-usd-day 2 --max-tool-calls 20</code></p>
+      </div>
+    </div>`;
+  }).join('');
+  document.querySelectorAll('[data-agent]').forEach(btn => {
+    btn.onclick = () => {
+      const el = $('agent-d-' + btn.dataset.agent);
+      el.classList.toggle('open');
+      btn.textContent = el.classList.contains('open') ? 'Hide' : 'View';
+    };
+  });
+}
+
+function renderProviders(ctrl) {
+  const rows = ctrl.providers || [];
+  if (!rows.length) {
+    $('provTable').innerHTML = `<tr><td colspan="6" class="muted">No provider data yet</td></tr>`;
+    return;
+  }
+  $('provTable').innerHTML = rows.map((p,i) =>
+    `<tr class="click" data-prov="${i}">
+      <td><b>${p.provider}</b>${p.enabled===false?' <span class="muted">(off)</span>':''}</td>
+      <td class="${cls(p.status)}">${p.status}</td>
+      <td>${pct(p.success_rate)}</td>
+      <td>${p.latency_ms_avg!=null?Math.round(p.latency_ms_avg)+' ms':'—'}</td>
+      <td>${money4(p.usd)}</td>
+      <td><span class="pill">${p.circuit||'closed'}</span></td>
+    </tr>`
+  ).join('');
+  document.querySelectorAll('[data-prov]').forEach(tr => {
+    tr.onclick = () => {
+      const p = rows[Number(tr.dataset.prov)];
+      $('provDetail').innerHTML = `<div class="card">
+        <b style="font-size:1.1rem">${p.provider}</b>
+        <div class="kv" style="margin-top:.75rem">
+          <div><b>Health score</b><br/>${p.score??'—'}</div>
+          <div><b>Status</b><br/><span class="${cls(p.status)}">${p.status}</span></div>
+          <div><b>Requests today</b><br/>${p.calls??0}</div>
+          <div><b>Errors</b><br/>${p.errors??0}</div>
+          <div><b>Success</b><br/>${pct(p.success_rate)}</div>
+          <div><b>Avg latency</b><br/>${p.latency_ms_avg!=null?Math.round(p.latency_ms_avg)+' ms':'—'}</div>
+          <div><b>USD today</b><br/>${money4(p.usd)}</div>
+          <div><b>Circuit</b><br/>${p.circuit}</div>
+        </div>
+        <p class="muted" style="margin:.85rem 0 0;font-size:.85rem">
+          Reset circuit: <code>tollgate circuits reset ${p.provider}</code>
+        </p>
+      </div>`;
+    };
+  });
+}
+
+function renderProve(ctrl, cert) {
+  const res = ctrl.resilience || {};
+  const last = (ctrl.chaos||{}).last_report;
+  const score = res.score;
+  $('proveScore').innerHTML = `
+    <div class="stats">
+      <div class="stat"><b>${score!=null?Math.round(score):'—'}</b><span>Resilience</span></div>
+      <div class="stat"><b>${res.policy_compliant===true?'OK':(res.policy_compliant===false?'⚠':'—')}</b><span>Policy</span></div>
+      <div class="stat"><b>${(ctrl.chaos&&ctrl.chaos.history||[]).length}</b><span>DR history</span></div>
+    </div>
+    <p class="muted" style="margin:.75rem 0 0">${res.summary || ctrl.promise || ''}</p>`;
+  if (!last) {
+    $('proveLast').innerHTML = `Last test: <span class="warn">Never — run a failover test</span>`;
+  } else {
+    const ok = last.survived;
+    $('proveLast').innerHTML = `Last test: <span class="${ok?'ok':'bad'}">${ok?'✓ PASSED':'✗ FAILED'}</span>
+      · ${last.chaos_provider} · ${last.successful||0}/${last.requests_tested||0} routes · recovery ${last.recovery_time_ms_best??'—'} ms
+      <div style="margin-top:.35rem">${last.message||''}</div>`;
+  }
+  if (cert) {
+    const checks = (cert.checks||[]).map(ch =>
+      `<div class="row"><span>${ch.label}</span><span class="${cls(ch.status)}">${ch.status}</span></div>`
+    ).join('');
+    $('certCard').innerHTML = `<h2 style="margin-top:0">AI Reliability Report</h2>
+      <div class="muted">${cert.application||''} · ${cert.period||''} · overall <b class="${cls(cert.overall)}">${cert.overall}</b></div>
+      ${checks}
+      <div style="margin-top:.75rem">Resilience <b>${cert.resilience_score??'—'}</b>/100</div>`;
+  }
+}
+
+function renderAudit(events) {
+  if (!events || !events.length) {
+    $('auditTable').innerHTML = `<tr><td colspan="5" class="muted">No audit rows yet — denials and usage appear after traffic</td></tr>`;
+    return;
+  }
+  $('auditTable').innerHTML = events.map(e => {
+    const ev = e.event || '—';
+    const detail = (e.error || e.reason || (e.extra && JSON.stringify(e.extra)) || '—');
+    const short = String(detail).slice(0, 80);
+    return `<tr>
+      <td class="muted">${when(e.ts)}</td>
+      <td>${e.consumer||'—'}</td>
+      <td class="${ev==='admit_deny'?'bad':''}">${ev}</td>
+      <td>${e.provider||'—'}</td>
+      <td class="muted" title="${String(detail).replace(/"/g,'&quot;')}">${short}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function loadAll() {
+  try {
+    CTRL = await api('/v1/control');
+    setStatus(CTRL);
+    try { CERT = await api('/v1/certificate'); } catch { CERT = null; }
+    renderOverview(CTRL, CERT);
+    renderAgents(CTRL);
+    renderProviders(CTRL);
+    renderProve(CTRL, CERT);
+  } catch (e) {
+    $('headline').textContent = 'Failed to load control plane: ' + e.message;
+  }
+}
+
+async function loadAudit(deniesOnly) {
+  try {
+    const q = deniesOnly ? '?event=admit_deny&limit=40' : '?limit=40';
+    const d = await api('/v1/audit' + q);
+    renderAudit(d.events || []);
+  } catch (e) {
+    $('auditTable').innerHTML = `<tr><td colspan="5" class="bad">${e.message}</td></tr>`;
+  }
+}
+
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+  const el = $('view-' + name);
+  if (el) el.classList.add('active');
+  const link = document.querySelector(`nav a[data-view="${name}"]`);
+  if (link) link.classList.add('active');
+  if (name === 'audit') loadAudit(false);
+  if (name === 'prove' && CTRL) renderProve(CTRL, CERT);
+}
+
+function onHash() {
+  const h = (location.hash || '#overview').replace('#','') || 'overview';
+  showView(h);
+}
+
+document.querySelectorAll('nav a').forEach(a => {
+  a.addEventListener('click', (e) => {
+    /* hash navigation */
+  });
+});
+window.addEventListener('hashchange', onHash);
+$('apiKey').addEventListener('change', loadAll);
+$('btnAudit').onclick = () => loadAudit(false);
+$('btnAuditDenies').onclick = () => loadAudit(true);
+$('btnCert').onclick = async () => {
+  try {
+    CERT = await api('/v1/certificate');
+    if (CTRL) renderProve(CTRL, CERT);
+    $('proveOut').textContent = 'Certificate refreshed.';
+  } catch (e) { $('proveOut').textContent = e.message; }
+};
+$('btnChaos').onclick = async () => {
+  const btn = $('btnChaos');
+  btn.disabled = true;
+  $('proveOut').textContent = 'Running failover test…';
+  try {
+    const provider = $('chaosProvider').value.trim() || 'opencode_zen';
+    const rep = await api('/v1/chaos/test', {
+      method: 'POST',
+      body: JSON.stringify({ provider, requests: 8, intent: 'free_llm' }),
+    });
+    const lines = [
+      rep.survived ? '✓ TEST PASSED' : '✗ TEST FAILED',
+      '',
+      `Provider:     ${rep.chaos_provider}`,
+      `Requests:     ${rep.requests_tested}`,
+      `Successful:   ${rep.successful}`,
+      `Failed:       ${rep.failed}`,
+      `Failover %:   ${rep.automatic_failover_pct}`,
+      `Recovery ms:  ${rep.recovery_time_ms_best}`,
+      '',
+      rep.message || '',
+      rep.survived ? '\nYour agent survived.' : '',
+    ];
+    $('proveOut').textContent = lines.join('\n');
+    await loadAll();
+    showView('prove');
+  } catch (e) {
+    $('proveOut').textContent = 'Test failed to start: ' + e.message +
+      '\n\nOpen mode: use any key. Auth mode: need admin consumer.';
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+loadAll();
+onHash();
+setInterval(loadAll, 15000);
 </script>
 </body>
 </html>

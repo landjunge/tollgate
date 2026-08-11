@@ -2,6 +2,15 @@
 
 All notable releases of [landjunge/tollgate](https://github.com/landjunge/tollgate).
 
+## 1.0.3 — 2026-08-11
+
+### WebUI — Control Room (simple, not dense)
+- Multi-screen dashboard: **Overview · Agents · Providers · Prove · Audit**
+- Status badge: PROTECTED / ATTENTION / FROZEN
+- Recommendations with fix hints; Prove runs `POST /v1/chaos/test`
+- `GET /v1/certificate` for scorecard in UI
+- Agent detail shows protection + scopes (edit still CLI)
+
 ## 1.0.2 — 2026-08-11
 
 ### Product / onboarding (not feature density)
