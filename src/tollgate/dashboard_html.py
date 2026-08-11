@@ -398,9 +398,9 @@ function renderOverview(ctrl, cert) {
   });
   const last = (ctrl.chaos||{}).last_report;
   if (!last) {
-    recos.push({level:'warn', text:'Failover has never been tested (Prove).', action:'#prove'});
+    recos.push({level:'warn', text:'Prove pending: no failover chaos test yet. Needs ≥2 providers + keys — open Prove.', action:'#prove'});
   } else if (last.survived === false) {
-    recos.push({level:'bad', text:`Last DR test failed for ${last.chaos_provider}.`, action:'#prove'});
+    recos.push({level:'bad', text:`Last DR test failed for ${last.chaos_provider}. Check keys & second provider in free_llm chain.`, action:'#prove'});
   }
   if (!recos.length) {
     recos.push({level:'ok', text:'Settings look reasonable for a protected desk.', action:''});
@@ -580,19 +580,34 @@ function renderProve(ctrl, cert) {
     </div>
     <p class="muted" style="margin:.75rem 0 0">${res.summary || ctrl.promise || ''}</p>`;
   if (!last) {
-    $('proveLast').innerHTML = `Last test: <span class="warn">Never — run a failover test</span>`;
+    $('proveLast').innerHTML = `
+      <div style="margin-bottom:.5rem">Last test: <span class="warn">Never run</span></div>
+      <div class="muted" style="font-size:.9rem;line-height:1.45">
+        <b style="color:var(--fg)">NOT_RUN is normal</b> until you prove failover.<br/>
+        Prerequisites:
+        <ol style="margin:.4rem 0 0 1.1rem;padding:0">
+          <li>≥2 providers enabled in the free_llm chain</li>
+          <li>API keys in <code>User/Key.txt</code> (or env)</li>
+          <li>Run test below (or <code>tollgate chaos test opencode_zen</code>)</li>
+        </ol>
+        Protect (budgets / tool-loop) can already PASS without this.
+      </div>`;
   } else {
     const ok = last.survived;
     $('proveLast').innerHTML = `Last test: <span class="${ok?'ok':'bad'}">${ok?'✓ PASSED':'✗ FAILED'}</span>
       · ${last.chaos_provider} · ${last.successful||0}/${last.requests_tested||0} routes · recovery ${last.recovery_time_ms_best??'—'} ms
-      <div style="margin-top:.35rem">${last.message||''}</div>`;
+      <div style="margin-top:.35rem">${last.message||''}</div>
+      ${!ok ? `<div class="muted" style="margin-top:.5rem;font-size:.88rem">If this failed: check second provider in free_llm, keys, circuits (<code>tollgate doctor</code> · <code>circuits list</code>).</div>` : ''}`;
   }
   if (cert) {
     const checks = (cert.checks||[]).map(ch =>
-      `<div class="row"><span>${ch.label}</span><span class="${cls(ch.status)}">${ch.status}</span></div>`
+      `<div class="row"><span>${ch.label}</span><span class="${cls(ch.status)}">${ch.status}</span></div>
+       ${ch.detail ? `<div class="muted" style="font-size:.8rem;margin:-.2rem 0 .45rem">${ch.detail}</div>` : ''}
+       ${ch.next_step && ch.status==='NOT_RUN' ? `<div class="muted" style="font-size:.8rem;margin:-.2rem 0 .45rem">→ ${ch.next_step}</div>` : ''}`
     ).join('');
     $('certCard').innerHTML = `<h2 style="margin-top:0">AI Reliability Report</h2>
       <div class="muted">${cert.application||''} · ${cert.period||''} · overall <b class="${cls(cert.overall)}">${cert.overall}</b></div>
+      ${cert.prove_pending ? `<div class="warn" style="margin:.5rem 0;font-size:.9rem">Prove pending — Protect can still be OK. Run chaos when ≥2 providers are ready.</div>` : ''}
       ${checks}
       <div style="margin-top:.75rem">Resilience <b>${cert.resilience_score??'—'}</b>/100</div>`;
   }

@@ -491,7 +491,12 @@ def control_snapshot(*, root: Any = None) -> dict[str, Any]:
                 {
                     "level": "warn",
                     "code": "chaos_untested",
-                    "message": "No failover chaos test yet — tollgate chaos test <provider>",
+                    "message": (
+                        "Prove pending: no chaos test yet. Needs ≥2 enabled providers "
+                        "in free_llm + keys, then: tollgate chaos test <provider> "
+                        "(or Dashboard → Prove). Protect can still be OK."
+                    ),
+                    "fix": "#prove",
                 }
             )
     except Exception:  # noqa: BLE001

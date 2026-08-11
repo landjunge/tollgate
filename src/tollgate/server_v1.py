@@ -79,7 +79,7 @@ _bootstrap_env()
 
 app = FastAPI(
     title="Tollgate",
-    version="1.0.9",
+    version="1.0.11",
     description=(
         "Tollgate — AI reliability & control plane. "
         "Protect · Route · Prove (chaos failover tests). "
@@ -147,7 +147,7 @@ def health() -> dict[str, Any]:
         "ok": not fr.get("frozen"),
         "service": "tollgate",
         "product": "Tollgate",
-        "version": "1.0.9",
+        "version": "1.0.11",
         "extractable": True,
         "multi_consumer": True,
         "portable": path_snapshot(),
@@ -772,6 +772,8 @@ class ChatCompletionsBody(BaseModel):
     temperature: float | None = 0.7
     max_tokens: int | None = 1024
     stream: bool = False
+    # OpenAI tools schema (optional) — also used as weak tool_calls_est fallback
+    tools: list[Any] | None = None
     # Tollgate extras (optional; ignored by OpenAI SDKs)
     intent: str | None = None
     provider: str | None = None
@@ -803,6 +805,9 @@ def openai_chat_completions(
     x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
     x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
     authorization: str | None = Header(default=None, alias="Authorization"),
+    x_tool_calls_est: str | None = Header(
+        default=None, alias="X-Tollgate-Tool-Calls-Est"
+    ),
 ) -> Any:
     """
     OpenAI-compatible chat completions (admission + route + meter).
@@ -812,10 +817,16 @@ def openai_chat_completions(
         export OPENAI_BASE_URL=http://127.0.0.1:8787/v1
         export OPENAI_API_KEY=n8n:secret   # or any label in open mode
 
+    Loop protection: send ``tool_calls_est`` (body) or header
+    ``X-Tollgate-Tool-Calls-Est``, or let Tollgate infer depth from tool
+    messages in ``messages`` history.
+
     ``stream: true`` returns SSE — real upstream token stream when the provider
     supports it (deepseek / worker / opencode_zen / openrouter); otherwise
     synthetic chunks from a full completion.
     """
+    from tollgate.openai_compat import estimate_tool_calls_est
+
     auth = _require(x_consumer_key, x_consumer_id, authorization=authorization)
     consumer = auth["consumer"]
     msgs = normalize_messages(body.messages)
@@ -842,7 +853,13 @@ def openai_chat_completions(
     max_tok = int(body.max_tokens or 1024)
     temp = float(body.temperature if body.temperature is not None else 0.7)
 
-    tools_est = int(body.tool_calls_est or 0)
+    # Prefer raw messages for tool_calls inference (normalize strips tool_calls)
+    tools_est = estimate_tool_calls_est(
+        explicit=int(body.tool_calls_est or 0),
+        messages=body.messages,
+        tools=body.tools,
+        header_val=x_tool_calls_est,
+    )
     tok_est = int(body.tokens_est or 0)
 
     if body.stream:

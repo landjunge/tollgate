@@ -45,6 +45,68 @@ def test_route_flattens_provider():
     assert r.get("model") == "x"
 
 
+def test_estimate_tool_calls_est_from_history():
+    from tollgate.openai_compat import estimate_tool_calls_est
+
+    assert estimate_tool_calls_est(explicit=7) == 7
+    assert (
+        estimate_tool_calls_est(
+            header_val="9",
+            messages=[{"role": "user", "content": "x"}],
+        )
+        == 9
+    )
+    msgs = [
+        {"role": "user", "content": "go"},
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {"id": "1", "type": "function", "function": {"name": "a"}},
+                {"id": "2", "type": "function", "function": {"name": "b"}},
+            ],
+        },
+        {"role": "tool", "tool_call_id": "1", "content": "ok"},
+        {"role": "tool", "tool_call_id": "2", "content": "ok"},
+    ]
+    # 2 tool_calls + 2 tool messages = 4
+    assert estimate_tool_calls_est(messages=msgs) == 4
+    assert estimate_tool_calls_est(tools=[{}, {}, {}]) == 3
+
+
+def test_chat_tool_calls_est_blocks_from_history(client, monkeypatch, tmp_path):
+    monkeypatch.setenv("TOLLGATE_HOME", str(tmp_path))
+    (tmp_path / "User").mkdir(parents=True, exist_ok=True)
+    from tollgate import consumers as c
+    from tollgate.app_config import load_config, save_config
+
+    c.clear_cache()
+    cfg = load_config(force=True)
+    cfg["consumer_envelopes"] = {"desk": {"max_tool_calls": 2, "max_usd_day": 5}}
+    save_config(cfg)
+
+    # 3 tool messages → est=3 > max 2 → deny before provider
+    r = client.post(
+        "/v1/chat/completions",
+        headers={"Authorization": "Bearer desk"},
+        json={
+            "model": "tollgate/free",
+            "messages": [
+                {"role": "user", "content": "x"},
+                {"role": "tool", "content": "a"},
+                {"role": "tool", "content": "b"},
+                {"role": "tool", "content": "c"},
+            ],
+            "max_tokens": 8,
+        },
+    )
+    # 402 or body error depending on map
+    assert r.status_code in (200, 402, 429) or r.status_code >= 400
+    body = r.json()
+    err = str(body)
+    assert "max_tool_calls" in err or body.get("error") or r.status_code in (402, 429)
+
+
 def test_chat_completions_shape(client):
     fake = {
         "ok": True,

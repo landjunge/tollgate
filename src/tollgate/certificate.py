@@ -98,7 +98,18 @@ def build_certificate(*, root: Any = None, application: str = "") -> dict[str, A
             "detail": (
                 f"last chaos: {last.get('chaos_provider')} survived={last.get('survived')}"
                 if last
-                else "run: tollgate chaos test <provider>"
+                else (
+                    "NOT_RUN — needs ≥2 enabled providers in free_llm chain + keys. "
+                    "Then: tollgate chaos test opencode_zen --requests 8"
+                )
+            ),
+            "next_step": (
+                None
+                if last
+                else (
+                    "1) tollgate doctor  2) enable 2nd provider / Key.txt  "
+                    "3) tollgate chaos test <primary>  4) tollgate certificate"
+                )
             ),
         },
         {
@@ -108,7 +119,7 @@ def build_certificate(*, root: Any = None, application: str = "") -> dict[str, A
             "detail": (
                 f"recovery_ms={last.get('recovery_time_ms_best')}"
                 if last
-                else "included in chaos test report"
+                else "NOT_RUN — same as Provider Failover (included in chaos report)"
             ),
         },
         {
@@ -148,8 +159,10 @@ def build_certificate(*, root: Any = None, application: str = "") -> dict[str, A
         "headline": snap.get("headline"),
         "note": (
             "Certificate assembles live desk signals — not a legal audit. "
-            "Run tollgate demo then certificate for a full card."
+            "Run tollgate demo then certificate for a full card. "
+            "NOT_RUN on failover is normal until chaos test with ≥2 providers."
         ),
+        "prove_pending": failover_status == "NOT_RUN",
     }
 
 
@@ -172,12 +185,18 @@ def format_certificate_text(cert: dict[str, Any] | None = None, *, root: Any = N
         lines.append(f"  {mark} {ch.get('label'):<24} {st}")
         if ch.get("detail"):
             lines.append(f"      {ch.get('detail')}")
+        if ch.get("next_step") and st == "NOT_RUN":
+            lines.append(f"      next: {ch.get('next_step')}")
     score = c.get("resilience_score")
     lines += [
         "",
         f"  Resilience Score        {score if score is not None else '—'} / 100",
         "",
     ]
+    if c.get("prove_pending"):
+        lines.append("  · Prove pending (OK) — Protect can pass without chaos.")
+        lines.append("    Need ≥2 providers + keys, then: tollgate chaos test <provider>")
+        lines.append("")
     if c.get("frozen"):
         lines.append("  ⛔ ADMISSION FROZEN — unfreeze before production traffic")
         lines.append("")

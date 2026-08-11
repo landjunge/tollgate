@@ -77,7 +77,24 @@ tollgate consumer-budget --list
 Or Control Room → Agents → Edit / Setup wizard.
 
 ### What is `max_tool_calls`?
-Hard cap on **tool-loop depth this turn**. Client must send `tool_calls_est` (OpenAI body field or invoke JSON). Without it, Tollgate cannot enforce loop depth.
+Hard cap on **tool-loop depth this turn**. Depth sources (first wins):
+
+1. Body `tool_calls_est`
+2. Header `X-Tollgate-Tool-Calls-Est`
+3. Auto-count of `role:tool` + `assistant.tool_calls` in message history
+4. Weak: `len(tools)` schema list
+
+Without any of these, a plain one-shot chat has est=0 and will **not** hit the loop cap. See [OPENAI.md](OPENAI.md).
+
+### Chaos says NOT_RUN or failed?
+**NOT_RUN** is normal until you run a test — Protect can still PASS.  
+**Failed** often means only one provider in the `free_llm` chain or missing keys.
+
+```bash
+tollgate doctor
+tollgate chaos test opencode_zen --requests 8
+# needs ≥2 enabled providers with usable keys
+```
 
 ### Why am I always blocked?
 1. `tollgate freeze status`  

@@ -2,6 +2,14 @@
 
 All notable releases of [landjunge/tollgate](https://github.com/landjunge/tollgate).
 
+## 1.0.11 — 2026-08-11
+
+### Product friction (not features)
+- Version aligned (package was behind site 1.0.10)
+- **tool_calls_est**: infer from message history + header `X-Tollgate-Tool-Calls-Est`; docs OPENAI/N8N/FAQ
+- **Chaos NOT_RUN**: honest next steps in certificate, Control Room Prove pane, CLI help, attention text
+- `estimate_tool_calls_est()` in `openai_compat` for OpenAI drop-in
+
 ## 1.0.10 — 2026-08-11
 
 ### Site redesign — ops desk, not SaaS template

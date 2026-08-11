@@ -63,6 +63,62 @@ def normalize_messages(messages: list[Any]) -> list[dict[str, str]]:
     return out
 
 
+def estimate_tool_calls_est(
+    *,
+    explicit: int = 0,
+    messages: list[Any] | None = None,
+    tools: list[Any] | None = None,
+    header_val: str | int | None = None,
+) -> int:
+    """
+    Resolve tool-loop depth for Protect (max_tool_calls).
+
+    Priority:
+      1. explicit body ``tool_calls_est``
+      2. header ``X-Tollgate-Tool-Calls-Est``
+      3. infer from message history (role=tool + assistant.tool_calls)
+      4. len(tools) only as last resort (schema list — weak signal)
+
+    Agent frameworks that replay tool history get loop protection without
+    remembering to set ``tool_calls_est`` on every hop.
+    """
+    try:
+        ex = int(explicit or 0)
+    except (TypeError, ValueError):
+        ex = 0
+    if ex > 0:
+        return ex
+    if header_val is not None and str(header_val).strip() != "":
+        try:
+            hv = int(str(header_val).strip())
+            if hv > 0:
+                return hv
+        except (TypeError, ValueError):
+            pass
+    n = 0
+    for m in messages or []:
+        if not isinstance(m, dict):
+            continue
+        role = str(m.get("role") or "")
+        if role == "tool":
+            n += 1
+            continue
+        if role == "assistant":
+            tc = m.get("tool_calls")
+            if isinstance(tc, list):
+                n += len(tc)
+            elif isinstance(tc, dict):
+                n += 1
+            # function_call (legacy single)
+            if m.get("function_call"):
+                n += 1
+    if n > 0:
+        return n
+    if isinstance(tools, list) and tools:
+        return len(tools)
+    return 0
+
+
 def openai_error(
     message: str,
     *,

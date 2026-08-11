@@ -30,6 +30,9 @@ def test_certificate_structure(monkeypatch, tmp_path):
     assert "TOLLGATE" in text
     assert "Budget Protection" in text
     assert "Resilience Score" in text
+    if ids["provider_failover"] == "NOT_RUN":
+        assert c.get("prove_pending") is True
+        assert "≥2" in text or "Prove pending" in text or "next:" in text
 
 
 def test_cli_certificate(monkeypatch, tmp_path, capsys):

@@ -43,6 +43,12 @@ def _format_help(topic: str = "") -> str:
     -H 'X-Consumer-Key: support-agent' \\
     -d '{"provider":"opencode_zen","op":"chat","tool_calls_est":99,"arguments":{"message":"x"}}'
 
+  # OpenAI drop-in: send tool_calls_est or tool history
+  #   body:  "tool_calls_est": 12
+  #   header: X-Tollgate-Tool-Calls-Est: 12
+  #   auto:  count role=tool + assistant.tool_calls in messages
+  # See docs/OPENAI.md
+
   tollgate freeze --reason "incident"   # kill switch
   tollgate unfreeze
   Dashboard: Overview → "Test tool-loop block"
@@ -67,6 +73,12 @@ def _format_help(topic: str = "") -> str:
   tollgate demo                     # Protect + Prove live script
 
   Dashboard → Prove → Run test
+
+  NOT_RUN / failed chaos is normal when:
+    · only one provider in free_llm chain
+    · missing keys (tollgate doctor)
+  Protect (budgets / max_tool_calls) can PASS without chaos.
+  Next: enable 2nd provider → Key.txt → chaos test → certificate
 """,
         "ui": """
 # Control Room WebUI
@@ -118,12 +130,14 @@ def _format_help(topic: str = "") -> str:
   Server won't start     → tollgate doctor · free port 8787 · Python ≥ 3.11
   401 Unauthorized       → auth mode needs id:secret · consumer-add
   Always blocked         → envelope / freeze status / scopes
-  Chaos failed           → ≥2 providers in free_llm chain · keys
+  Chaos failed / NOT_RUN → ≥2 providers in free_llm · keys · doctor
+  Loop never blocks      → send tool_calls_est (body/header) or tool history
   Stale dashboard        → hard refresh · check /v1/health version
   Wrong data home        → tollgate paths · echo $TOLLGATE_HOME
   Metrics 401            → token / consumer / TOLLGATE_METRICS_PUBLIC=1
 
   Log (desk): /tmp/tollgate-desk.log
+  Docs: docs/OPENAI.md (tool_calls_est) · docs/FAQ.md
 """,
         "commands": """
 # All CLI commands

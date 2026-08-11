@@ -27,11 +27,23 @@ Without consumers.json, open mode accepts any `X-Consumer-Key` / Bearer label (d
 ### Cap n8n spend independently of Gnom
 
 ```bash
-tollgate consumer-budget n8n --max-usd-day 0.5 --max-calls-day 200
+tollgate consumer-budget n8n \
+  --max-usd-day 0.5 --max-calls-day 200 \
+  --max-tool-calls 15 --max-requests-minute 30
 curl -s http://127.0.0.1:8787/v1/budget -H 'X-Consumer-Key: n8n'
 ```
 
-See [COST_LIMITS.md](COST_LIMITS.md).
+### Tool-loop protection from n8n
+
+| Path | How to send loop depth |
+|------|------------------------|
+| **Community node Chat/Invoke** | Field `tool_calls_est` (v0.2+) |
+| **OpenAI node** | Often no custom fields — use HTTP Request node with body `tool_calls_est`, or header `X-Tollgate-Tool-Calls-Est` |
+| **Auto** | If the agent keeps tool messages in history, Tollgate counts them on `/v1/chat/completions` |
+
+Without `tool_calls_est` (or tool history), `max_tool_calls` will not fire on simple single-turn OpenAI nodes.
+
+See [COST_LIMITS.md](COST_LIMITS.md) · [OPENAI.md](OPENAI.md).
 
 ## A) Community node (recommended)
 

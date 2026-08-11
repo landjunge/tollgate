@@ -59,9 +59,55 @@ Optional body fields (Tollgate-only, SDKs ignore extras):
   "intent": "free_llm",
   "provider": "opencode_zen",
   "request_class": "batch",
-  "prefer_free": true
+  "prefer_free": true,
+  "tool_calls_est": 3,
+  "tokens_est": 1200
 }
 ```
+
+## Agent loop protection (`tool_calls_est`)
+
+`max_tool_calls` on a consumer envelope only works if Tollgate knows the **loop depth**.
+
+| Source | How |
+|--------|-----|
+| **Body** | `"tool_calls_est": 12` (best — explicit) |
+| **Header** | `X-Tollgate-Tool-Calls-Est: 12` |
+| **Auto** | Count `role: tool` messages + `assistant.tool_calls` in history |
+| **Weak** | `len(tools)` if tools schema present and no history yet |
+
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://127.0.0.1:8787/v1", api_key="support-agent")
+
+# Explicit (recommended for agent frameworks)
+client.chat.completions.create(
+    model="tollgate/free",
+    messages=[{"role": "user", "content": "hi"}],
+    extra_body={"tool_calls_est": 5},  # or pass as top-level if your SDK allows
+)
+
+# Header alternative
+client.chat.completions.create(
+    model="tollgate/free",
+    messages=[...],
+    extra_headers={"X-Tollgate-Tool-Calls-Est": "5"},
+)
+```
+
+curl:
+
+```bash
+curl -s http://127.0.0.1:8787/v1/chat/completions \
+  -H "Authorization: Bearer support-agent" \
+  -H "Content-Type: application/json" \
+  -H "X-Tollgate-Tool-Calls-Est: 99" \
+  -d '{"model":"tollgate/free","messages":[{"role":"user","content":"x"}],"max_tokens":16}'
+```
+
+Without any of the above, a plain single-turn chat will **not** hit `max_tool_calls` (est=0).  
+Dashboard **Test tool-loop block** always sends an explicit high est.
 
 ## Streaming
 
