@@ -19,12 +19,16 @@ class TollgateClient:
         consumer: str = "gnom",
         timeout: float = 120.0,
     ) -> None:
-        self.base_url = (
+        raw = (
             base_url
             or os.environ.get("TOLLGATE_URL")
             or "http://127.0.0.1:8787"
         ).rstrip("/")
-        self.consumer = consumer
+        # accept http://host:8787 or http://host:8787/v1
+        if raw.endswith("/v1"):
+            raw = raw[: -len("/v1")]
+        self.base_url = raw.rstrip("/")
+        self.consumer = consumer or os.environ.get("TOLLGATE_CONSUMER") or "gnom"
         self.timeout = timeout
 
     def _headers(self) -> dict[str, str]:
@@ -32,6 +36,7 @@ class TollgateClient:
             "Accept": "application/json",
             "Content-Type": "application/json",
             "X-Consumer-Key": self.consumer,
+            "Authorization": f"Bearer {self.consumer}",
             "User-Agent": "TollgateClient/0.1",
         }
 
@@ -106,33 +111,45 @@ class TollgateClient:
         temperature: float = 0.7,
         agent_id: str = "",
     ) -> dict[str, Any]:
-        """Route + invoke chat via remote Tollgate."""
+        """OpenAI-compatible chat via remote Tollgate (admit + route + meter)."""
         msgs = (
             [{"role": "user", "content": messages}]
             if isinstance(messages, str)
             else list(messages or [])
         )
-        pid = provider
-        mid = model
-        if not pid:
-            r = self.route(intent, tokens_est=max(64, sum(len(m.get("content", "")) for m in msgs) // 4))
-            if not r.get("ok") and not r.get("provider"):
-                return r
-            pid = str(r.get("provider") or "")
-            mid = mid or str(r.get("model") or "")
-        return self.invoke(
-            pid,
-            "chat",
-            arguments={
-                "messages": msgs,
-                "model": mid,
-                "max_tokens": max_tokens,
-                "temperature": temperature,
-            },
-            model=mid,
-            tokens_est=max(64, sum(len(m.get("content", "")) for m in msgs) // 4 + max_tokens),
-            agent_id=agent_id or self.consumer,
-        )
+        mid = model or ("tollgate/free" if intent == "free_llm" else "tollgate/auto")
+        body: dict[str, Any] = {
+            "model": mid,
+            "messages": msgs,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "intent": intent,
+            "prefer_free": intent == "free_llm",
+            "user": agent_id or self.consumer,
+        }
+        if provider:
+            body["provider"] = provider
+        out = self._request("POST", "/v1/chat/completions", body)
+        # Normalize to invoke-style for in-process callers
+        if "choices" in out and out.get("ok") is not False:
+            msg = (out.get("choices") or [{}])[0].get("message") or {}
+            usage = out.get("usage") if isinstance(out.get("usage"), dict) else {}
+            tg = out.get("tollgate") if isinstance(out.get("tollgate"), dict) else {}
+            return {
+                "ok": True,
+                "content": str(msg.get("content") or ""),
+                "model": out.get("model") or mid,
+                "provider": tg.get("provider"),
+                "prompt_tokens": int(usage.get("prompt_tokens") or 0),
+                "completion_tokens": int(usage.get("completion_tokens") or 0),
+                "usage": usage,
+                "raw_openai": out,
+            }
+        if isinstance(out.get("error"), dict):
+            out = dict(out)
+            out.setdefault("ok", False)
+            out["error"] = out["error"].get("message") or out["error"]
+        return out
 
     def budget(self, provider: str = "") -> dict[str, Any]:
         q = f"?provider={provider}" if provider else ""
