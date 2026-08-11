@@ -78,7 +78,7 @@ _bootstrap_env()
 
 app = FastAPI(
     title="Tollgate",
-    version="0.3.5",
+    version="0.3.6",
     description=(
         "Tollgate — AI reliability & control plane. "
         "Protect · Route · Prove (chaos failover tests). "
@@ -136,26 +136,30 @@ class InvokeBody(BaseModel):
 
 @app.get("/v1/health")
 def health() -> dict[str, Any]:
+    from tollgate.freeze import freeze_status
     from tollgate.gateway.circuit import get_circuits
     from tollgate.paths import path_snapshot
 
     ks = get_keys_service()
+    fr = freeze_status()
     return {
-        "ok": True,
+        "ok": not fr.get("frozen"),
         "service": "tollgate",
         "product": "Tollgate",
-        "version": "0.3.5",
+        "version": "0.3.6",
         "extractable": True,
         "multi_consumer": True,
         "portable": path_snapshot(),
         "auth": auth_status(),
         "app": ks.app_status(),
+        "freeze": fr,
         "circuits": get_circuits().snapshot()[:30],
         "metrics": "/metrics",
         "control": "/v1/control",
         "audit": "/v1/audit",
         "report": "/v1/report",
         "alerts": "/v1/alerts",
+        "freeze_path": "/v1/freeze",
         "dashboard": "/dashboard",
     }
 
@@ -393,6 +397,89 @@ def alerts_test(
     from tollgate.alerts import test_webhook
 
     out = test_webhook(message=f"probe from consumer {auth.get('consumer')}")
+    out["viewer"] = auth["consumer"]
+    return out
+
+
+class FreezeBody(BaseModel):
+    frozen: bool = True
+    reason: str = ""
+
+
+@app.get("/v1/freeze")
+def freeze_get(
+    x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+    x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> dict[str, Any]:
+    """Admission kill-switch status."""
+    auth = _require(x_consumer_key, x_consumer_id, authorization=authorization)
+    from tollgate.freeze import freeze_status
+
+    out = freeze_status()
+    out["viewer"] = auth["consumer"]
+    return out
+
+
+@app.post("/v1/freeze")
+def freeze_set(
+    body: FreezeBody,
+    x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+    x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> dict[str, Any]:
+    """Set global admission freeze (admin when auth mode)."""
+    auth = _require(
+        x_consumer_key, x_consumer_id, need_admin=True, authorization=authorization
+    )
+    from tollgate.freeze import set_frozen
+
+    out = set_frozen(
+        bool(body.frozen),
+        reason=body.reason or ("api freeze" if body.frozen else ""),
+        by=str(auth.get("consumer") or "api"),
+    )
+    out["viewer"] = auth["consumer"]
+    return out
+
+
+class CircuitsResetBody(BaseModel):
+    provider: str = ""
+    all: bool = False
+
+
+@app.get("/v1/circuits")
+def circuits_list(
+    x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+    x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> dict[str, Any]:
+    """List circuit breaker rows."""
+    auth = _require(x_consumer_key, x_consumer_id, authorization=authorization)
+    from tollgate.gateway.circuit import get_circuits
+
+    rows = get_circuits().snapshot()
+    return {"ok": True, "count": len(rows), "circuits": rows, "viewer": auth["consumer"]}
+
+
+@app.post("/v1/circuits/reset")
+def circuits_reset(
+    body: CircuitsResetBody,
+    x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+    x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> dict[str, Any]:
+    """Reset circuit breakers for a provider or all (admin)."""
+    auth = _require(
+        x_consumer_key, x_consumer_id, need_admin=True, authorization=authorization
+    )
+    from tollgate.gateway.circuit import reset_circuits
+
+    if not body.provider and not body.all:
+        raise HTTPException(
+            status_code=400, detail="provider required or all=true"
+        )
+    out = reset_circuits(body.provider or "", all_circuits=bool(body.all))
     out["viewer"] = auth["consumer"]
     return out
 

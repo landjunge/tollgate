@@ -115,6 +115,25 @@ def run_doctor(*, live: bool = False, root: Path | None = None) -> dict[str, Any
             }
         )
 
+    # Global freeze kill switch
+    try:
+        from tollgate.freeze import freeze_status
+
+        fr = freeze_status()
+        if fr.get("frozen"):
+            issues.append(
+                {
+                    "level": "error",
+                    "code": "admission_frozen",
+                    "message": f"Admission FROZEN: {fr.get('reason') or 'kill switch'}",
+                    "action": "tollgate freeze off   # or: tollgate unfreeze",
+                }
+            )
+        else:
+            ok_items.append("admission open (not frozen)")
+    except Exception:  # noqa: BLE001
+        pass
+
     # Agent protection / envelopes (count named lanes + _default)
     envelopes = cfg.get("consumer_envelopes") or {}
     _prot_keys = (

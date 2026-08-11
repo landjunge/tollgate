@@ -326,6 +326,38 @@ class CircuitRegistry:
         with self._lock:
             return [c.as_dict() for c in self._circuits.values()]
 
+    def reset(
+        self,
+        provider: str = "",
+        *,
+        all_circuits: bool = False,
+    ) -> dict[str, Any]:
+        """
+        Clear open/half-open circuits for a provider or all.
+
+        Returns counts of removed rows. Persists to circuits.json.
+        """
+        pid = (provider or "").strip().lower()
+        removed: list[str] = []
+        with self._lock:
+            if all_circuits or not pid:
+                removed = list(self._circuits.keys())
+                self._circuits.clear()
+            else:
+                for k in list(self._circuits.keys()):
+                    c = self._circuits[k]
+                    if str(c.provider or "").lower() == pid:
+                        removed.append(k)
+                        del self._circuits[k]
+            self._save_unlocked()
+        return {
+            "ok": True,
+            "removed_n": len(removed),
+            "removed": removed[:50],
+            "provider": pid or None,
+            "all": bool(all_circuits or not pid),
+        }
+
 
 _CIRCUITS: CircuitRegistry | None = None
 
@@ -335,6 +367,15 @@ def get_circuits() -> CircuitRegistry:
     if _CIRCUITS is None:
         _CIRCUITS = CircuitRegistry(persist=True)
     return _CIRCUITS
+
+
+def reset_circuits(
+    provider: str = "",
+    *,
+    all_circuits: bool = False,
+) -> dict[str, Any]:
+    """Public helper: reset circuit breaker state on disk."""
+    return get_circuits().reset(provider, all_circuits=all_circuits)
 
 
 def reset_circuits_for_tests() -> None:

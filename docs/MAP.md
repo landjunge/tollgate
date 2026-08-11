@@ -31,6 +31,10 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | `GET` | `/v1/report` | Daily operator report (json|md) |
 | `GET` | `/v1/alerts` | Webhook event catalog |
 | `POST` | `/v1/alerts/test` | Force webhook probe (admin) |
+| `GET` | `/v1/freeze` | Kill-switch status |
+| `POST` | `/v1/freeze` | Set admission freeze (admin) |
+| `GET` | `/v1/circuits` | List circuit breakers |
+| `POST` | `/v1/circuits/reset` | Reset circuits (admin) |
 | `GET` | `/dashboard` | HTML control plane |
 | `GET` | `/v1/providers` | Provider inventory |
 | `GET` | `/v1/budget` | Budget snapshot |
@@ -68,6 +72,8 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | `tollgate report` | Daily operator report Protect·Route·Prove |
 | `tollgate snapshot` | Export/import desk ops state (USB migrate) |
 | `tollgate alert` | Webhook test / event catalog |
+| `tollgate freeze` | Global admission kill switch |
+| `tollgate circuits` | List or reset circuit breakers |
 
 ## Concepts → code
 
@@ -93,6 +99,7 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | Desk snapshot export/import | `src/tollgate/snapshot.py` |
 | Structured webhook alerts | `src/tollgate/alerts.py` |
 | Consumer scopes (allow/block providers) | `src/tollgate/limits.py` |
+| Global admission freeze (kill switch) | `src/tollgate/freeze.py` |
 | Consumer auth (id:secret) | `src/tollgate/consumers.py` |
 | Cost guard + high-risk providers | `src/tollgate/cost.py` |
 | keys_app.json config + validate | `src/tollgate/app_config.py` |
@@ -141,6 +148,7 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | `elevenlabs.py` | ElevenLabs key specials: subscription + credit reserve floor. |
 | `failover.py` | Execute-time failover across routed candidates. |
 | `filelock.py` | Cross-process exclusive file lock (Unix fcntl; Windows msvcrt). |
+| `freeze.py` | Global admission freeze — emergency kill switch for all billable traffic. |
 | `gateway/__init__.py` | L4–L7 gateway core: admit → route → call → meter. |
 | `gateway/admit.py` | L4 Admission control — fail closed before HTTP. |
 | `gateway/circuit.py` | Circuit breaker per (provider, model, key_ref). |

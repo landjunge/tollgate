@@ -68,6 +68,14 @@ EVENT_CATALOG: dict[str, dict[str, str]] = {
         "severity": "info",
         "description": "Manual webhook probe (tollgate alert test)",
     },
+    "admission_frozen": {
+        "severity": "error",
+        "description": "Global kill switch ON — billable traffic denied",
+    },
+    "admission_unfrozen": {
+        "severity": "info",
+        "description": "Global kill switch OFF — admission open again",
+    },
 }
 
 

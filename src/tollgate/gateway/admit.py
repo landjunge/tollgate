@@ -66,6 +66,32 @@ def admit(
     if ctx.request_class == RequestClass.SYSTEM:
         ctx.billable = False
 
+    # Global freeze kill switch (env or keys_app.admission.frozen)
+    try:
+        from tollgate.freeze import allow_system_when_frozen, freeze_status, is_frozen
+
+        if is_frozen():
+            if not (
+                ctx.request_class == RequestClass.SYSTEM and allow_system_when_frozen()
+            ):
+                st = freeze_status()
+                return AdmitDecision(
+                    allowed=False,
+                    code=ErrorClass.POLICY_DENY,
+                    reason=(
+                        "admission frozen: "
+                        + (st.get("reason") or st.get("message") or "kill switch")
+                    ),
+                    limits={
+                        "protection": "freeze",
+                        "frozen": True,
+                        "frozen_reason": st.get("reason"),
+                    },
+                    context=ctx,
+                )
+    except Exception:  # noqa: BLE001
+        pass
+
     # FREE class: never go to high-risk paid providers
     if ctx.request_class == RequestClass.FREE:
         from tollgate.cost import is_high_risk

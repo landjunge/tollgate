@@ -192,6 +192,13 @@ CONCEPTS: list[dict[str, Any]] = [
         "keywords": "scope allowlist blocklist allowed_providers intent op L3",
     },
     {
+        "id": "freeze",
+        "title": "Global admission freeze (kill switch)",
+        "path": "src/tollgate/freeze.py",
+        "summary": "tollgate freeze — deny all billable traffic; TOLLGATE_FROZEN env.",
+        "keywords": "freeze kill switch panic emergency admission frozen",
+    },
+    {
         "id": "consumers-auth",
         "title": "Consumer auth (id:secret)",
         "path": "src/tollgate/consumers.py",
@@ -309,6 +316,10 @@ HTTP_ROUTES: list[dict[str, str]] = [
     {"method": "GET", "path": "/v1/report", "summary": "Daily operator report (json|md)"},
     {"method": "GET", "path": "/v1/alerts", "summary": "Webhook event catalog"},
     {"method": "POST", "path": "/v1/alerts/test", "summary": "Force webhook probe (admin)"},
+    {"method": "GET", "path": "/v1/freeze", "summary": "Kill-switch status"},
+    {"method": "POST", "path": "/v1/freeze", "summary": "Set admission freeze (admin)"},
+    {"method": "GET", "path": "/v1/circuits", "summary": "List circuit breakers"},
+    {"method": "POST", "path": "/v1/circuits/reset", "summary": "Reset circuits (admin)"},
     {"method": "GET", "path": "/dashboard", "summary": "HTML control plane"},
     {"method": "GET", "path": "/v1/providers", "summary": "Provider inventory"},
     {"method": "GET", "path": "/v1/budget", "summary": "Budget snapshot"},
@@ -353,6 +364,8 @@ CLI_COMMANDS: list[dict[str, str]] = [
     {"cmd": "report", "summary": "Daily operator report Protect·Route·Prove"},
     {"cmd": "snapshot", "summary": "Export/import desk ops state (USB migrate)"},
     {"cmd": "alert", "summary": "Webhook test / event catalog"},
+    {"cmd": "freeze", "summary": "Global admission kill switch"},
+    {"cmd": "circuits", "summary": "List or reset circuit breakers"},
 ]
 
 

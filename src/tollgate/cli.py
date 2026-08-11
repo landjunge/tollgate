@@ -156,6 +156,46 @@ def main(argv: list[str] | None = None) -> None:
         help="Propose routing/budget tweaks from ledger (never auto-applies)",
     )
 
+    frz = sub.add_parser(
+        "freeze",
+        help="Emergency kill switch — deny all billable admission",
+    )
+    frz.add_argument(
+        "action",
+        nargs="?",
+        default="on",
+        choices=["on", "off", "status", "unfreeze"],
+        help="on (default) | off/unfreeze | status",
+    )
+    frz.add_argument(
+        "--reason",
+        default="",
+        help="why freeze (audit + webhook)",
+    )
+    sub.add_parser("unfreeze", help="Alias for: freeze off")
+
+    circ = sub.add_parser(
+        "circuits",
+        help="List or reset circuit breakers",
+    )
+    circ.add_argument(
+        "action",
+        choices=["list", "reset", "status"],
+        help="list | reset | status",
+    )
+    circ.add_argument(
+        "provider",
+        nargs="?",
+        default="",
+        help="provider id for reset (omit with --all)",
+    )
+    circ.add_argument(
+        "--all",
+        action="store_true",
+        dest="all_circuits",
+        help="reset every circuit",
+    )
+
     alrt = sub.add_parser(
         "alert",
         help="Webhook alerts: test delivery or list event catalog",
@@ -403,6 +443,64 @@ def main(argv: list[str] | None = None) -> None:
         out = test_webhook(message=args.message)
         print(json.dumps(out, indent=2, default=str))
         raise SystemExit(0 if out.get("ok") else 1)
+
+    if args.cmd in ("freeze", "unfreeze"):
+        from tollgate.freeze import freeze_status, set_frozen
+        from tollgate.paths import pin_data_home_env
+
+        pin_data_home_env()
+        if args.cmd == "unfreeze":
+            out = set_frozen(False, reason="", by="cli")
+            print(json.dumps(out, indent=2, default=str))
+            raise SystemExit(0)
+        act = (getattr(args, "action", None) or "on").lower()
+        if act == "status":
+            print(json.dumps(freeze_status(), indent=2, default=str))
+            return
+        if act in ("off", "unfreeze"):
+            out = set_frozen(False, reason=args.reason or "", by="cli")
+            print(json.dumps(out, indent=2, default=str))
+            raise SystemExit(0)
+        out = set_frozen(
+            True,
+            reason=args.reason or "manual freeze via CLI",
+            by="cli",
+        )
+        print(json.dumps(out, indent=2, default=str))
+        raise SystemExit(0)
+
+    if args.cmd == "circuits":
+        from tollgate.gateway.circuit import get_circuits, reset_circuits
+        from tollgate.paths import pin_data_home_env
+
+        pin_data_home_env()
+        if args.action in ("list", "status"):
+            rows = get_circuits().snapshot()
+            print(
+                json.dumps(
+                    {"ok": True, "count": len(rows), "circuits": rows},
+                    indent=2,
+                    default=str,
+                )
+            )
+            return
+        # reset
+        if not args.provider and not args.all_circuits:
+            print(
+                json.dumps(
+                    {
+                        "ok": False,
+                        "error": "provider id required, or pass --all",
+                    }
+                )
+            )
+            raise SystemExit(2)
+        out = reset_circuits(
+            args.provider or "",
+            all_circuits=bool(args.all_circuits),
+        )
+        print(json.dumps(out, indent=2, default=str))
+        return
 
     if args.cmd == "snapshot":
         from datetime import date

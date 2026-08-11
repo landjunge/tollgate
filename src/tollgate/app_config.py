@@ -28,6 +28,18 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "prefer_free": True,
     "auto_failover": True,
     "record_usage": True,
+    # Emergency kill switch — deny all billable traffic when frozen
+    "admission": {
+        "frozen": False,
+        "frozen_reason": "",
+        "frozen_at": None,
+        "frozen_by": "",
+        "allow_system_when_frozen": True,
+        "notes": (
+            "tollgate freeze / unfreeze. Env TOLLGATE_FROZEN=1 overrides. "
+            "System probes still pass if allow_system_when_frozen=true."
+        ),
+    },
     # Prove pillar — continuous reliability targets (DR / chaos)
     "reliability": {
         "availability_target": 99.9,

@@ -2,6 +2,15 @@
 
 All notable releases of [landjunge/tollgate](https://github.com/landjunge/tollgate).
 
+## 0.3.6 — 2026-08-11
+
+### Added
+- Global admission freeze kill switch: `tollgate freeze` / `unfreeze`, `GET|POST /v1/freeze`, MCP `keys_freeze`
+- Env override `TOLLGATE_FROZEN=1`
+- Circuit reset: `tollgate circuits list|reset`, `POST /v1/circuits/reset`
+- Dashboard freeze banner + control plane `freeze` blob
+- Webhook events `admission_frozen` / `admission_unfrozen`
+
 ## 0.3.5 — 2026-08-11
 
 ### Added

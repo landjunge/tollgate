@@ -203,6 +203,66 @@ KEYS_MCP_TOOLS: list[dict[str, Any]] = [
         ),
     },
     {
+        "name": "keys_freeze",
+        "description": (
+            "Global admission kill switch. action=status|on|off. "
+            "When frozen, all billable traffic is denied (Protect emergency)."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["status", "on", "off"],
+                    "default": "status",
+                },
+                "reason": {"type": "string", "default": ""},
+            },
+        },
+        "handler": lambda action="status", reason="", **_k: (
+            __import__("tollgate.freeze", fromlist=["freeze_status"]).freeze_status()
+            if str(action or "status") == "status"
+            else __import__("tollgate.freeze", fromlist=["set_frozen"]).set_frozen(
+                str(action or "") == "on",
+                reason=str(reason or ""),
+                by="mcp",
+            )
+        ),
+    },
+    {
+        "name": "keys_circuits",
+        "description": "List or reset circuit breakers. action=list|reset, optional provider, all=true.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list", "reset"],
+                    "default": "list",
+                },
+                "provider": {"type": "string", "default": ""},
+                "all": {"type": "boolean", "default": False},
+            },
+        },
+        "handler": lambda action="list", provider="", all=False, **_k: (
+            {
+                "ok": True,
+                "circuits": __import__(
+                    "tollgate.gateway.circuit", fromlist=["get_circuits"]
+                )
+                .get_circuits()
+                .snapshot(),
+            }
+            if str(action or "list") == "list"
+            else __import__(
+                "tollgate.gateway.circuit", fromlist=["reset_circuits"]
+            ).reset_circuits(
+                str(provider or ""),
+                all_circuits=bool(all),
+            )
+        ),
+    },
+    {
         "name": "keys_alert_test",
         "description": (
             "Force-send webhook_test to TOLLGATE_ALERT_WEBHOOK / "

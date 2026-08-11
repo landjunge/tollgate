@@ -10,6 +10,32 @@
 
 First command after install: **`tollgate doctor`**.
 
+## Global freeze (kill switch, v0.3.6+)
+
+Emergency stop for **all billable** traffic (Protect panic button):
+
+```bash
+tollgate freeze --reason "runaway agents"
+tollgate freeze status
+tollgate freeze off          # or: tollgate unfreeze
+# env override (wins over keys_app):
+export TOLLGATE_FROZEN=1
+```
+
+HTTP: `GET /v1/freeze` · `POST /v1/freeze` `{"frozen":true,"reason":"…"}` (admin)  
+MCP: `keys_freeze`  
+System probes still pass when `admission.allow_system_when_frozen=true` (default).
+
+## Circuit reset
+
+```bash
+tollgate circuits list
+tollgate circuits reset deepseek
+tollgate circuits reset --all
+curl -s -X POST http://127.0.0.1:8787/v1/circuits/reset \
+  -H 'X-Consumer-Key: desk:…' -d '{"provider":"deepseek"}'
+```
+
 ## Audit trail (who was denied)
 
 Append-only file: `$TOLLGATE_HOME/User/audit.jsonl` (never rewritten).

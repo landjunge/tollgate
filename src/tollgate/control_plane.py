@@ -497,8 +497,31 @@ def control_snapshot(*, root: Any = None) -> dict[str, Any]:
         f"{day_errors} provider errors · "
         f"{protected} agents protected"
     )
+    freeze_blob: dict[str, Any] = {"frozen": False}
+    try:
+        from tollgate.freeze import freeze_status
+
+        freeze_blob = freeze_status()
+        if freeze_blob.get("frozen"):
+            attention.insert(
+                0,
+                {
+                    "level": "error",
+                    "code": "admission_frozen",
+                    "message": (
+                        "ADMISSION FROZEN — "
+                        + str(freeze_blob.get("reason") or "kill switch active")
+                        + " · tollgate unfreeze"
+                    ),
+                },
+            )
+    except Exception:  # noqa: BLE001
+        pass
+
     if res_score is not None:
         headline = f"Resilience {res_score}/100 · " + headline
+    if freeze_blob.get("frozen"):
+        headline = "⛔ FROZEN · " + headline
     if over:
         headline += f" · ⚠ {len(over)} need attention"
 
@@ -527,12 +550,14 @@ def control_snapshot(*, root: Any = None) -> dict[str, Any]:
             "agent_protection_blocks": blocks,
             "admit_denies": denies,
             "resilience_score": res_score,
+            "frozen": bool(freeze_blob.get("frozen")),
         },
         "attention": attention[:12],
         "providers": providers,
         "consumers": consumers,
         "chaos": chaos_blob,
         "resilience": res_blob,
+        "freeze": freeze_blob,
         "recent_denies": recent_deny_rows,
         "audit": {
             "admit_denies": denies,

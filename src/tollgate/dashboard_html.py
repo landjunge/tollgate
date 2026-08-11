@@ -67,6 +67,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 </header>
 <main>
   <div class="headline" id="headline">Loading…</div>
+  <div class="attn" id="freezeBanner" style="display:none;border-color:var(--bad);margin-bottom:1rem"></div>
   <p class="promise" id="tagline"></p>
   <div class="top">
     <div class="ring-wrap">
@@ -116,6 +117,14 @@ async function load(){
   document.getElementById('headline').textContent = d.headline || '—';
   document.getElementById('tagline').textContent = d.tagline || d.promise || '';
   if (d.promise) document.getElementById('promise').textContent = d.promise;
+  const fb = document.getElementById('freezeBanner');
+  if (d.freeze && d.freeze.frozen) {
+    fb.style.display = 'block';
+    fb.innerHTML = `<div class="error">⛔ ADMISSION FROZEN — ${d.freeze.reason||'kill switch'} · <code>tollgate unfreeze</code> or POST /v1/freeze</div>`;
+  } else {
+    fb.style.display = 'none';
+    fb.innerHTML = '';
+  }
   const s = d.summary || {};
   const res = d.resilience || {};
   const score = res.score!=null ? Number(res.score) : null;
