@@ -82,14 +82,31 @@ Example::
 
 Or set `TOLLGATE_HOME` to the **absolute path of WS-tollgate on that machine** (volume name may differ per OS — that is expected; do not hardcode another user’s home).
 
+## Consumer auth (optional, multi-host stick)
+
+Open mode (default): no `User/consumers.json` → any local client works.
+
+Lock the gate (n8n / other machines)::
+
+```bash
+tollgate consumer-add n8n
+tollgate consumer-add desk --admin
+# → prints secret once; stored as hash only
+export TOLLGATE_REQUIRE_AUTH=1   # optional if consumers file non-empty
+```
+
+Header: `X-Consumer-Key: n8n:<secret>`
+
+`/v1/config` needs an **admin** consumer when auth is on. `/v1/health` and `/v1/auth` stay public.
+
 ## Rules
 
 | Do | Don't |
 |----|--------|
-| Keep `User/` + ledger on the stick | Commit `Key.txt` / `.env` |
+| Keep `User/` + ledger on the stick | Commit `Key.txt` / `.env` / `consumers.json` |
 | Use relative scripts under `scripts/` | Absolute paths like `/Users/name/…` in docs or mcp.json |
 | Prefer sibling `WS-tollgate` | Assume `~` exists or is the same host |
-| Bind HTTP to `127.0.0.1` | Expose `/v1/config` on `0.0.0.0` without auth |
+| Bind HTTP to `127.0.0.1` | Expose `/v1/config` on `0.0.0.0` without auth + admin consumer |
 
 ## Gnom + USB
 

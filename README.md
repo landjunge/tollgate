@@ -38,13 +38,15 @@ See [docs/PORTABLE.md](docs/PORTABLE.md). No machine-local `/Users/…` paths re
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/v1/health` | Liveness + circuits |
+| GET | `/v1/health` | Liveness + portable + auth mode |
+| GET | `/v1/auth` | Whether consumer secrets are required |
 | POST | `/v1/route` | intent → provider/model |
 | POST | `/v1/invoke` | admit + call + meter |
 | GET | `/v1/budget` | remaining limits |
-| GET | `/v1/providers` | inventory grades |
+| GET | `/v1/providers` | inventory grades (masked) |
+| GET/POST | `/v1/config` | policy (admin when auth on) |
 
-Header: `X-Consumer-Key: n8n` (placeholder until consumer secrets land).
+Header: `X-Consumer-Key: n8n` (open mode) or `n8n:<secret>` after `tollgate consumer-add n8n`.
 
 ### MCP
 

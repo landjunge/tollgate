@@ -1,16 +1,28 @@
 # n8n + Tollgate
 
-n8n holds **no** DeepSeek/Brave/Google secrets — only a consumer label (later: consumer API key).
+n8n holds **no** DeepSeek/Brave/Google secrets — only a consumer id + secret when auth is enabled.
 
-**Product:** Tollgate (future repo `tollgate`)
+**Product:** https://github.com/landjunge/tollgate
 
 ## Run Tollgate
 
 ```bash
-cd gnom-hub-v1
-./scripts/run_keys_gateway.sh
+# desk or USB
+./scripts/run.sh
 # → http://127.0.0.1:8787/docs
 ```
+
+Portable stick: see [PORTABLE.md](PORTABLE.md).
+
+### Optional auth (recommended if n8n is not only-localhost)
+
+```bash
+tollgate consumer-add n8n
+# → secret printed once
+# Header becomes: X-Consumer-Key: n8n:<secret>
+```
+
+Without consumers.json, open mode accepts any `X-Consumer-Key` label (desk).
 
 ## Example HTTP nodes
 
@@ -18,7 +30,7 @@ cd gnom-hub-v1
 
 - Method: `POST`
 - URL: `http://127.0.0.1:8787/v1/route`
-- Header: `X-Consumer-Key: n8n`
+- Header: `X-Consumer-Key: n8n` (open) or `n8n:<secret>` (auth)
 - Body:
 
 ```json
@@ -48,8 +60,7 @@ Use `route.provider` + `route.model` in the next node.
 }
 ```
 
-POST `http://127.0.0.1:8787/v1/invoke`  
-Header: `X-Consumer-Key: n8n`
+POST `http://127.0.0.1:8787/v1/invoke`
 
 ### 3) Budget check
 

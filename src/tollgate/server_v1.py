@@ -1,17 +1,18 @@
 """
-Standalone multi-consumer HTTP surface (extractable to own repo).
+Standalone multi-consumer HTTP surface.
 
-Run (no full hub UI required):
-  PYTHONPATH=src GNOM_WS=... uvicorn tollgate.server_v1:app --host 127.0.0.1 --port 8787
+  tollgate serve
+  → http://127.0.0.1:8787/docs
 
-Contract (stable for n8n / agents / future repo):
+Contract:
   GET  /v1/health
   GET  /v1/providers
   GET  /v1/budget
   POST /v1/route
   POST /v1/invoke
   GET  /v1/usage
-  GET  /v1/config   (local desk; lock down later with consumer auth)
+  GET|POST /v1/config   (admin when auth mode)
+  GET  /v1/auth
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ from fastapi import FastAPI, Header, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from tollgate import get_keys_service
+from tollgate.consumers import auth_status, verify_consumer
 from tollgate.gateway.context import RequestClass, RequestContext
 from tollgate.gateway.entry import gateway_call
 
@@ -49,25 +51,26 @@ _bootstrap_env()
 
 app = FastAPI(
     title="Tollgate",
-    version="0.1.0",
+    version="0.1.2",
     description=(
         "Tollgate — multi-consumer API admission + router. "
         "Budgets, circuits, distill-backed providers. "
-        "Gnom, n8n, and other agents share this control plane. "
+        "Portable/USB friendly. "
         "https://github.com/landjunge/tollgate"
     ),
 )
 
 
-def _consumer_from_header(x_consumer_key: str | None) -> str:
-    """
-    Lightweight consumer id until full API-key store lands.
-
-    Header: X-Consumer-Key: n8n | gnom | cursor | ...
-    (Phase 3: map to hashed secrets + per-consumer budgets.)
-    """
-    c = (x_consumer_key or "anonymous").strip() or "anonymous"
-    return c[:64]
+def _require(
+    x_consumer_key: str | None,
+    x_consumer_id: str | None = None,
+    *,
+    need_admin: bool = False,
+) -> dict[str, Any]:
+    auth = verify_consumer(x_consumer_key, x_consumer_id, need_admin=need_admin)
+    if not auth.get("ok"):
+        raise HTTPException(status_code=401, detail=auth.get("error") or "unauthorized")
+    return auth
 
 
 class RouteBody(BaseModel):
@@ -88,7 +91,7 @@ class InvokeBody(BaseModel):
     agent_id: str = ""
     job_id: str = ""
     session_id: str = ""
-    request_class: str = "interactive"  # interactive|batch|free|system
+    request_class: str = "interactive"
     allow_paid_fallback: bool = False
 
 
@@ -102,18 +105,39 @@ def health() -> dict[str, Any]:
         "ok": True,
         "service": "tollgate",
         "product": "Tollgate",
-        "version": "0.1.1",
+        "version": "0.1.2",
         "extractable": True,
         "multi_consumer": True,
         "portable": path_snapshot(),
+        "auth": auth_status(),
         "app": ks.app_status(),
         "circuits": get_circuits().snapshot()[:30],
     }
 
 
+@app.get("/v1/auth")
+def auth_info() -> dict[str, Any]:
+    """Public: whether auth is required (never returns secrets)."""
+    st = auth_status()
+    return {
+        "ok": True,
+        "required": st["required"],
+        "consumers_n": st["consumers_n"],
+        "consumers": st["consumers"],
+        "header": "X-Consumer-Key: <id>:<secret>",
+    }
+
+
 @app.get("/v1/providers")
-def providers(live: bool = Query(False)) -> dict[str, Any]:
-    return get_keys_service().inventory(live=live)
+def providers(
+    live: bool = Query(False),
+    x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+    x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
+) -> dict[str, Any]:
+    auth = _require(x_consumer_key, x_consumer_id)
+    out = get_keys_service().inventory(live=live)
+    out["consumer"] = auth["consumer"]
+    return out
 
 
 @app.get("/v1/budget")
@@ -121,33 +145,43 @@ def budget(
     provider: str = Query(""),
     tokens_est: int = Query(0, ge=0),
     chars_est: int = Query(0, ge=0),
+    x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+    x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
 ) -> dict[str, Any]:
+    auth = _require(x_consumer_key, x_consumer_id)
     ks = get_keys_service()
     if provider.strip():
         return {
             "ok": True,
+            "consumer": auth["consumer"],
             "provider": provider,
             "limits": ks.check_provider_limits(
                 provider, tokens_est=tokens_est, chars_est=chars_est
             ),
             "usage": ks.usage(),
         }
-    return {"ok": True, "usage": ks.usage(), "config": ks.get_config().get("config", {}).get("cost_guard")}
+    return {
+        "ok": True,
+        "consumer": auth["consumer"],
+        "usage": ks.usage(),
+        "config": ks.get_config().get("config", {}).get("cost_guard"),
+    }
 
 
 @app.post("/v1/route")
 def route(
     body: RouteBody,
     x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+    x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
 ) -> dict[str, Any]:
-    consumer = _consumer_from_header(x_consumer_key)
+    auth = _require(x_consumer_key, x_consumer_id)
     out = get_keys_service().route(
         body.intent,
         tokens_est=body.tokens_est,
         chars_est=body.chars_est,
         live=body.live,
     )
-    out["consumer"] = consumer
+    out["consumer"] = auth["consumer"]
     return out
 
 
@@ -155,13 +189,11 @@ def route(
 def invoke(
     body: InvokeBody,
     x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+    x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
 ) -> dict[str, Any]:
-    """
-    Multi-consumer admit + call + meter.
-
-    n8n / agents should use this instead of holding provider secrets.
-    """
-    consumer = _consumer_from_header(x_consumer_key)
+    """Multi-consumer admit + call + meter."""
+    auth = _require(x_consumer_key, x_consumer_id)
+    consumer = auth["consumer"]
     try:
         rclass = RequestClass(body.request_class or "interactive")
     except ValueError:
@@ -190,30 +222,29 @@ def invoke(
 
 
 @app.get("/v1/usage")
-def usage() -> dict[str, Any]:
-    return get_keys_service().usage()
-
-
-class ConfigPatchBody(BaseModel):
-    """Deep-merge patch into keys_app.json (policy only — not Key.txt secrets)."""
-
-    model_config = {"extra": "allow"}
+def usage(
+    x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+    x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
+) -> dict[str, Any]:
+    auth = _require(x_consumer_key, x_consumer_id)
+    out = get_keys_service().usage()
+    if isinstance(out, dict):
+        out = dict(out)
+        out["consumer"] = auth["consumer"]
+    return out
 
 
 @app.get("/v1/config")
 def config_get(
     x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+    x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
 ) -> dict[str, Any]:
-    """
-    Read keys_app.json policy (budgets, routing, enables).
-
-    Does not include Key.txt API secrets. Still desk-sensitive —
-    Phase 3: require consumer admin scope. Bind to 127.0.0.1 until then.
-    """
+    """Read keys_app.json policy (admin when auth mode)."""
+    auth = _require(x_consumer_key, x_consumer_id, need_admin=True)
     out = get_keys_service().get_config()
-    out["consumer"] = _consumer_from_header(x_consumer_key)
+    out["consumer"] = auth["consumer"]
     out["warning"] = (
-        "policy config only (no Key.txt secrets); bind loopback until admin auth"
+        "policy config only (no Key.txt secrets); admin scope when auth enabled"
     )
     return out
 
@@ -222,16 +253,21 @@ def config_get(
 def config_patch(
     body: dict[str, Any],
     x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+    x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
 ) -> dict[str, Any]:
-    """Deep-merge patch into keys_app.json. Same security caveats as GET."""
+    """Deep-merge patch into keys_app.json (admin when auth mode)."""
+    auth = _require(x_consumer_key, x_consumer_id, need_admin=True)
     if not isinstance(body, dict) or not body:
         raise HTTPException(status_code=400, detail="JSON object patch required")
-    # Drop accidental wrapper keys if a client POSTs {config: {...}}
-    patch = body.get("config") if isinstance(body.get("config"), dict) and len(body) == 1 else body
+    patch = (
+        body.get("config")
+        if isinstance(body.get("config"), dict) and len(body) == 1
+        else body
+    )
     if not isinstance(patch, dict):
         raise HTTPException(status_code=400, detail="invalid patch")
     out = get_keys_service().set_config(patch)
-    out["consumer"] = _consumer_from_header(x_consumer_key)
+    out["consumer"] = auth["consumer"]
     return out
 
 
@@ -245,9 +281,11 @@ def root() -> dict[str, Any]:
         "vision": "docs/VISION.md",
         "architecture": "docs/ARCHITECTURE.md",
         "mcp": "docs/MCP.md",
+        "portable": "docs/PORTABLE.md",
         "cost_limits": "docs/COST_LIMITS.md",
         "v1": [
             "/v1/health",
+            "/v1/auth",
             "/v1/route",
             "/v1/invoke",
             "/v1/budget",

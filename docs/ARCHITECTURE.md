@@ -128,9 +128,10 @@ Do **not** store user wishes, chat transcripts, or project files here.
 3. Seal all spend paths through gateway  
 4. **SQLite gateway memory** (ledger + circuits + optional cache) + agent_id/consumer  
 5. Real execute failover for LLM chat  
-6. Own repo + consumer API keys  
+6. ~~Own repo + CI~~ · ~~consumer API keys (hash + open mode)~~ · ~~USB portable~~  
 7. Optional OpenAI-compatible `/v1/chat/completions`  
-8. Optional semantic quality routing  
+8. Optional semantic quality routing · per-consumer budget envelopes  
+
 
 ## Success metrics
 

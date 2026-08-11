@@ -11,6 +11,8 @@ src/*.egg-info/
 .env
 .DS_Store
 User/
+consumers.json
 *.sqlite
 keys_usage.json
 *.log
+WS-tollgate/

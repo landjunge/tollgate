@@ -1,0 +1,20 @@
+# Copy to $TOLLGATE_HOME/User/Key.txt (or portable WS-tollgate/User/Key.txt)
+# Do not commit real secrets.
+
+# DEEPSEEK_API_KEY=
+# WORKER_API_KEY=
+# DEEPSEEK_MODEL=deepseek-v4-flash
+
+# BRAVE_API_KEY=
+# ELEVENLABS_API_KEY=
+# ELEVENLABS_MIN_REMAINING=5000
+# ELEVENLABS_VOICE_ID=
+
+# OPENCODE_API_KEY=
+# OPENROUTER_API_KEY=
+# OPENROUTER_FREE_ONLY=1
+# NVIDIA_API_KEY=
+# MINIMAX_API_KEY=
+
+# Google / Gemini — keep providers.google.enabled=false in keys_app.json
+# GOOGLE_API_KEY=
