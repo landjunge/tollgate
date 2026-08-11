@@ -157,3 +157,19 @@ Brainstorm freely. Execute on purpose.
 https://landjunge.github.io/gnom-hub-v1/
 https://github.com/landjunge/gnom-hub-v1"
 ```
+
+
+---
+
+## Already published (do not re-spam)
+
+| Channel | URL |
+|---------|-----|
+| GitHub Gist | https://gist.github.com/landjunge/ce4190deb6536cc6134c767f500c4dc9 |
+| Tollgate Discussions | https://github.com/landjunge/tollgate/discussions/10 |
+| Gnom-Hub Discussions | https://github.com/landjunge/gnom-hub-v1/discussions/46 |
+| Tollgate release | https://github.com/landjunge/tollgate/releases/tag/announce-public |
+| Gnom-Hub release | https://github.com/landjunge/gnom-hub-v1/releases/tag/announce-public |
+| Awesome AI Agents PR | https://github.com/aloth/awesome-ai-agents/pull/38 |
+| Awesome MCP Servers PR | (see open PRs from landjunge) |
+| Profile README | https://github.com/landjunge |
