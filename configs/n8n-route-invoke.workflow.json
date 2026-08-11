@@ -1,0 +1,68 @@
+{
+  "name": "Tollgate Route then Invoke",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "1",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8787/v1/route",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer n8n" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"intent\": \"free_llm\",\n  \"tokens_est\": 500,\n  \"prefer_free\": true\n}",
+        "options": {}
+      },
+      "id": "2",
+      "name": "Route free_llm",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8787/v1/invoke",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer n8n" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"provider\": \"{{ $json.provider || $json.route.provider }}\",\n  \"op\": \"chat\",\n  \"model\": \"{{ $json.model || $json.route.model }}\",\n  \"arguments\": {\n    \"message\": \"Reply with exactly: ROUTE_INVOKE_OK\",\n    \"model\": \"{{ $json.model || $json.route.model }}\",\n    \"max_tokens\": 32\n  },\n  \"request_class\": \"batch\",\n  \"agent_id\": \"n8n-route-invoke\"\n}",
+        "options": {}
+      },
+      "id": "3",
+      "name": "Invoke chat",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [540, 0]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [[{ "node": "Route free_llm", "type": "main", "index": 0 }]]
+    },
+    "Route free_llm": {
+      "main": [[{ "node": "Invoke chat", "type": "main", "index": 0 }]]
+    }
+  },
+  "meta": {
+    "notes": "Demonstrates native Tollgate route → invoke (not OpenAI surface)."
+  }
+}

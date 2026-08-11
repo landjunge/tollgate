@@ -150,7 +150,7 @@ Code guards:
 6. ~~Own repo + CI~~ · ~~consumer API keys (hash + open mode)~~ · ~~USB portable~~  
 7. ~~OpenAI-compatible `/v1/chat/completions` + `/v1/models`~~ (SSE synthetic stream)  
 8. ~~Real token streaming~~ · ~~per-consumer budget envelopes~~  
-9. ~~Prometheus `/metrics`~~ · ~~webhook alerts~~ · ~~Anthropic messages~~ · n8n node on demand  
+9. ~~Prometheus `/metrics`~~ · ~~webhook alerts~~ · ~~Anthropic messages~~ · ~~n8n node pack~~  
 
 
 ## Success metrics

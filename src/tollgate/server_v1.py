@@ -78,7 +78,7 @@ _bootstrap_env()
 
 app = FastAPI(
     title="Tollgate",
-    version="0.1.7",
+    version="0.1.8",
     description=(
         "Tollgate — multi-consumer API admission + router. "
         "OpenAI /v1/chat/completions + Anthropic /v1/messages drop-ins. "
@@ -140,7 +140,7 @@ def health() -> dict[str, Any]:
         "ok": True,
         "service": "tollgate",
         "product": "Tollgate",
-        "version": "0.1.7",
+        "version": "0.1.8",
         "extractable": True,
         "multi_consumer": True,
         "portable": path_snapshot(),

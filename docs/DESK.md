@@ -17,13 +17,15 @@ cd ~/tollgate
 | **n8n** | OpenAI Base `http://127.0.0.1:8787/v1`, Key `n8n`, Model `tollgate/free` |
 | **n8n Docker** | Base `http://host.docker.internal:8787/v1` |
 | **Anthropic SDK** | Base `http://127.0.0.1:8787`, Key `desk` → `POST /v1/messages` ([ANTHROPIC.md](ANTHROPIC.md)) |
-| **Import** | `configs/n8n-openai-chat.workflow.json` |
+| **Import** | `configs/n8n-*.workflow.json` (chat, budget-gate, search, route-invoke) |
+| **n8n node** | `n8n-nodes-tollgate/` → install under `~/.n8n/custom` |
 
 ## Checks
 
 ```bash
 ./scripts/desk-check.sh      # health + free chat
 ./scripts/live_smoke.sh      # route + chat
+./scripts/n8n-smoke.sh       # surfaces n8n uses (budget/route/chat/search)
 tollgate doctor
 curl -s localhost:8787/metrics | head
 # optional lane caps (n8n vs gnom):

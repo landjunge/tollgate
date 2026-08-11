@@ -1,0 +1,46 @@
+{
+  "name": "n8n-nodes-tollgate",
+  "version": "0.1.0",
+  "description": "n8n community node for Tollgate — multi-consumer API admission, budgets, routing",
+  "keywords": [
+    "n8n-community-node-package",
+    "n8n",
+    "tollgate",
+    "llm",
+    "budget",
+    "openai",
+    "admission"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/landjunge/tollgate",
+  "author": {
+    "name": "landjunge"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/landjunge/tollgate.git",
+    "directory": "n8n-nodes-tollgate"
+  },
+  "main": "index.js",
+  "files": [
+    "credentials",
+    "nodes",
+    "index.js",
+    "README.md"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "credentials/TollgateApi.credentials.js"
+    ],
+    "nodes": [
+      "nodes/Tollgate/Tollgate.node.js"
+    ]
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

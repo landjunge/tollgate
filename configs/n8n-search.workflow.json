@@ -1,5 +1,5 @@
 {
-  "name": "Tollgate OpenAI Chat (smoke)",
+  "name": "Tollgate Brave Search",
   "nodes": [
     {
       "parameters": {},
@@ -12,7 +12,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "http://127.0.0.1:8787/v1/chat/completions",
+        "url": "http://127.0.0.1:8787/v1/invoke",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -22,11 +22,11 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"tollgate/free\",\n  \"messages\": [\n    { \"role\": \"user\", \"content\": \"Reply with exactly: N8N_TOLL_OK\" }\n  ],\n  \"max_tokens\": 32\n}",
+        "jsonBody": "={\n  \"provider\": \"brave\",\n  \"op\": \"search\",\n  \"arguments\": {\n    \"query\": \"Tollgate API admission gateway\",\n    \"count\": 3\n  },\n  \"request_class\": \"batch\",\n  \"agent_id\": \"n8n-search\"\n}",
         "options": {}
       },
       "id": "2",
-      "name": "Tollgate Chat",
+      "name": "Brave Search",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [280, 0]
@@ -34,11 +34,10 @@
   ],
   "connections": {
     "Manual Trigger": {
-      "main": [[{ "node": "Tollgate Chat", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "Brave Search", "type": "main", "index": 0 }]]
     }
   },
   "meta": {
-    "templateCredsSetupCompleted": true,
-    "notes": "Import in n8n. Docker: host.docker.internal:8787. Community node: n8n-nodes-tollgate/"
+    "notes": "Needs BRAVE_API_KEY in Tollgate Key.txt. Spend counted on n8n consumer envelope."
   }
 }

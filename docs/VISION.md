@@ -87,7 +87,7 @@ Lives with the **own-repo** gateway (SQLite first; Redis only if multi-host).
 | 2 | Seal all Gnom spend through Tollgate | **done** (client + tools + UI) |
 | 3 | Consumer API keys + per-consumer budgets | **done** (hash auth + envelopes) |
 | 4 | **Own repo `tollgate`** + CI + version tags | **done** |
-| 5 | n8n: HTTP workflows → community node | docs: `N8N.md` + OpenAI drop-in |
+| 5 | n8n: HTTP workflows → community node | **done** (`n8n-nodes-tollgate` + workflow pack) |
 | 6 | Optional OpenAI-compatible proxy | **done** (`/v1/chat/completions`) |
 | 7 | Optional quality/semantic routing | later |
 

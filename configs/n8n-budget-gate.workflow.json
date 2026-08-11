@@ -1,0 +1,106 @@
+{
+  "name": "Tollgate Budget Gate",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "1",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://127.0.0.1:8787/v1/budget",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Consumer-Key", "value": "n8n" },
+            { "name": "Authorization", "value": "Bearer n8n" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2",
+      "name": "Budget",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.consumer_limits.allowed !== false }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "3",
+      "name": "Allowed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [520, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8787/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer n8n" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"tollgate/free\",\n  \"messages\": [\n    { \"role\": \"user\", \"content\": \"Budget OK — reply with BUDGET_PASS\" }\n  ],\n  \"max_tokens\": 32\n}",
+        "options": {}
+      },
+      "id": "4",
+      "name": "Chat if allowed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [780, -80]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "blocked",
+              "value": "={{ $json.consumer_limits.reason || 'budget denied' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5",
+      "name": "Blocked",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [780, 100]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [[{ "node": "Budget", "type": "main", "index": 0 }]]
+    },
+    "Budget": {
+      "main": [[{ "node": "Allowed?", "type": "main", "index": 0 }]]
+    },
+    "Allowed?": {
+      "main": [
+        [{ "node": "Chat if allowed", "type": "main", "index": 0 }],
+        [{ "node": "Blocked", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "meta": {
+    "notes": "Docker n8n: replace 127.0.0.1 with host.docker.internal. Auth mode: Bearer n8n:<secret>."
+  }
+}
