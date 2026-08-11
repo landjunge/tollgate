@@ -37,7 +37,19 @@
       </p>
       <div class="cta-row">
         <a class="btn lg" href="#start">Loslegen</a>
-        <a class="btn lg ghost" href="https://github.com/landjunge/tollgate">Auf GitHub ansehen</a>
+        <a class="btn lg ghost" href="https://github.com/landjunge/tollgate" target="_blank" rel="noopener">GitHub ↗</a>
+        <a class="btn lg ghost" href="docs.html">Docs</a>
+      </div>
+      <div class="quick-links" aria-label="Links öffnen und kopieren">
+        <a href="https://github.com/landjunge/tollgate" target="_blank" rel="noopener">
+          GitHub <span class="url">github.com/landjunge/tollgate</span>
+        </a>
+        <button type="button" data-copy-href="https://github.com/landjunge/tollgate">GitHub-URL kopieren</button>
+        <a href="https://landjunge.github.io/tollgate/de.html" target="_blank" rel="noopener">
+          Website <span class="url">…/tollgate/de.html</span>
+        </a>
+        <button type="button" data-copy-href="https://landjunge.github.io/tollgate/de.html">Site-URL kopieren</button>
+        <a href="https://github.com/landjunge/tollgate/blob/main/docs/HILFE.md" target="_blank" rel="noopener">Hilfe (DE)</a>
       </div>
       <ul class="compat">
         <li>OpenAI</li>
@@ -220,14 +232,18 @@
           </div>
         </div>
         <div class="code-block reveal">
-          <div class="bar"><span>python · drop-in</span></div>
-          <pre><span class="k">from</span> openai <span class="k">import</span> OpenAI
+          <div class="bar">
+            <span>python · drop-in</span>
+            <button type="button" class="btn sm ghost" data-copy="#sdk-de">Code kopieren</button>
+          </div>
+          <pre id="sdk-de" class="copyable"><span class="k">from</span> openai <span class="k">import</span> OpenAI
 
 client = OpenAI(
     base_url=<span class="s">"http://127.0.0.1:8787/v1"</span>,
     api_key=<span class="s">"support-agent"</span>,
 )</pre>
         </div>
+        <p class="code-hint reveal">Code anklicken = alles markieren · Button kopiert · sonst <kbd>⌘C</kbd></p>
       </div>
     </section>
 
@@ -244,15 +260,26 @@ client = OpenAI(
             <div class="step"><div><h3>Resilience testen</h3><p><code>chaos test</code> · <code>certificate</code></p></div></div>
           </div>
           <p style="margin-top:1.25rem">
-            <a class="btn lg" href="https://github.com/landjunge/tollgate#10-minutes-cold-start">In 5 Minuten starten →</a>
+            <a class="btn lg" href="https://github.com/landjunge/tollgate#10-minutes-cold-start" target="_blank" rel="noopener">In 5 Minuten starten →</a>
+            <a class="btn lg ghost" href="https://github.com/landjunge/tollgate/blob/main/docs/HILFE.md" target="_blank" rel="noopener">Hilfe</a>
           </p>
         </div>
+        <div>
         <div class="code-block reveal">
-          <div class="bar"><span>cold path</span></div>
-          <pre>git clone https://github.com/landjunge/tollgate.git
+          <div class="bar">
+            <span>cold path</span>
+            <button type="button" class="btn sm ghost" data-copy="#cold-de">Code kopieren</button>
+          </div>
+          <pre id="cold-de" class="copyable">git clone https://github.com/landjunge/tollgate.git
 cd tollgate
 python3 -m venv .venv && .venv/bin/pip install -e .
 ./scripts/ten-minute.sh</pre>
+        </div>
+        <p class="code-hint reveal">
+          Dashboard:
+          <a class="link-plain" href="http://127.0.0.1:8787/dashboard" target="_blank" rel="noopener">http://127.0.0.1:8787/dashboard</a>
+          <button type="button" class="btn sm ghost" data-copy-href="http://127.0.0.1:8787/dashboard">URL kopieren</button>
+        </p>
         </div>
       </div>
     </section>

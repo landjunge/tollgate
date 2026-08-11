@@ -26,7 +26,7 @@
         <a href="#start">Quickstart</a>
         <a href="docs.html">Docs</a>
         <a class="lang" href="de.html" hreflang="de">DE</a>
-        <a href="https://github.com/landjunge/tollgate">GitHub</a>
+        <a href="https://github.com/landjunge/tollgate" target="_blank" rel="noopener">GitHub ↗</a>
         <a class="btn" href="#start">Get Started</a>
       </nav>
     </div>
@@ -43,7 +43,30 @@
       </p>
       <div class="cta-row">
         <a class="btn lg" href="#start">Get Started</a>
-        <a class="btn lg ghost" href="https://github.com/landjunge/tollgate">View on GitHub</a>
+        <a class="btn lg ghost" href="https://github.com/landjunge/tollgate" target="_blank" rel="noopener">View on GitHub</a>
+        <a class="btn lg ghost" href="docs.html">Docs</a>
+      </div>
+      <div class="quick-links" aria-label="Open and copy links">
+        <a href="https://github.com/landjunge/tollgate" target="_blank" rel="noopener" title="Open repo">
+          GitHub
+          <span class="url">github.com/landjunge/tollgate</span>
+        </a>
+        <button type="button" data-copy-href="https://github.com/landjunge/tollgate" title="Copy GitHub URL">
+          Copy GitHub URL
+        </button>
+        <a href="https://landjunge.github.io/tollgate/" target="_blank" rel="noopener" title="Open website">
+          Website
+          <span class="url">landjunge.github.io/tollgate</span>
+        </a>
+        <button type="button" data-copy-href="https://landjunge.github.io/tollgate/" title="Copy website URL">
+          Copy site URL
+        </button>
+        <a href="https://github.com/landjunge/tollgate/blob/main/docs/HILFE.md" target="_blank" rel="noopener">
+          Hilfe (DE)
+        </a>
+        <a href="https://github.com/landjunge/tollgate/blob/main/docs/USER_GUIDE.md" target="_blank" rel="noopener">
+          User Guide
+        </a>
       </div>
       <ul class="compat" aria-label="Works with">
         <li>OpenAI</li>
@@ -284,9 +307,9 @@
         <div class="code-block reveal">
           <div class="bar">
             <span>python · drop-in</span>
-            <button type="button" class="btn sm ghost" data-copy="#sdk-snippet">Copy</button>
+            <button type="button" class="btn sm ghost" data-copy="#sdk-snippet">Copy code</button>
           </div>
-          <pre id="sdk-snippet"><span class="c"># OpenAI-compatible — no app rewrite</span>
+          <pre id="sdk-snippet" class="copyable"><span class="c"># OpenAI-compatible — no app rewrite</span>
 <span class="k">from</span> openai <span class="k">import</span> OpenAI
 
 client = OpenAI(
@@ -300,6 +323,7 @@ client.chat.completions.create(
     extra_body={<span class="s">"tool_calls_est"</span>: 3},
 )</pre>
         </div>
+        <p class="code-hint reveal">Click the code to select · button copies · fallback <kbd>⌘C</kbd> / <kbd>Ctrl+C</kbd></p>
       </div>
     </section>
 
@@ -345,22 +369,32 @@ client.chat.completions.create(
             </div>
           </div>
           <p style="margin-top:1.25rem">
-            <a class="btn lg" href="https://github.com/landjunge/tollgate#10-minutes-cold-start">Start in 5 minutes →</a>
+            <a class="btn lg" href="https://github.com/landjunge/tollgate#10-minutes-cold-start" target="_blank" rel="noopener">Start in 5 minutes →</a>
+            <a class="btn lg ghost" href="https://github.com/landjunge/tollgate/blob/main/docs/TEN_MINUTE.md" target="_blank" rel="noopener">10-min guide</a>
           </p>
         </div>
+        <div>
         <div class="code-block reveal">
           <div class="bar">
             <span>cold path</span>
-            <button type="button" class="btn sm ghost" data-copy="#cold-snippet">Copy</button>
+            <button type="button" class="btn sm ghost" data-copy="#cold-snippet">Copy code</button>
           </div>
-          <pre id="cold-snippet">git clone https://github.com/landjunge/tollgate.git
+          <pre id="cold-snippet" class="copyable">git clone https://github.com/landjunge/tollgate.git
 cd tollgate
 python3 -m venv .venv && .venv/bin/pip install -e .
 ./scripts/ten-minute.sh
 
-<span class="c"># or Docker</span>
+# or Docker
 docker compose up -d --build
 open http://127.0.0.1:8787/dashboard</pre>
+        </div>
+        <p class="code-hint reveal">Click code to select all · <button type="button" class="btn sm ghost" style="vertical-align:middle" data-copy="#cold-snippet">Copy again</button></p>
+        <p class="code-hint reveal" style="margin-top:0.75rem">
+          Dashboard after start:
+          <a class="link-plain" href="http://127.0.0.1:8787/dashboard" target="_blank" rel="noopener">http://127.0.0.1:8787/dashboard</a>
+          ·
+          <button type="button" class="btn sm ghost" data-copy-href="http://127.0.0.1:8787/dashboard">Copy URL</button>
+        </p>
         </div>
       </div>
     </section>
@@ -379,11 +413,15 @@ open http://127.0.0.1:8787/dashboard</pre>
             <span class="ok">Recovery verified</span>
           </div>
           <p class="prove-score">99.97% recovered</p>
-          <a class="btn lg" href="https://github.com/landjunge/tollgate/blob/main/docs/DEMO.md">Run a chaos test →</a>
-          <p style="margin-top:1rem;color:var(--muted);font-size:0.95rem">
-            <code>tollgate chaos test opencode_zen --requests 10</code><br/>
-            then <code>tollgate certificate</code>
-          </p>
+          <a class="btn lg" href="https://github.com/landjunge/tollgate/blob/main/docs/DEMO.md" target="_blank" rel="noopener">Demo script →</a>
+          <div class="code-block" style="text-align:left;margin:1.25rem auto 0;max-width:28rem">
+            <div class="bar">
+              <span>prove</span>
+              <button type="button" class="btn sm ghost" data-copy="#prove-snippet">Copy code</button>
+            </div>
+            <pre id="prove-snippet" class="copyable">tollgate chaos test opencode_zen --requests 10
+tollgate certificate</pre>
+          </div>
         </div>
       </div>
     </section>
@@ -410,10 +448,16 @@ open http://127.0.0.1:8787/dashboard</pre>
           <li>Control Room UI</li>
         </ul>
         <div class="cta-row" style="justify-content:flex-start">
-          <a class="btn" href="https://github.com/landjunge/tollgate">★ GitHub</a>
+          <a class="btn" href="https://github.com/landjunge/tollgate" target="_blank" rel="noopener">★ GitHub</a>
           <a class="btn ghost" href="docs.html">Documentation</a>
           <a class="btn ghost" href="#start">Quickstart</a>
+          <a class="btn ghost" href="https://github.com/landjunge/tollgate/blob/main/docs/HILFE.md" target="_blank" rel="noopener">Hilfe (DE)</a>
         </div>
+        <p style="margin-top:1rem;color:var(--muted);font-size:0.9rem">
+          Repo:
+          <a class="link-plain" href="https://github.com/landjunge/tollgate" target="_blank" rel="noopener">https://github.com/landjunge/tollgate</a>
+          <button type="button" class="btn sm ghost" style="margin-left:0.35rem" data-copy-href="https://github.com/landjunge/tollgate">Copy</button>
+        </p>
       </div>
     </section>
   </main>
