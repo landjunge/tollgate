@@ -1,6 +1,6 @@
 # Tollgate
 
-**Pay the toll — or don't call.**
+**Pay the toll — or don't call.** · **v1.0.0**
 
 > **AI Reliability & Control Plane** — Protect · Route · **Prove**.
 

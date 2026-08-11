@@ -2,6 +2,51 @@
 
 All notable releases of [landjunge/tollgate](https://github.com/landjunge/tollgate).
 
+## 1.0.0 — 2026-08-11
+
+**First stable community release** — Protect · Route · Prove.
+
+Self-hosted AI reliability & control plane: pre-admission hard stops, multi-consumer
+envelopes, health-aware failover, chaos/DR proof, and operator surfaces (CLI, HTTP,
+MCP, dashboard). Not another LLM catalog proxy.
+
+### Stable contract (v1)
+
+| Surface | Role |
+|---------|------|
+| `POST /v1/route` · `POST /v1/invoke` | Intent route + admit/call/meter |
+| `POST /v1/chat/completions` · `POST /v1/messages` | OpenAI / Anthropic drop-ins |
+| `GET /v1/control` · `/dashboard` | Control plane pane |
+| `GET /v1/status` · `GET /v1/report` · `GET /v1/audit` | Ops glance / day brief / trail |
+| `GET|POST /v1/freeze` · `GET|POST /v1/circuits/*` | Kill switch · circuit ops |
+| `GET /metrics` | Prometheus (auth when consumers / token) |
+| MCP stdio · `tollgate` CLI | Same product, agent & shell |
+
+### Protect
+- Safe `_default` envelopes · agent protection (rpm / $ / tool loops)
+- Consumer scopes (allow/block providers · intents · ops)
+- Global freeze kill switch (fail-closed) · fail-closed ledger
+- Secret redaction · metrics/config auth · structured webhooks
+
+### Route
+- Health-aware ranking · execute-time failover
+- Circuit breakers (disk + FileLock + mtime live reload · jitter)
+
+### Prove
+- Chaos inject / failover tests · AI Resilience Score
+- Doctor reliability policy · chaos history on dashboard
+
+### Ops & portable
+- Snapshot export/import · desk status · n8n node v0.2
+- `docs/MAP.md` · `llms.txt` · `tollgate search`
+
+### Compatibility
+- **Requires Python ≥ 3.11**
+- Config shape remains `keys_app.json` version 2 (forward-compatible extras allowed)
+- Breaking changes after 1.0.0 will target `/v2` or a minor with deprecation notes
+
+Earlier history: 0.2.x foundation through 0.3.8 review harden (below).
+
 ## 0.3.8 — 2026-08-11
 
 ### Fixed (deep review)
