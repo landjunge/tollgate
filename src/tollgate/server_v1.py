@@ -78,7 +78,7 @@ _bootstrap_env()
 
 app = FastAPI(
     title="Tollgate",
-    version="0.2.1",
+    version="0.2.2",
     description=(
         "Tollgate — safety & control layer for AI agents. "
         "Protects from outages, runaway cost, bad model choices. "
@@ -139,7 +139,7 @@ def health() -> dict[str, Any]:
         "ok": True,
         "service": "tollgate",
         "product": "Tollgate",
-        "version": "0.2.1",
+        "version": "0.2.2",
         "extractable": True,
         "multi_consumer": True,
         "portable": path_snapshot(),

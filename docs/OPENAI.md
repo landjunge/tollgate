@@ -74,6 +74,26 @@ Optional body fields (Tollgate-only, SDKs ignore extras):
 
 Upstream mode admits first, then proxies token deltas, then meters usage (ledger + consumer envelope). Synthetic mode still runs a full completion and chunk-splits it for clients that only need `stream: true` compatibility.
 
+## Health-aware routing
+
+`POST /v1/route` (and OpenAI/Anthropic free/auto models that use the router) ranks
+**admitted** providers when `routing.health_aware` is true (default):
+
+| `routing.strategy` | Bias |
+|--------------------|------|
+| `balanced` (default) | reliability + latency + cost + config order |
+| `reliability` | health score first |
+| `cost_optimized` | lower day spend, still needs health |
+
+Response fields: `strategy`, `ranking[]`, `route.rank_score`, `explain.reasons`.
+
+```bash
+curl -s localhost:8787/v1/route -H 'Content-Type: application/json' \
+  -d '{"intent":"free_llm","prefer_free":true}' | jq '{provider, strategy, ranking, explain}'
+```
+
+Disable: `"routing": { "health_aware": false }` → pure config chain order.
+
 ## Failover
 
 When `auto_failover` is true in `keys_app.json` (default) and the client did **not** pin `provider=…`:

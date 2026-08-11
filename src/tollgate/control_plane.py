@@ -178,6 +178,8 @@ def consumer_burn(*, root: Any = None) -> list[dict[str, Any]]:
 def explain_route(route_result: dict[str, Any], *, root: Any = None) -> dict[str, Any]:
     """
     Human-readable reasons for a route() decision (Control pillar).
+
+    Prefers rank_reasons from health-aware routing when present.
     """
     health = {r["provider"]: r for r in provider_health(root=root)}
     primary = route_result.get("route") if isinstance(route_result.get("route"), dict) else {}
@@ -194,73 +196,94 @@ def explain_route(route_result: dict[str, Any], *, root: Any = None) -> dict[str
             "checks": [],
         }
 
+    # From router ranking (best source of truth)
+    rank_reasons = primary.get("rank_reasons") or []
+    if isinstance(rank_reasons, list) and rank_reasons:
+        reasons.extend(f"✓ {r}" for r in rank_reasons if r)
+    if primary.get("rank_score") is not None:
+        reasons.insert(
+            0,
+            f"selected {pid} (rank_score={primary.get('rank_score')}, "
+            f"strategy={route_result.get('strategy') or 'balanced'})",
+        )
+        checks.append(
+            {
+                "ok": True,
+                "code": "rank_score",
+                "detail": primary.get("rank_score"),
+            }
+        )
+
     h = health.get(pid) or {}
     if h.get("status") == "healthy":
-        reasons.append(f"{pid} healthy (score {h.get('score')})")
+        reasons.append(f"✓ {pid} healthy (score {h.get('score')})")
         checks.append({"ok": True, "code": "healthy", "detail": h.get("status")})
     elif h.get("status") == "idle":
-        reasons.append(f"{pid} idle today — no error signal yet")
+        reasons.append(f"✓ {pid} idle today — no error signal yet")
         checks.append({"ok": True, "code": "idle", "detail": "no day traffic"})
-    else:
-        reasons.append(f"{pid} status={h.get('status')} score={h.get('score')}")
+    elif h:
+        reasons.append(f"· {pid} status={h.get('status')} score={h.get('score')}")
         checks.append(
-            {"ok": h.get("status") not in ("circuit_open", "disabled"), "code": "status", "detail": h.get("status")}
+            {
+                "ok": h.get("status") not in ("circuit_open", "disabled"),
+                "code": "status",
+                "detail": h.get("status"),
+            }
         )
 
     if h.get("success_rate") is not None:
         sr = float(h["success_rate"])
-        checks.append(
-            {
-                "ok": sr >= 0.9,
-                "code": "success_rate",
-                "detail": f"{sr:.1%}",
-            }
-        )
-        if sr >= 0.95:
-            reasons.append(f"success rate {sr:.0%}")
-        elif sr < 0.9:
-            reasons.append(f"success rate only {sr:.0%} — watch closely")
+        checks.append({"ok": sr >= 0.9, "code": "success_rate", "detail": f"{sr:.1%}"})
 
     if h.get("latency_ms_avg") is not None:
         lat = float(h["latency_ms_avg"])
         checks.append({"ok": lat < 5000, "code": "latency", "detail": f"{lat:.0f}ms avg"})
-        if lat < 2000:
-            reasons.append(f"latency ~{lat:.0f}ms")
-        elif lat >= 5000:
-            reasons.append(f"latency elevated ~{lat:.0f}ms")
-
-    usd = float(h.get("usd") or 0)
-    checks.append({"ok": True, "code": "day_spend", "detail": f"${usd:.4f} today"})
-    reasons.append(f"${usd:.4f} day spend on provider")
 
     if route_result.get("prefer_free"):
-        reasons.append("prefer_free / free_llm intent")
+        reasons.append("✓ prefer_free / free_llm intent")
         checks.append({"ok": True, "code": "prefer_free", "detail": True})
 
-    # note degraded alternatives
-    alts = []
-    for fb in route_result.get("fallbacks") or []:
-        if not isinstance(fb, dict):
+    # Compare to alternatives in ranking
+    for row in (route_result.get("ranking") or [])[1:4]:
+        if not isinstance(row, dict):
             continue
-        fp = str(fb.get("provider") or "")
+        fp = str(row.get("provider") or "")
         fh = health.get(fp) or {}
-        if fh.get("circuit") == "open":
-            alts.append(f"{fp} circuit OPEN")
-        elif fh.get("status") == "degraded":
-            alts.append(f"{fp} degraded")
-    for a in alts[:4]:
-        reasons.append(f"✗ alt: {a}")
-        checks.append({"ok": False, "code": "alt_degraded", "detail": a})
+        if fh.get("circuit") == "open" or row.get("health_status") == "circuit_open":
+            reasons.append(f"✗ {fp} circuit OPEN — not chosen")
+            checks.append({"ok": False, "code": "alt_circuit", "detail": fp})
+        elif fh.get("status") == "degraded" or row.get("health_status") == "degraded":
+            reasons.append(f"✗ {fp} degraded (score {row.get('health_score')})")
+            checks.append({"ok": False, "code": "alt_degraded", "detail": fp})
+        elif row.get("rank_score") is not None and primary.get("rank_score") is not None:
+            try:
+                if float(row["rank_score"]) < float(primary["rank_score"]):
+                    reasons.append(
+                        f"· {fp} ranked lower ({row.get('rank_score')} < {primary.get('rank_score')})"
+                    )
+            except (TypeError, ValueError):
+                pass
 
     for row in route_result.get("tried") or []:
         if isinstance(row, dict) and row.get("skip"):
-            reasons.append(f"skipped {row.get('provider')}: {row.get('skip')}")
+            reasons.append(f"✗ skipped {row.get('provider')}: {row.get('skip')}")
+
+    # Fallback list for clients
+    fallbacks = []
+    for fb in route_result.get("fallbacks") or []:
+        if isinstance(fb, dict) and fb.get("provider"):
+            fallbacks.append(
+                {"provider": fb.get("provider"), "model": fb.get("model")}
+            )
 
     return {
         "ok": True,
         "selected": {"provider": pid, "model": model},
         "reasons": reasons,
         "checks": checks,
+        "fallbacks": fallbacks,
+        "strategy": route_result.get("strategy"),
+        "health_aware": route_result.get("health_aware"),
         "health": h or None,
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }

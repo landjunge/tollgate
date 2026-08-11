@@ -77,8 +77,9 @@ Agents ────┘         HTTP + MCP + OpenAI/Anthropic drop-ins
 | Foundation | Admit, budgets, circuits, distill, own repo | **done** |
 | Multi-consumer | Auth, envelopes, n8n node, OpenAI/Anthropic | **done** |
 | Failover | Execute-time hop on retriable errors | **done** |
-| Control plane v0.2 | Provider health · consumer burn · explain · mini UI | **shipping** |
-| Health-aware route | Prefer healthy/cheap automatically | next |
+| Control plane v0.2 | Provider health · consumer burn · explain · mini UI | **done** |
+| Agent protection | request/hour/minute hard stops | **done (v0.2.1)** |
+| Health-aware route | Prefer healthy/cheap automatically | **done (v0.2.2)** |
 | Enterprise | Teams, SSO/RBAC | later |
 
 ---

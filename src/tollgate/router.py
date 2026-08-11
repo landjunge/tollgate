@@ -1,7 +1,7 @@
 """
-Provider-based intelligent routing with limits + failover.
+Provider-based intelligent routing with limits + health-aware ranking.
 
-route(intent) → {provider, model, base, reason, fallbacks}
+route(intent) → {provider, model, base, reason, fallbacks, ranking}
 """
 
 from __future__ import annotations
@@ -27,6 +27,122 @@ def _base_for(provider_id: str) -> str | None:
     }.get(provider_id)
 
 
+def _health_map() -> dict[str, dict[str, Any]]:
+    try:
+        from tollgate.control_plane import provider_health
+
+        return {str(r["provider"]): r for r in provider_health() if r.get("provider")}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def _rank_score(
+    pick: dict[str, Any],
+    *,
+    health: dict[str, Any] | None,
+    strategy: str,
+    chain_index: int,
+    chain_len: int,
+) -> tuple[float, list[str]]:
+    """
+    Higher is better. Returns (score, human reasons for this pick).
+    """
+    h = health or {}
+    health_score = float(h.get("score") if h.get("score") is not None else 50.0)
+    # circuit open should never win if somehow admitted
+    if h.get("circuit") == "open" or h.get("status") == "circuit_open":
+        return -1000.0, ["circuit OPEN"]
+
+    lat = h.get("latency_ms_avg")
+    usd = float(h.get("usd") or 0.0)
+    success = h.get("success_rate")
+    reasons: list[str] = []
+
+    # normalize components 0..100
+    rel = health_score
+    if success is not None:
+        reasons.append(f"success {float(success):.0%}")
+    else:
+        reasons.append("no traffic yet (neutral health)")
+
+    if lat is None:
+        lat_score = 70.0  # unknown
+    else:
+        # 0ms → 100, 10s → ~0
+        lat_score = max(0.0, min(100.0, 100.0 - (float(lat) / 100.0)))
+        if float(lat) < 2000:
+            reasons.append(f"latency ~{float(lat):.0f}ms")
+        elif float(lat) >= 5000:
+            reasons.append(f"latency elevated ~{float(lat):.0f}ms")
+
+    # lower day spend → higher cost score (prefer cheaper lanes when equal reliability)
+    cost_score = max(0.0, min(100.0, 100.0 - min(usd * 20.0, 100.0)))
+    if usd <= 0.01:
+        reasons.append("low day spend")
+    else:
+        reasons.append(f"${usd:.4f} day spend")
+
+    # config chain order as soft bias (earlier = higher)
+    order_score = 100.0 * (1.0 - (chain_index / max(chain_len, 1)))
+
+    st = (strategy or "balanced").strip().lower()
+    if st in ("reliability", "reliable", "health"):
+        total = rel * 0.85 + lat_score * 0.10 + order_score * 0.05
+        reasons.insert(0, "strategy=reliability")
+    elif st in ("cost", "cost_optimized", "cheap"):
+        total = rel * 0.35 + cost_score * 0.45 + lat_score * 0.10 + order_score * 0.10
+        reasons.insert(0, "strategy=cost_optimized")
+    else:
+        # balanced: reliability first, then latency, cost, config order
+        total = rel * 0.55 + lat_score * 0.20 + cost_score * 0.15 + order_score * 0.10
+        reasons.insert(0, "strategy=balanced")
+
+    # priority field from config (higher priority value wins slightly)
+    prio = float(pick.get("priority") or 50)
+    total += (prio - 50) * 0.05
+
+    return total, reasons
+
+
+def _rank_winners(
+    winners: list[dict[str, Any]],
+    *,
+    chain: list[str],
+    strategy: str,
+    health_aware: bool,
+) -> list[dict[str, Any]]:
+    if not winners or not health_aware:
+        return winners
+
+    health = _health_map()
+    chain_index = {p: i for i, p in enumerate(chain)}
+    n = max(len(chain), 1)
+    ranked: list[tuple[float, int, dict[str, Any]]] = []
+    for i, pick in enumerate(winners):
+        pid = str(pick.get("provider") or "")
+        score, reasons = _rank_score(
+            pick,
+            health=health.get(pid),
+            strategy=strategy,
+            chain_index=int(chain_index.get(pid, i)),
+            chain_len=n,
+        )
+        pick = dict(pick)
+        pick["health_score"] = (health.get(pid) or {}).get("score")
+        pick["health_status"] = (health.get(pid) or {}).get("status")
+        pick["rank_score"] = round(score, 2)
+        pick["rank_reasons"] = reasons
+        pick["reason"] = (
+            f"health-aware rank={score:.1f} "
+            f"status={(health.get(pid) or {}).get('status')} · "
+            + "; ".join(reasons[:4])
+        )
+        ranked.append((score, -i, pick))  # stable: higher score, then earlier collect
+
+    ranked.sort(key=lambda t: (t[0], t[1]), reverse=True)
+    return [p for _, __, p in ranked]
+
+
 def route(
     service: Any,
     intent: str = "llm",
@@ -39,17 +155,23 @@ def route(
     """
     Pick best provider for intent under config + readiness + limits.
 
+    When ``routing.health_aware`` is true (default), admitted candidates are
+    ranked by reliability / latency / cost strategy — not only config order.
+
     Does not execute the call — only decides route.
     """
     cfg = load_config()
     intent = (intent or "llm").strip().lower()
-    intents = (cfg.get("routing") or {}).get("intents") or {}
+    routing_cfg = cfg.get("routing") or {}
+    intents = routing_cfg.get("intents") or {}
     chain = list(intents.get(intent) or intents.get("llm") or [])
-    models = (cfg.get("routing") or {}).get("models") or {}
+    models = routing_cfg.get("models") or {}
     prefer_free = (
         bool(cfg.get("prefer_free", True)) if prefer_free is None else bool(prefer_free)
     )
     auto_failover = bool(cfg.get("auto_failover", True))
+    health_aware = bool(routing_cfg.get("health_aware", True))
+    strategy = str(routing_cfg.get("strategy") or "balanced").strip().lower()
 
     inv = service.inventory(live=live, use_cache=True)
     by_id = {c["id"]: c for c in (inv.get("providers") or [])}
@@ -85,7 +207,11 @@ def route(
             continue
 
         # L4 admission (limits + cost_guard + circuit)
-        rclass = RequestClass.FREE if (prefer_free and intent in ("llm", "free_llm")) else RequestClass.INTERACTIVE
+        rclass = (
+            RequestClass.FREE
+            if (prefer_free and intent in ("llm", "free_llm"))
+            else RequestClass.INTERACTIVE
+        )
         decision = admit(
             pid,
             op=intent,
@@ -141,11 +267,17 @@ def route(
         tried.append({**entry, "ok": True})
         if not auto_failover:
             break
-        # keep collecting fallbacks
-        if len(winners) >= 4:
+        # collect more candidates for health ranking (cap)
+        if len(winners) >= 8:
             break
 
+    winners = _rank_winners(
+        winners, chain=chain, strategy=strategy, health_aware=health_aware
+    )
+    # expose top 4 as primary + fallbacks
     primary = winners[0] if winners else None
+    fallbacks = winners[1:4] if winners else []
+
     return {
         "ok": primary is not None,
         "intent": intent,
@@ -153,8 +285,21 @@ def route(
         "chars_est": int(chars_est or 0),
         "prefer_free": prefer_free,
         "auto_failover": auto_failover,
+        "health_aware": health_aware,
+        "strategy": strategy if health_aware else "config_order",
         "route": primary,
-        "fallbacks": winners[1:],
+        "fallbacks": fallbacks,
+        "ranking": [
+            {
+                "provider": w.get("provider"),
+                "model": w.get("model"),
+                "rank_score": w.get("rank_score"),
+                "health_score": w.get("health_score"),
+                "health_status": w.get("health_status"),
+                "reasons": w.get("rank_reasons"),
+            }
+            for w in winners[:6]
+        ],
         "tried": tried,
         "error": None if primary else f"no provider available for intent={intent}",
     }

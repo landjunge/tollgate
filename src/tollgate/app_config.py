@@ -90,7 +90,10 @@ DEFAULT_CONFIG: dict[str, Any] = {
         ),
     },
     "routing": {
-        # first match that is enabled + under limits + ready wins
+        # Admitted candidates are ranked when health_aware=true
+        "health_aware": True,
+        # balanced | reliability | cost_optimized
+        "strategy": "balanced",
         # never put google in free_llm by default
         "intents": {
             "llm": ["opencode_zen", "deepseek", "nvidia", "openrouter", "worker"],
@@ -107,6 +110,10 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "openrouter": "openrouter/free",
             "nvidia": "",
         },
+        "notes": (
+            "health_aware reorders admitted providers by reliability/latency/cost. "
+            "strategy=cost_optimized weights day spend; reliability weights health score."
+        ),
     },
     "providers": {
         "deepseek": {

@@ -51,7 +51,7 @@ Everything else (OpenAI/Anthropic drop-ins, MCP, n8n, cache) is **distribution**
 |-------|--------|--------|
 | **1 Stability** | Config back-compat, secrets, tests, doctor | continuous + PR #7 |
 | **2 Agent protection** | request/hour/minute/token hard stops | **v0.2.1 shipping** |
-| **3 Intelligence** | health-aware smart routing | next |
+| **3 Intelligence** | health-aware smart routing | **v0.2.2** |
 | **4 Visibility** | dashboard headlines that sell | mini `/dashboard` exists |
 | **5 Enterprise** | RBAC, teams, SSO, admin audit | later |
 
