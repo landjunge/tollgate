@@ -33,7 +33,7 @@ Exit code 1 if errors (e.g. missing Key.txt, high-risk enabled without `$` cap).
 |-----------|----------|
 | Day ledger rollover | On next read/write if `day != today` — **no cron** |
 | Circuit half-open | Auto after jittered cooldown (`circuits.jitter_min`–`jitter_max`); canary success closes |
-| Hard circuit open | `AUTH_DEAD` etc. elevates **this** OPEN wait to `hard_cooldown_s` (default 300s). After canary success, soft `cooldown_s` is restored from config — not permanently sticky |
+| Hard circuit open | `AUTH_DEAD` etc. elevates that circuit’s `cooldown_s` to at least `hard_cooldown_s` (default 300s) and **persists** it in `circuits.json`. Soft failures after recovery may still use the elevated cooldown until the row is cleared/reset — intentional (dead keys stay cold) |
 | Soft budget + anomaly burn | Soft warn + optional webhook — **does not change config** |
 | `tollgate suggest` | Proposes routing/spend tweaks — **human applies** |
 | Dependabot | Weekly pip PRs on GitHub |

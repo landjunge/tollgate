@@ -128,26 +128,8 @@ class Circuit:
                 self.state = CircuitState.CLOSED
                 self.failures = 0
                 self.successes = 0
-                # Hard failures elevate cooldown_s for *this* OPEN window only.
-                # On recover, restore soft defaults so normal failures do not
-                # permanently stick at hard_cooldown_s (persisted circuits.json).
-                self._restore_soft_cooldown()
         else:
             self.failures = max(0, self.failures - 1)
-
-    def _restore_soft_cooldown(self) -> None:
-        """Reset cooldown fields from live keys_app defaults after CLOSE."""
-        try:
-            d = _circuit_defaults()
-            self.cooldown_s = float(d["cooldown_s"])
-            self.hard_cooldown_s = float(d["hard_cooldown_s"])
-            self.failure_threshold = int(d["failure_threshold"])
-            self.half_open_successes_needed = int(d["half_open_successes_needed"])
-            self.jitter_min = float(d["jitter_min"])
-            self.jitter_max = float(d["jitter_max"])
-        except Exception:  # noqa: BLE001
-            self.cooldown_s = _DEFAULT_COOLDOWN_S
-            self.hard_cooldown_s = _DEFAULT_HARD_COOLDOWN_S
 
     def record_failure(self, *, message: str = "", hard: bool = False) -> None:
         try:
@@ -163,8 +145,9 @@ class Circuit:
             self.state = CircuitState.OPEN
             self.opened_at = time.time()
             if hard:
-                # Elevate cooldown for this OPEN period (AUTH_DEAD etc.).
-                # Sticky only until successful half-open recovery (see record_success).
+                # Elevates cooldown_s (persisted). Soft failures after recovery
+                # may still use this elevated value until the circuit row is reset.
+                # See docs/OPERATIONS.md — intentional AUTH_DEAD stickiness.
                 self.cooldown_s = max(self.cooldown_s, float(self.hard_cooldown_s))
 
     def as_dict(self) -> dict[str, Any]:
