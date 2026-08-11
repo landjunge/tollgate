@@ -1,12 +1,19 @@
 # Tollgate
 
+[![Website](https://img.shields.io/badge/website-live-3dd68c?style=flat-square)](https://landjunge.github.io/tollgate/)
+[![GitHub release](https://img.shields.io/github/v/release/landjunge/tollgate?style=flat-square)](https://github.com/landjunge/tollgate/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
+[![Discussions](https://img.shields.io/badge/discussions-open-6c8cff?style=flat-square)](https://github.com/landjunge/tollgate/discussions)
+[![Launch](https://img.shields.io/badge/launch_post-2026--08-e8a317?style=flat-square)](https://landjunge.github.io/tollgate/blog/launch.html)
+[![Checklist](https://img.shields.io/badge/safety_checklist-read-5dff9a?style=flat-square)](https://landjunge.github.io/tollgate/blog/checklist.html)
+
 **v1.0.12** · *Pay the toll — or don't call.*
 
 # “My AI agent must never go out of control.”
 
 > **Tollgate is the safety layer between your AI agents and the internet.**
 
-**Website:** [landjunge.github.io/tollgate](https://landjunge.github.io/tollgate/) · [DE](https://landjunge.github.io/tollgate/de.html) · [Docs](https://landjunge.github.io/tollgate/docs.html) · [Ecosystem](https://landjunge.github.io/tollgate/ecosystem.html) · [Sitemap](https://landjunge.github.io/tollgate/sitemap.xml)
+**Website:** [landjunge.github.io/tollgate](https://landjunge.github.io/tollgate/) · [DE](https://landjunge.github.io/tollgate/de.html) · [Docs](https://landjunge.github.io/tollgate/docs.html) · [Launch](https://landjunge.github.io/tollgate/blog/launch.html) · [Safety checklist](https://landjunge.github.io/tollgate/blog/checklist.html) · [Press](https://landjunge.github.io/tollgate/press/) · [llms.txt](https://landjunge.github.io/tollgate/llms.txt)
 
 **Pairs with:** [Gnom-Hub](https://github.com/landjunge/gnom-hub-v1) — local multi-agent desk (brainstorm free, Execute on purpose) · [site](https://landjunge.github.io/gnom-hub-v1/)
 

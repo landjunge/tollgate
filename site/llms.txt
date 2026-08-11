@@ -1,0 +1,37 @@
+# Tollgate
+> Safety layer for AI agents — Protect · Route · Prove.
+> Not an LLM catalog / multi-provider marketplace. Pre-admission control plane.
+
+- Site: https://landjunge.github.io/tollgate/
+- DE: https://landjunge.github.io/tollgate/de.html
+- Docs: https://landjunge.github.io/tollgate/docs.html
+- Ecosystem: https://landjunge.github.io/tollgate/ecosystem.html
+- Launch: https://landjunge.github.io/tollgate/blog/launch.html
+- Launch (DE): https://landjunge.github.io/tollgate/blog/launch-de.html
+- Safety checklist: https://landjunge.github.io/tollgate/blog/checklist.html
+- Press kit: https://landjunge.github.io/tollgate/press/
+- Repo: https://github.com/landjunge/tollgate
+- Discussions: https://github.com/landjunge/tollgate/discussions
+- Gist: https://gist.github.com/landjunge/ce4190deb6536cc6134c767f500c4dc9
+
+## What it does
+- Protect: budgets, tool-loop hard deny (max_tool_calls), freeze, scopes
+- Route: health-aware failover, circuit breakers
+- Prove: chaos/DR tests, resilience certificate scorecard
+- Drop-ins: OpenAI-compatible /v1, Anthropic Messages, MCP, n8n
+
+## Cold start (10 minutes, Protect needs no keys)
+```
+git clone https://github.com/landjunge/tollgate.git && cd tollgate
+python3 -m venv .venv && .venv/bin/pip install -e .
+./scripts/ten-minute.sh
+# Dashboard: http://127.0.0.1:8787/dashboard
+```
+
+## Sibling project
+- Gnom-Hub (local multi-agent desk): https://landjunge.github.io/gnom-hub-v1/
+- Repo: https://github.com/landjunge/gnom-hub-v1
+
+## Positioning (honest)
+LiteLLM-style gateways connect models. Tollgate keeps agents in line:
+hard denies before the call, freeze, audit, and Prove with chaos + certificate.

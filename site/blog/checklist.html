@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>AI Agent Safety Checklist (Production) — Tollgate</title>
+  <meta name="description" content="Practical AI agent safety checklist before production: budgets, tool-loop hard stops, freeze, failover, chaos proof. Printable and honest."/>
+  <meta name="keywords" content="AI agent safety checklist, production AI agents, tool loop protection, LLM budget control, agent freeze kill switch, chaos test LLM"/>
+  <meta name="robots" content="index, follow, max-image-preview:large"/>
+  <meta name="author" content="landjunge"/>
+  <link rel="canonical" href="https://landjunge.github.io/tollgate/blog/checklist.html"/>
+  <meta property="og:type" content="article"/>
+  <meta property="og:title" content="AI Agent Safety Checklist before production"/>
+  <meta property="og:description" content="Protect · Route · Prove — a practical checklist, not a vendor pitch deck."/>
+  <meta property="og:url" content="https://landjunge.github.io/tollgate/blog/checklist.html"/>
+  <meta property="og:image" content="https://landjunge.github.io/tollgate/assets/og.png"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml"/>
+  <link rel="stylesheet" href="../styles.css"/>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "AI Agent Safety Checklist (Production)",
+    "description": "Practical checklist before putting AI agents in production.",
+    "author": {"@type":"Person","name":"landjunge","url":"https://github.com/landjunge"},
+    "datePublished": "2026-08-11",
+    "dateModified": "2026-08-11",
+    "image": "https://landjunge.github.io/tollgate/assets/og.png",
+    "mainEntityOfPage": "https://landjunge.github.io/tollgate/blog/checklist.html"
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "name": "Prove AI agent safety with Tollgate in 10 minutes",
+    "description": "Cold path: install Tollgate, run the Protect demo and certificate scorecard without API keys.",
+    "totalTime": "PT10M",
+    "tool": [{"@type":"HowToTool","name":"Python 3.11+"},{"@type":"HowToTool","name":"git"}],
+    "step": [
+      {"@type":"HowToStep","name":"Clone","text":"git clone https://github.com/landjunge/tollgate.git && cd tollgate"},
+      {"@type":"HowToStep","name":"Install","text":"python3 -m venv .venv && .venv/bin/pip install -e ."},
+      {"@type":"HowToStep","name":"Run cold path","text":"./scripts/ten-minute.sh"},
+      {"@type":"HowToStep","name":"Open dashboard","text":"Open http://127.0.0.1:8787/dashboard and read the certificate scorecard"}
+    ]
+  }
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="../index.html">Tollgate</a>
+      <nav class="nav-right">
+        <a href="launch.html">Launch</a>
+        <a href="../press/">Press</a>
+        <a href="../docs.html">Docs</a>
+        <a class="cta" href="https://github.com/landjunge/tollgate" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="shell" style="padding:2.5rem 0 3.5rem;max-width:720px">
+    <p class="kicker">Field guide · shareable</p>
+    <h1 style="font-size:clamp(1.55rem,3.4vw,2.15rem);letter-spacing:-0.02em;line-height:1.15">
+      AI agent safety checklist <em>before production</em>
+    </h1>
+    <p class="sec-lead">
+      Agents fail loudly (loops) or quietly (spend). Use this list whether you run
+      <a href="https://landjunge.github.io/tollgate/">Tollgate</a> or something else.
+      The point is evidence, not vibes.
+    </p>
+
+    <h2 style="margin-top:2rem">Protect — hard limits</h2>
+    <ul style="color:var(--muted);line-height:1.65">
+      <li>☐ <strong style="color:var(--paper)">Per-consumer budget</strong> (daily/monthly) with a hard deny when empty</li>
+      <li>☐ <strong style="color:var(--paper)">Tool-loop ceiling</strong> (<code>max_tool_calls</code> / estimated tool rounds) before the model starts</li>
+      <li>☐ <strong style="color:var(--paper)">Freeze / kill switch</strong> that stops admission without redeploying code</li>
+      <li>☐ <strong style="color:var(--paper)">Scopes</strong> — agents only get tools they need</li>
+      <li>☐ Secrets never live in agent prompts; keys stay off the wire to workers when possible</li>
+    </ul>
+
+    <h2 style="margin-top:1.75rem">Route — survive outages</h2>
+    <ul style="color:var(--muted);line-height:1.65">
+      <li>☐ At least <strong style="color:var(--paper)">two providers</strong> (or local + cloud) for critical paths</li>
+      <li>☐ Health-aware failover, not “retry the same dead host forever”</li>
+      <li>☐ Circuit breakers with cool-down (and optional jitter)</li>
+      <li>☐ Clear error to the desk when nothing is healthy (fail closed)</li>
+    </ul>
+
+    <h2 style="margin-top:1.75rem">Prove — evidence</h2>
+    <ul style="color:var(--muted);line-height:1.65">
+      <li>☐ Chaos / DR drill that kills a provider and checks recovery</li>
+      <li>☐ Scorecard you can show (resilience / certificate), not a slide</li>
+      <li>☐ Audit trail: who spent, who was denied, who froze</li>
+      <li>☐ 10-minute cold path a stranger can run without a sales call</li>
+    </ul>
+
+    <h2 style="margin-top:1.75rem">Desk hygiene (Gnom-Hub and friends)</h2>
+    <ul style="color:var(--muted);line-height:1.65">
+      <li>☐ Brainstorm chat ≠ auto-spend workers</li>
+      <li>☐ Explicit <strong style="color:var(--paper)">Execute</strong> before tools/files cost money</li>
+      <li>☐ Dry-run computer-use until a deliberate God-Mode</li>
+    </ul>
+
+    <h2 style="margin-top:1.75rem">Run the Tollgate cold path (10 min)</h2>
+    <p style="color:var(--muted)">Protect demo needs <strong style="color:var(--paper)">no API keys</strong>.</p>
+    <div class="term" style="margin:1rem 0">
+      <div class="term-bar">
+        <span>cold path</span>
+        <button type="button" class="btn sm" data-copy="#chk-cold">Copy</button>
+      </div>
+      <pre id="chk-cold">git clone https://github.com/landjunge/tollgate.git &amp;&amp; cd tollgate
+python3 -m venv .venv &amp;&amp; .venv/bin/pip install -e .
+./scripts/ten-minute.sh
+# Dashboard: http://127.0.0.1:8787/dashboard</pre>
+    </div>
+
+    <h2 style="margin-top:1.75rem">Share this list</h2>
+    <p style="color:var(--muted)">
+      Permalink: <a href="https://landjunge.github.io/tollgate/blog/checklist.html">landjunge.github.io/tollgate/blog/checklist.html</a><br/>
+      Stack: <a href="launch.html">Launch post</a> · <a href="https://landjunge.github.io/gnom-hub-v1/">Gnom-Hub</a> ·
+      <a href="../press/">Press kit</a>
+    </p>
+    <p style="color:var(--dim);font-size:0.9rem;margin-top:1.5rem">
+      Ran the cold path? Drop your resilience score in
+      <a href="https://github.com/landjunge/tollgate/discussions">Discussions</a> — that is the best free marketing we have.
+    </p>
+  </main>
+
+  <footer class="foot shell">
+    <div class="foot-inner">
+      <div><strong>landjunge</strong> · Protect · Route · Prove</div>
+      <div class="foot-links">
+        <a href="../index.html">Home</a>
+        <a href="launch.html">Launch</a>
+        <a href="../sitemap.xml">Sitemap</a>
+      </div>
+    </div>
+  </footer>
+  <script src="../site.js"></script>
+</body>
+</html>

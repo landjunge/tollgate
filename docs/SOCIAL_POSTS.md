@@ -161,19 +161,81 @@ https://github.com/landjunge/gnom-hub-v1"
 
 ---
 
+## Dev.to / Hashnode / Medium
+
+Full article ready to paste: [`docs/DEVTO_ARTICLE.md`](./DEVTO_ARTICLE.md)
+
+Canonical: https://landjunge.github.io/tollgate/blog/launch.html  
+Tags: `ai` `agents` `python` `opensource` `devops`
+
+---
+
+## Product Hunt (draft — post on a Tuesday/Wednesday EU morning)
+
+**Name:** Tollgate  
+**Tagline:** Safety layer for AI agents — Protect · Route · Prove  
+**Topics:** Artificial Intelligence, Developer Tools, Open Source  
+**Links:** https://landjunge.github.io/tollgate/ · https://github.com/landjunge/tollgate  
+**First comment:** mention Gnom-Hub + cold path commands + checklist URL.
+
+**Gallery:** `site/assets/stack-share.png`, `promo-square.png`, `og.png`
+
+---
+
+## Resilience challenge (community loop)
+
+Post in Discussions after a cold path run:
+
+```text
+## Cold path result
+- Date:
+- OS:
+- Protect blocked loop? (yes/no)
+- Certificate / resilience score:
+- Confusing step (if any):
+```
+
+Permalink target: https://github.com/landjunge/tollgate/discussions
+
+---
+
+## Discord / Slack communities (manual, no spam)
+
+Paste **one** short message max per server; prefer “feedback on cold path” over dump links.
+
+| Community | Angle |
+|-----------|--------|
+| LangChain Discord | safety / tool-loop, not another chain |
+| n8n community | Certificate op + consumer budgets |
+| LocalLLaMA Discord | local desk + optional gate |
+| Self-hosted Discord | fail-closed admission |
+
+---
+
+## Mastodon / Bluesky (same as X short)
+
+Use combo post from top; attach `stack-share.png`.
+
+---
+
 ## Already published (do not re-spam)
 
 | Channel | URL |
 |---------|-----|
-| GitHub Gist | https://gist.github.com/landjunge/ce4190deb6536cc6134c767f500c4dc9 |
+| GitHub Gist (stack) | https://gist.github.com/landjunge/ce4190deb6536cc6134c767f500c4dc9 |
+| GitHub Gist (10-min) | https://gist.github.com/landjunge/5b36c2afc4e5242e55700aee28407f03 |
 | Tollgate Discussions | https://github.com/landjunge/tollgate/discussions/10 |
+| Resilience challenge | https://github.com/landjunge/tollgate/discussions/12 |
 | Gnom-Hub Discussions | https://github.com/landjunge/gnom-hub-v1/discussions/46 |
 | Tollgate release | https://github.com/landjunge/tollgate/releases/tag/announce-public |
 | Gnom-Hub release | https://github.com/landjunge/gnom-hub-v1/releases/tag/announce-public |
+| Launch blog EN | https://landjunge.github.io/tollgate/blog/launch.html |
+| Launch blog DE | https://landjunge.github.io/tollgate/blog/launch-de.html |
+| Safety checklist | https://landjunge.github.io/tollgate/blog/checklist.html |
+| Press kit | https://landjunge.github.io/tollgate/press/ |
 | Awesome AI Agents PR | https://github.com/aloth/awesome-ai-agents/pull/38 |
 | Awesome LLMOps PR | https://github.com/tensorchord/Awesome-LLMOps/pull/735 |
 | Awesome AI Tools PR | https://github.com/mahseema/awesome-ai-tools/pull/1955 |
 | Awesome Selfhosted-data PR | https://github.com/awesome-selfhosted/awesome-selfhosted-data/pulls?q=is%3Apr+author%3Alandjunge |
 | Awesome MCP Servers PR | https://github.com/punkpeye/awesome-mcp-servers/pull/11967 |
-| Profile README | https://github.com/landjunge |
 | Profile README | https://github.com/landjunge |

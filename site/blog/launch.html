@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Announcing Tollgate + Gnom-Hub — Local AI Agent Desk &amp; Safety Layer</title>
+  <meta name="description" content="Launch post: Gnom-Hub (local multi-agent desk) and Tollgate (Protect · Route · Prove safety layer). Why we built them, how they fit, and how to try both in minutes."/>
+  <meta name="keywords" content="Tollgate launch, Gnom-Hub launch, AI agent safety, multi-agent desk, Protect Route Prove, local AI agents"/>
+  <meta name="robots" content="index, follow, max-image-preview:large"/>
+  <meta name="author" content="landjunge"/>
+  <link rel="canonical" href="https://landjunge.github.io/tollgate/blog/launch.html"/>
+  <meta property="og:type" content="article"/>
+  <meta property="og:title" content="Announcing Tollgate + Gnom-Hub"/>
+  <meta property="og:description" content="Two open tools for production-minded AI agent work: a desk and a safety gate."/>
+  <meta property="og:url" content="https://landjunge.github.io/tollgate/blog/launch.html"/>
+  <meta property="og:image" content="https://landjunge.github.io/tollgate/assets/stack-share.png"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:image" content="https://landjunge.github.io/tollgate/assets/stack-share.png"/>
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml"/>
+  <link rel="stylesheet" href="../styles.css"/>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Announcing Tollgate + Gnom-Hub",
+    "description": "Two open tools for production-minded AI agent work: a local multi-agent desk and a safety gate.",
+    "image": "https://landjunge.github.io/tollgate/assets/stack-share.png",
+    "author": { "@type": "Person", "name": "landjunge", "url": "https://github.com/landjunge" },
+    "datePublished": "2026-08-11",
+    "dateModified": "2026-08-11",
+    "mainEntityOfPage": "https://landjunge.github.io/tollgate/blog/launch.html",
+    "publisher": { "@type": "Person", "name": "landjunge" }
+  }
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="../index.html">Tollgate</a>
+      <nav class="nav-right">
+        <a href="../index.html">Home</a>
+        <a href="../ecosystem.html">Ecosystem</a>
+        <a class="cta" href="https://github.com/landjunge/tollgate" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="shell" style="padding:2.5rem 0 3.5rem;max-width:720px">
+    <p class="kicker">Launch post · 2026-08-11</p>
+    <h1 style="font-size:clamp(1.6rem,3.5vw,2.2rem);letter-spacing:-0.02em;line-height:1.15">
+      Two tools for AI agents that should not go off the rails
+    </h1>
+    <p class="sec-lead" style="font-size:1.05rem">
+      If you run multi-agent work on a desk and care about cost, loops, and provider outages,
+      these two open projects fit together: <strong style="color:var(--paper)">Gnom-Hub</strong> (the desk)
+      and <strong style="color:var(--paper)">Tollgate</strong> (the gate).
+    </p>
+
+    <p style="color:var(--muted)">
+      <img src="../assets/stack-share.png" alt="Gnom-Hub + Tollgate stack share card" width="1200" height="630" style="max-width:100%;height:auto;border:1px solid var(--line);margin:1rem 0" loading="lazy"/>
+    </p>
+
+    <h2 style="margin-top:2rem">The problem</h2>
+    <p style="color:var(--muted)">
+      Agent demos are easy. Production is not. Either the desk becomes a black box of runaway workers,
+      or the LLM layer becomes an unguarded credit card. We wanted something local, honest, and boringly reliable.
+    </p>
+
+    <h2 style="margin-top:1.75rem">1) Gnom-Hub — the desk</h2>
+    <p style="color:var(--muted)">
+      <a href="https://landjunge.github.io/gnom-hub-v1/">Gnom-Hub</a> is a <strong style="color:var(--paper)">local multi-agent control hub</strong>.
+      You brainstorm freely in chat. Workers that spend money or touch files start only when you press
+      <strong style="color:var(--paper)">Execute</strong>. Visible agent cards, tools, safe computer-use (dry-run until God-Mode). No Docker.
+    </p>
+    <ul style="color:var(--muted)">
+      <li>Site: <a href="https://landjunge.github.io/gnom-hub-v1/">landjunge.github.io/gnom-hub-v1</a></li>
+      <li>Repo: <a href="https://github.com/landjunge/gnom-hub-v1">github.com/landjunge/gnom-hub-v1</a></li>
+    </ul>
+
+    <h2 style="margin-top:1.75rem">2) Tollgate — the gate</h2>
+    <p style="color:var(--muted)">
+      <a href="https://landjunge.github.io/tollgate/">Tollgate</a> sits between agents and the internet:
+      <strong style="color:var(--paper)">Protect · Route · Prove</strong>.
+      Budgets and tool-loop hard stops before the call. Failover when a provider dies.
+      Chaos tests and a reliability certificate so you can show evidence, not vibes.
+    </p>
+    <ul style="color:var(--muted)">
+      <li>OpenAI drop-in <code>base_url</code> · Anthropic · MCP · n8n</li>
+      <li>Site: <a href="https://landjunge.github.io/tollgate/">landjunge.github.io/tollgate</a></li>
+      <li>Repo: <a href="https://github.com/landjunge/tollgate">github.com/landjunge/tollgate</a></li>
+    </ul>
+
+    <h2 style="margin-top:1.75rem">How they fit</h2>
+    <pre style="background:#0c0f14;border:1px solid var(--line);padding:1rem;font-family:var(--mono);font-size:0.82rem;color:var(--muted);overflow-x:auto">You / n8n / agent framework
+        │
+        ▼
+   GNOM-HUB desk     brainstorm → Execute
+        │
+        ▼
+    TOLLGATE         Protect · Route · Prove
+        │
+   OpenAI / Zen / DeepSeek / tools</pre>
+
+    <h2 style="margin-top:1.75rem">Try Tollgate in 10 minutes</h2>
+    <p style="color:var(--muted)">Protect demo needs <strong style="color:var(--paper)">no API keys</strong>.</p>
+    <div class="term" style="margin:1rem 0">
+      <div class="term-bar">
+        <span>cold path</span>
+        <button type="button" class="btn sm" data-copy="#launch-cold">Copy</button>
+      </div>
+      <pre id="launch-cold">git clone https://github.com/landjunge/tollgate.git &amp;&amp; cd tollgate
+python3 -m venv .venv &amp;&amp; .venv/bin/pip install -e .
+./scripts/ten-minute.sh
+# → blocked tool-loop + certificate scorecard
+# Dashboard: http://127.0.0.1:8787/dashboard</pre>
+    </div>
+
+    <h2 style="margin-top:1.75rem">Share</h2>
+    <p style="color:var(--muted)">
+      Ready-made posts: <a href="https://github.com/landjunge/tollgate/blob/main/docs/SOCIAL_POSTS.md">SOCIAL_POSTS.md</a><br/>
+      Ecosystem: <a href="../ecosystem.html">ecosystem page</a><br/>
+      Gist: <a href="https://gist.github.com/landjunge/ce4190deb6536cc6134c767f500c4dc9">public gist</a>
+    </p>
+
+    <p style="color:var(--dim);font-size:0.9rem;margin-top:2rem">
+      Feedback on the cold path is more valuable than feature requests.
+      If something is confusing in the first 10 minutes — that is the bug.
+    </p>
+  </main>
+
+  <footer class="foot shell">
+    <div class="foot-inner">
+      <div><strong>landjunge</strong> · open tools for agent work</div>
+      <div class="foot-links">
+        <a href="../index.html">Tollgate</a>
+        <a href="https://landjunge.github.io/gnom-hub-v1/">Gnom-Hub</a>
+        <a href="../sitemap.xml">Sitemap</a>
+      </div>
+    </div>
+  </footer>
+  <script src="../site.js"></script>
+</body>
+</html>

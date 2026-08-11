@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Tollgate + Gnom-Hub — Lokale Multi-Agent-Desk &amp; Safety Layer</title>
+  <meta name="description" content="Launch auf Deutsch: Gnom-Hub (lokaler Multi-Agent-Desk) und Tollgate (Protect · Route · Prove). Warum wir sie gebaut haben und wie du in 10 Minuten startest."/>
+  <meta name="keywords" content="Tollgate, Gnom-Hub, KI Agent Sicherheit, Multi-Agent Desk, Protect Route Prove, lokale KI Agenten"/>
+  <meta name="robots" content="index, follow, max-image-preview:large"/>
+  <meta name="author" content="landjunge"/>
+  <link rel="canonical" href="https://landjunge.github.io/tollgate/blog/launch-de.html"/>
+  <link rel="alternate" hreflang="de" href="https://landjunge.github.io/tollgate/blog/launch-de.html"/>
+  <link rel="alternate" hreflang="en" href="https://landjunge.github.io/tollgate/blog/launch.html"/>
+  <meta property="og:type" content="article"/>
+  <meta property="og:locale" content="de_DE"/>
+  <meta property="og:title" content="Tollgate + Gnom-Hub — Launch"/>
+  <meta property="og:description" content="Zwei offene Tools für produktive KI-Agenten: Desk und Safety-Gate."/>
+  <meta property="og:url" content="https://landjunge.github.io/tollgate/blog/launch-de.html"/>
+  <meta property="og:image" content="https://landjunge.github.io/tollgate/assets/stack-share.png"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml"/>
+  <link rel="stylesheet" href="../styles.css"/>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Tollgate + Gnom-Hub — Launch",
+    "inLanguage": "de",
+    "datePublished": "2026-08-11",
+    "author": {"@type":"Person","name":"landjunge","url":"https://github.com/landjunge"},
+    "image": "https://landjunge.github.io/tollgate/assets/stack-share.png",
+    "mainEntityOfPage": "https://landjunge.github.io/tollgate/blog/launch-de.html"
+  }
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="../de.html">Tollgate</a>
+      <nav class="nav-right">
+        <a href="launch.html" hreflang="en">EN</a>
+        <a href="../de.html">Start</a>
+        <a class="cta" href="https://github.com/landjunge/tollgate" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="shell" style="padding:2.5rem 0 3.5rem;max-width:720px">
+    <p class="kicker">Launch-Post · 2026-08-11 · DE</p>
+    <h1 style="font-size:clamp(1.55rem,3.4vw,2.15rem);letter-spacing:-0.02em;line-height:1.15">
+      Zwei Tools für KI-Agenten, die nicht aus dem Ruder laufen sollen
+    </h1>
+    <p class="sec-lead">
+      <strong style="color:var(--paper)">Gnom-Hub</strong> ist der lokale Multi-Agent-Desk.
+      <strong style="color:var(--paper)">Tollgate</strong> ist die Safety-Schicht davor:
+      Protect · Route · Prove.
+    </p>
+
+    <p style="color:var(--muted)">
+      <img src="../assets/stack-share.png" alt="Gnom-Hub + Tollgate" width="1200" height="630" style="max-width:100%;height:auto;border:1px solid var(--line);margin:1rem 0" loading="lazy"/>
+    </p>
+
+    <h2 style="margin-top:1.75rem">Das Problem</h2>
+    <p style="color:var(--muted)">
+      Demos sind leicht. Produktion nicht. Entweder wird der Desk zur Blackbox mit runaway Workers,
+      oder die LLM-Schicht zur unbewachten Kreditkarte. Wir wollten etwas Lokales, Ehrliches und
+      langweilig Zuverlässiges.
+    </p>
+
+    <h2 style="margin-top:1.75rem">Gnom-Hub — der Desk</h2>
+    <p style="color:var(--muted)">
+      Frei brainstormen im Chat. Workers, die Geld kosten oder Dateien anfassen, starten erst mit
+      <strong style="color:var(--paper)">Execute</strong>. Kein Docker. Sichtbare Agent-Karten.
+      Safe Computer-Use (Dry-Run bis God-Mode).
+    </p>
+    <ul style="color:var(--muted)">
+      <li><a href="https://landjunge.github.io/gnom-hub-v1/de.html">Seite (DE)</a></li>
+      <li><a href="https://github.com/landjunge/gnom-hub-v1">Repo</a></li>
+    </ul>
+
+    <h2 style="margin-top:1.75rem">Tollgate — das Gate</h2>
+    <p style="color:var(--muted)">
+      Budgets und Tool-Loop-Hard-Stops <em>vor</em> dem Call. Failover, wenn ein Provider stirbt.
+      Chaos-Tests und Reliability-Zertifikat — Beweis statt Vibes. OpenAI-Drop-in, MCP, n8n.
+    </p>
+    <ul style="color:var(--muted)">
+      <li><a href="../de.html">Seite (DE)</a></li>
+      <li><a href="https://github.com/landjunge/tollgate">Repo</a></li>
+    </ul>
+
+    <h2 style="margin-top:1.75rem">In 10 Minuten (ohne API-Keys für Protect)</h2>
+    <div class="term" style="margin:1rem 0">
+      <div class="term-bar">
+        <span>cold path</span>
+        <button type="button" class="btn sm" data-copy="#de-cold">Kopieren</button>
+      </div>
+      <pre id="de-cold">git clone https://github.com/landjunge/tollgate.git &amp;&amp; cd tollgate
+python3 -m venv .venv &amp;&amp; .venv/bin/pip install -e .
+./scripts/ten-minute.sh
+# Dashboard: http://127.0.0.1:8787/dashboard</pre>
+    </div>
+
+    <p style="color:var(--muted);margin-top:1.5rem">
+      English: <a href="launch.html">launch.html</a> ·
+      Checklist: <a href="checklist.html">AI agent safety checklist</a> ·
+      Ready posts: <a href="https://github.com/landjunge/tollgate/blob/main/docs/SOCIAL_POSTS.md">SOCIAL_POSTS.md</a>
+    </p>
+  </main>
+
+  <footer class="foot shell">
+    <div class="foot-inner">
+      <div><strong>landjunge</strong> · offene Tools für Agent-Arbeit</div>
+      <div class="foot-links">
+        <a href="../de.html">Tollgate DE</a>
+        <a href="https://landjunge.github.io/gnom-hub-v1/de.html">Gnom-Hub DE</a>
+      </div>
+    </div>
+  </footer>
+  <script src="../site.js"></script>
+</body>
+</html>
