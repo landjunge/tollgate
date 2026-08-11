@@ -1,4 +1,10 @@
-"""Prometheus text exposition from ledger + circuits (no extra deps)."""
+"""
+Prometheus text exposition from ledger + circuits (no extra deps).
+
+Auth is **not** here — pure rendering only.
+Route gate: ``GET /metrics`` in ``server_v1._metrics_authorized`` /
+``metrics()`` (consumer key, TOLLGATE_METRICS_TOKEN, or PUBLIC=1).
+"""
 
 from __future__ import annotations
 

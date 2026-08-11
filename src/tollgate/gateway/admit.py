@@ -66,11 +66,14 @@ def admit(
     if ctx.request_class == RequestClass.SYSTEM:
         ctx.billable = False
 
-    # Global freeze kill switch (env or keys_app.admission.frozen)
+    # Global freeze kill switch (env or keys_app.admission.frozen).
+    # Fail-closed: if the freeze module itself errors, deny billable traffic
+    # (unlike earlier try/except:pass which silently bypassed the kill switch).
     try:
         from tollgate.freeze import allow_system_when_frozen, freeze_status, is_frozen
 
-        if is_frozen():
+        frozen = is_frozen()
+        if frozen:
             if not (
                 ctx.request_class == RequestClass.SYSTEM and allow_system_when_frozen()
             ):
@@ -89,8 +92,18 @@ def admit(
                     },
                     context=ctx,
                 )
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        if ctx.request_class != RequestClass.SYSTEM:
+            return AdmitDecision(
+                allowed=False,
+                code=ErrorClass.POLICY_DENY,
+                reason=f"admission freeze check failed — fail-closed ({e})",
+                limits={
+                    "protection": "freeze",
+                    "freeze_check_error": True,
+                },
+                context=ctx,
+            )
 
     # FREE class: never go to high-risk paid providers
     if ctx.request_class == RequestClass.FREE:

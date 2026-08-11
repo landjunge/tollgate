@@ -2,6 +2,14 @@
 
 All notable releases of [landjunge/tollgate](https://github.com/landjunge/tollgate).
 
+## 0.3.8 — 2026-08-11
+
+### Fixed (deep review)
+- Freeze kill switch is **fail-closed** if `tollgate.freeze` itself errors (no silent pass)
+- Circuit registry **re-reads** `circuits.json` on mtime change (multi-worker live share)
+- Docs: metrics auth lives in `server_v1` route (noted in `metrics.py`)
+- Test: ledger corrupt → `check_limits` → `admit` deny end-to-end
+
 ## 0.3.7 — 2026-08-11
 
 ### Added

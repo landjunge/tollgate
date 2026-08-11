@@ -53,11 +53,33 @@ def test_env_freeze_override(monkeypatch, tmp_path):
     assert freeze_status()["source"] == "env"
 
 
+def test_freeze_check_error_fail_closed(monkeypatch, tmp_path):
+    """Kill switch must not silently pass if freeze module raises."""
+    monkeypatch.setenv("TOLLGATE_HOME", str(tmp_path))
+    monkeypatch.delenv("TOLLGATE_FROZEN", raising=False)
+    (tmp_path / "User").mkdir(parents=True)
+
+    def _boom():
+        raise RuntimeError("freeze module broken")
+
+    monkeypatch.setattr("tollgate.freeze.is_frozen", _boom)
+    d = admit(
+        "deepseek",
+        op="chat",
+        tokens_est=10,
+        ctx=RequestContext(consumer="n8n"),
+    )
+    assert d.allowed is False
+    assert "fail-closed" in (d.reason or "").lower()
+    assert (d.limits or {}).get("freeze_check_error") is True
+
+
 def test_circuit_reset(monkeypatch, tmp_path):
     monkeypatch.setenv("TOLLGATE_HOME", str(tmp_path))
     (tmp_path / "User").mkdir(parents=True)
     from tollgate.gateway.circuit import (
         CircuitState,
+        CircuitRegistry,
         get_circuits,
         reset_circuits,
         reset_circuits_for_tests,
@@ -65,20 +87,52 @@ def test_circuit_reset(monkeypatch, tmp_path):
 
     reset_circuits_for_tests()
     reg = get_circuits()
+    # use registry API so root/persist is consistent
+    reg = CircuitRegistry(root=tmp_path, persist=True)
     c = reg.get("deepseek", model="flash")
     c.state = CircuitState.OPEN
     c.failures = 9
-    reg._save_unlocked()
+    with reg._lock:
+        reg._save_unlocked()
     assert any(r.get("state") == "open" for r in reg.snapshot())
 
-    out = reset_circuits("deepseek")
+    out = reg.reset("deepseek")
     assert out["ok"]
     assert out["removed_n"] >= 1
     assert not any(
         r.get("provider") == "deepseek" and r.get("state") == "open"
-        for r in get_circuits().snapshot()
+        for r in reg.snapshot()
     )
     reset_circuits_for_tests()
+
+
+def test_circuit_mtime_reload_across_registries(monkeypatch, tmp_path):
+    """Worker B must see Worker A's OPEN after circuits.json mtime changes."""
+    import time
+
+    monkeypatch.setenv("TOLLGATE_HOME", str(tmp_path))
+    (tmp_path / "User").mkdir(parents=True)
+    from tollgate.gateway.circuit import CircuitRegistry, CircuitState
+
+    a = CircuitRegistry(root=tmp_path, persist=True)
+    c = a.get("brave", model="*")
+    c.state = CircuitState.OPEN
+    c.opened_at = time.time()  # still in cooldown
+    c.cooldown_s = 300.0
+    c.jitter_min = 1.0
+    c.jitter_max = 1.0
+    with a._lock:
+        a._save_unlocked()
+
+    b = CircuitRegistry(root=tmp_path, persist=True)
+    # Stale empty memory — must re-read disk on access
+    b._circuits = {}
+    b._mtime = None
+    assert b.allow("brave", model="*") is False
+    snap = b.snapshot()
+    assert any(
+        r.get("provider") == "brave" and r.get("state") == "open" for r in snap
+    )
 
 
 def test_freeze_http(monkeypatch, tmp_path):

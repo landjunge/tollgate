@@ -220,19 +220,37 @@ class CircuitRegistry:
         self._circuits: dict[str, Circuit] = {}
         self._root = root
         self._persist = persist
+        # Disk mtime for multi-worker live re-read (same idea as app_config cache)
+        self._mtime: float | None = None
         if persist:
-            self._load()
+            with self._lock:
+                self._load_unlocked()
 
     def _path(self) -> Path:
         return circuits_path(self._root)
 
-    def _load(self) -> None:
+    def _file_mtime(self) -> float | None:
+        path = self._path()
+        try:
+            return path.stat().st_mtime if path.is_file() else None
+        except OSError:
+            return None
+
+    def _load_unlocked(self) -> None:
+        """
+        Replace in-memory map from circuits.json.
+
+        Caller must hold ``self._lock``. Full replace (not merge) so another
+        worker's OPEN state is visible after mtime change.
+        """
         path = self._path()
         if not path.is_file():
+            self._mtime = None
             return
         try:
             with FileLock(path):
                 raw = json.loads(path.read_text(encoding="utf-8"))
+                mtime = path.stat().st_mtime
         except Exception:  # noqa: BLE001
             return
         if not isinstance(raw, dict):
@@ -240,12 +258,25 @@ class CircuitRegistry:
         items = raw.get("circuits") or []
         if not isinstance(items, list):
             return
-        with self._lock:
-            for row in items:
-                if not isinstance(row, dict):
-                    continue
-                c = Circuit.from_dict(row)
-                self._circuits[c.key] = c
+        loaded: dict[str, Circuit] = {}
+        for row in items:
+            if not isinstance(row, dict):
+                continue
+            c = Circuit.from_dict(row)
+            loaded[c.key] = c
+        self._circuits = loaded
+        self._mtime = mtime
+
+    def _reload_if_stale_unlocked(self) -> None:
+        """Re-read disk when another worker updated circuits.json (mtime)."""
+        if not self._persist:
+            return
+        mtime = self._file_mtime()
+        if mtime is None:
+            return
+        if self._mtime is not None and mtime == self._mtime:
+            return
+        self._load_unlocked()
 
     def _save_unlocked(self) -> None:
         if not self._persist:
@@ -265,8 +296,37 @@ class CircuitRegistry:
                     encoding="utf-8",
                 )
                 tmp.replace(path)
+                try:
+                    self._mtime = path.stat().st_mtime
+                except OSError:
+                    self._mtime = time.time()
         except Exception:  # noqa: BLE001
             pass
+
+    def _get_unlocked(
+        self,
+        provider: str,
+        *,
+        model: str = "",
+        key_ref: str = "",
+    ) -> Circuit:
+        """Caller holds lock; reloads disk if stale first."""
+        self._reload_if_stale_unlocked()
+        k = f"{provider}|{model or '*'}|{key_ref or '*'}"
+        if k not in self._circuits:
+            d = _circuit_defaults()
+            self._circuits[k] = Circuit(
+                provider=provider,
+                model=model,
+                key_ref=key_ref,
+                cooldown_s=d["cooldown_s"],
+                hard_cooldown_s=d["hard_cooldown_s"],
+                failure_threshold=d["failure_threshold"],
+                half_open_successes_needed=d["half_open_successes_needed"],
+                jitter_min=d["jitter_min"],
+                jitter_max=d["jitter_max"],
+            )
+        return self._circuits[k]
 
     def get(
         self,
@@ -275,26 +335,12 @@ class CircuitRegistry:
         model: str = "",
         key_ref: str = "",
     ) -> Circuit:
-        k = f"{provider}|{model or '*'}|{key_ref or '*'}"
         with self._lock:
-            if k not in self._circuits:
-                d = _circuit_defaults()
-                self._circuits[k] = Circuit(
-                    provider=provider,
-                    model=model,
-                    key_ref=key_ref,
-                    cooldown_s=d["cooldown_s"],
-                    hard_cooldown_s=d["hard_cooldown_s"],
-                    failure_threshold=d["failure_threshold"],
-                    half_open_successes_needed=d["half_open_successes_needed"],
-                    jitter_min=d["jitter_min"],
-                    jitter_max=d["jitter_max"],
-                )
-            return self._circuits[k]
+            return self._get_unlocked(provider, model=model, key_ref=key_ref)
 
     def allow(self, provider: str, *, model: str = "", key_ref: str = "") -> bool:
         with self._lock:
-            c = self.get(provider, model=model, key_ref=key_ref)
+            c = self._get_unlocked(provider, model=model, key_ref=key_ref)
             before = c.state
             ok = c.allow()
             # half-open transition is a state change worth persisting
@@ -304,7 +350,7 @@ class CircuitRegistry:
 
     def success(self, provider: str, *, model: str = "", key_ref: str = "") -> None:
         with self._lock:
-            self.get(provider, model=model, key_ref=key_ref).record_success()
+            self._get_unlocked(provider, model=model, key_ref=key_ref).record_success()
             self._save_unlocked()
 
     def failure(
@@ -317,13 +363,14 @@ class CircuitRegistry:
         hard: bool = False,
     ) -> None:
         with self._lock:
-            self.get(provider, model=model, key_ref=key_ref).record_failure(
+            self._get_unlocked(provider, model=model, key_ref=key_ref).record_failure(
                 message=message, hard=hard
             )
             self._save_unlocked()
 
     def snapshot(self) -> list[dict[str, Any]]:
         with self._lock:
+            self._reload_if_stale_unlocked()
             return [c.as_dict() for c in self._circuits.values()]
 
     def reset(
@@ -340,6 +387,7 @@ class CircuitRegistry:
         pid = (provider or "").strip().lower()
         removed: list[str] = []
         with self._lock:
+            self._reload_if_stale_unlocked()
             if all_circuits or not pid:
                 removed = list(self._circuits.keys())
                 self._circuits.clear()
