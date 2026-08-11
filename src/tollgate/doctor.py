@@ -162,6 +162,103 @@ def run_doctor(*, live: bool = False, root: Path | None = None) -> dict[str, Any
             }
         )
 
+    # Reliability policy (Prove pillar)
+    try:
+        from tollgate.app_config import is_provider_enabled
+        from tollgate.chaos import reliability_policy, status as chaos_status
+
+        pol = reliability_policy()
+        req_fb = int(pol.get("required_fallbacks") or 2)
+        routing = cfg.get("routing") or {}
+        intents = routing.get("intents") or {}
+        for intent_name in ("free_llm", "llm", "paid_llm"):
+            chain = list(intents.get(intent_name) or [])
+            if not chain:
+                continue
+            ready = [p for p in chain if is_provider_enabled(p)]
+            if len(ready) < req_fb:
+                issues.append(
+                    {
+                        "level": "warn",
+                        "code": "policy_fallbacks",
+                        "message": (
+                            f"reliability.required_fallbacks={req_fb} but "
+                            f"intent «{intent_name}» has only {len(ready)} enabled provider(s)"
+                        ),
+                        "action": (
+                            f"Enable more providers in routing.intents.{intent_name} "
+                            "or lower reliability.required_fallbacks"
+                        ),
+                    }
+                )
+            else:
+                ok_items.append(
+                    f"policy: {intent_name} has {len(ready)}≥{req_fb} fallbacks"
+                )
+
+        ch = chaos_status()
+        last = ch.get("last_report") if isinstance(ch.get("last_report"), dict) else None
+        if not last:
+            issues.append(
+                {
+                    "level": "warn",
+                    "code": "chaos_untested",
+                    "message": "No failover chaos test recorded — DR not proven",
+                    "action": "tollgate chaos test opencode_zen --requests 5",
+                }
+            )
+        elif last.get("survived"):
+            ok_items.append(
+                f"DR proven: {last.get('chaos_provider')} outage survived "
+                f"({last.get('successful')}/{last.get('requests_tested')})"
+            )
+            max_s = float(pol.get("max_failover_time_s") or 5)
+            rec_ms = float(last.get("recovery_time_ms_best") or 0)
+            if rec_ms > max_s * 1000:
+                issues.append(
+                    {
+                        "level": "warn",
+                        "code": "policy_failover_sla",
+                        "message": (
+                            f"Last recovery {rec_ms:.0f}ms exceeds "
+                            f"reliability.max_failover_time_s={max_s}"
+                        ),
+                        "action": "Improve fallback latency or raise max_failover_time_s",
+                    }
+                )
+        else:
+            issues.append(
+                {
+                    "level": "error",
+                    "code": "chaos_failed",
+                    "message": (
+                        f"Last chaos test for {last.get('chaos_provider')} "
+                        "did not survive — app would fail on outage"
+                    ),
+                    "action": "Add fallbacks, enable auto_failover, re-run chaos test",
+                }
+            )
+
+        if ch.get("active"):
+            for inj in ch["active"][:3]:
+                issues.append(
+                    {
+                        "level": "warn",
+                        "code": "chaos_active",
+                        "message": f"Chaos inject ACTIVE on {inj.get('provider')}",
+                        "action": f"tollgate chaos stop {inj.get('provider')}",
+                    }
+                )
+    except Exception as e:  # noqa: BLE001
+        issues.append(
+            {
+                "level": "info",
+                "code": "policy_check_skip",
+                "message": f"reliability policy check skipped: {e}",
+                "action": "see tollgate resilience",
+            }
+        )
+
     # Optional live diagnose from service
     service_diag: dict[str, Any] | None = None
     if live:

@@ -429,10 +429,23 @@ def control_snapshot(*, root: Any = None) -> dict[str, Any]:
                 "message": "No agent lanes have hard budgets/limits — set consumer-budget",
             }
         )
+    chaos_blob: dict[str, Any] = {
+        "active": [],
+        "recovering": [],
+        "last_report": None,
+        "history": [],
+    }
     try:
         from tollgate.chaos import status as chaos_status
 
         ch = chaos_status()
+        chaos_blob = {
+            "active": list(ch.get("active") or []),
+            "recovering": list(ch.get("recovering") or []),
+            "last_report": ch.get("last_report"),
+            "history": list(ch.get("history") or []),
+            "policy": ch.get("policy"),
+        }
         if ch.get("active"):
             for inj in ch["active"][:3]:
                 attention.append(
@@ -468,12 +481,23 @@ def control_snapshot(*, root: Any = None) -> dict[str, Any]:
     except Exception:  # noqa: BLE001
         pass
 
+    res_blob: dict[str, Any] | None = None
+    try:
+        from tollgate.resilience import resilience_score
+
+        res_blob = resilience_score(root=root)
+    except Exception:  # noqa: BLE001
+        res_blob = None
+
+    res_score = (res_blob or {}).get("score")
     headline = (
         f"${day_usd:.2f} spent today · "
         f"{blocks} agent stops · "
         f"{day_errors} provider errors · "
         f"{protected} agents protected"
     )
+    if res_score is not None:
+        headline = f"Resilience {res_score}/100 · " + headline
     if over:
         headline += f" · ⚠ {len(over)} need attention"
 
@@ -501,10 +525,13 @@ def control_snapshot(*, root: Any = None) -> dict[str, Any]:
             "consumers_pressure": len(over),
             "agent_protection_blocks": blocks,
             "admit_denies": denies,
+            "resilience_score": res_score,
         },
         "attention": attention[:12],
         "providers": providers,
         "consumers": consumers,
+        "chaos": chaos_blob,
+        "resilience": res_blob,
         "day_fraction": round(_day_fraction(), 4),
         "ts": time.time(),
     }

@@ -78,7 +78,7 @@ _bootstrap_env()
 
 app = FastAPI(
     title="Tollgate",
-    version="0.2.5",
+    version="0.2.6",
     description=(
         "Tollgate — AI reliability & control plane. "
         "Protect · Route · Prove (chaos failover tests). "
@@ -139,7 +139,7 @@ def health() -> dict[str, Any]:
         "ok": True,
         "service": "tollgate",
         "product": "Tollgate",
-        "version": "0.2.5",
+        "version": "0.2.6",
         "extractable": True,
         "multi_consumer": True,
         "portable": path_snapshot(),
@@ -190,12 +190,6 @@ def control_plane_view(
 
     out = control_snapshot()
     out["consumer"] = auth["consumer"]
-    try:
-        from tollgate.resilience import resilience_score
-
-        out["resilience"] = resilience_score()
-    except Exception:  # noqa: BLE001
-        pass
     return out
 
 

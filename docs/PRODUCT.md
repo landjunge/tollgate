@@ -104,7 +104,7 @@ Policy: required_fallbacks=2 met · last recovery within 5s
 
 - Protect: consumer envelopes + agent_guard  
 - Route: health-aware ranking + execute failover  
-- Prove: `chaos` + `resilience` + dashboard attention  
+- Prove: `chaos` + `resilience` + **dashboard ring/DR panel/history** + **doctor policy checks**  
 
 ## What we refuse
 

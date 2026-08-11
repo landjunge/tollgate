@@ -45,3 +45,34 @@ def test_doctor_with_keyfile(monkeypatch, tmp_path):
     )
     r = run_doctor(live=False)
     assert any("DEEPSEEK" in x for x in r.get("ok_items") or []), r
+
+
+def test_doctor_flags_missing_chaos_and_fallbacks(monkeypatch, tmp_path):
+    monkeypatch.setenv("TOLLGATE_HOME", str(tmp_path))
+    ud = tmp_path / "User"
+    ud.mkdir(parents=True)
+    (ud / "Key.txt").write_text("DEEPSEEK_API_KEY=sk-live-doctor-check-key-ok99\n", encoding="utf-8")
+    from tollgate.app_config import load_config, save_config
+
+    cfg = load_config(force=True)
+    cfg["reliability"] = {
+        "required_fallbacks": 3,
+        "max_failover_time_s": 5,
+        "gradual_recovery_s": 0,
+    }
+    # only one free_llm provider enabled effectively
+    cfg["routing"] = dict(cfg.get("routing") or {})
+    cfg["routing"]["intents"] = {"free_llm": ["opencode_zen"], "llm": ["deepseek"]}
+    provs = dict(cfg.get("providers") or {})
+    provs["opencode_zen"] = dict(provs.get("opencode_zen") or {}, enabled=True)
+    provs["deepseek"] = dict(provs.get("deepseek") or {}, enabled=True)
+    # disable others so free_llm has only 1
+    for pid in list(provs.keys()):
+        if pid not in ("opencode_zen", "deepseek"):
+            provs[pid] = dict(provs.get(pid) or {}, enabled=False)
+    cfg["providers"] = provs
+    save_config(cfg)
+
+    r = run_doctor(live=False)
+    codes = {i.get("code") for i in r.get("issues") or []}
+    assert "chaos_untested" in codes or "policy_fallbacks" in codes

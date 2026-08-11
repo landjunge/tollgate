@@ -104,11 +104,13 @@ def status(*, root: Path | None = None) -> dict[str, Any]:
         with FileLock(path):
             data = _purge_expired(_load(path))
             _write(path, data)
+            hist = list(data.get("history") or [])
             return {
                 "ok": True,
                 "active": list(data.get("active") or []),
                 "recovering": list(data.get("recovering") or []),
                 "last_report": data.get("last_report"),
+                "history": hist[-20:],
                 "policy": reliability_policy(),
                 "path": str(path),
             }
