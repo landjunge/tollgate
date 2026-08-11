@@ -1,96 +1,106 @@
 # Tollgate product direction
 
-## Core promise (sharp)
+## Core promise
 
-> **Tollgate protects your AI applications from provider outages, runaway costs and bad model choices.**
+> **Tollgate prevents AI agents from becoming unreliable, expensive and uncontrollable.**
 
-Not “another LLM gateway.” Category line:
+Not: “access to many LLM providers.”  
+Category:
 
-> **The safety and control layer for AI agents.**
+> **The simplest self-hosted AI control plane for agents.**
 
-Existing gateways **route** traffic. Tollgate **protects and governs** AI traffic.
+Sibling products (LiteLLM, Portkey, Helicone, Bifrost, Envoy AI Gateway, Cloudflare AI Gateway) prove the **market** exists. They also prove that **“AI Gateway” alone is crowded**.
 
-## Why this exists
+Tollgate does **not** win by supporting 30 more providers.
 
-LLM providers multiply. Agents get more autonomous. That creates three operational failures:
+## Competitive map (why not clone LiteLLM)
 
-1. **Outages** without controlled failover  
-2. **Runaway cost** from loops, bugs, unbounded tools  
-3. **Opaque routing** nobody can audit  
+| Tool | Strength | Tollgate wedge |
+|------|----------|----------------|
+| **LiteLLM** | 100+ providers, proxy, fallbacks, spend | **Agent protection + policy + MCP/tools**, not catalog width |
+| **Portkey** | Production stack, guardrails, governance | **Self-hosted, simpler, developer-first desk** |
+| **Helicone** | Observability, cost analytics | **Runtime control**: hard stop before spend, not only after |
+| **Bifrost** | Fast OSS gateway | We’re not competing on raw gateway speed |
+| **Envoy AI Gateway** | K8s / infra | Desk/agents first, not platform engineering first |
+| **Cloudflare AI Gateway** | Managed edge | **Provider-neutral, self-hosted, USB/portable** |
 
-Tollgate is the place those problems stop.
+**One-liner vs the field:**
 
-## Three product layers
+> LiteLLM connects you to models.  
+> Helicone shows what happened.  
+> **Tollgate keeps your agents from misbehaving.**
 
-| Layer | Job | User-visible |
-|-------|-----|----------------|
-| **Reliability** | Health, circuits, failover | Provider scores, auto-failover |
-| **Cost intelligence** | Day/hour/request spend by agent | Burn, projection, alerts |
-| **Agent protection** | Stop loops before the invoice | Per-request / per-minute / per-hour hard stops |
+## Three pillars (product, not feature soup)
 
-Everything else (OpenAI/Anthropic drop-ins, MCP, n8n, cache) is **distribution** — not the product story.
+```text
+                 TOLLGATE
+                    │
+       ┌────────────┼────────────┐
+       ↓            ↓            ↓
+  Reliability     Budget      Policy
+       │            │            │
+    Failover      $/day      token limits
+    Health        $/agent    rate limits
+    Circuit       $/request  allowed models
+    Ranking       alerts     MCP/tool caps
+       └────────────┼────────────┘
+                    ↓
+             LLM + tools
+```
 
-## What we are not doing now
+| Pillar | Job |
+|--------|-----|
+| **Reliability** | Health, circuits, failover, health-aware route |
+| **Cost** | Envelopes, burn, projection |
+| **Agent protection** | max $/request/hour, rpm, tokens, tool loops — **fail closed** |
 
-- Twenty more integrations (Zapier, Slack, K8s operator, …)  
-- Competing with Kong/Envoy/LiteLLM as “more protocols”  
-- Enterprise SSO before the safety layer is excellent  
+MCP + agents (not only chat completions) is a deliberate second surface:
 
-**80% of users should never need advanced JSON.** Simple budgets + protection first.
+```text
+Agent ──► LLM ──► Tollgate ──► providers
+   └──► MCP/tools ──► Tollgate ──► APIs
+```
 
-## Audiences
+Same consumer lane: *this agent may use free LLM, max €5/day, max 20 tool calls per task.*
 
-1. AI-agent builders / startups  
-2. Companies with many AI tools / teams  
-3. n8n / automation  
-4. Self-hosted + paid APIs  
+## What we refuse (for now)
 
-## Roadmap (product phases)
+- “Support every provider LiteLLM has”  
+- Zapier/Slack/Discord/K8s operator sprawl  
+- Cloud multi-tenant SaaS before the safety layer is excellent  
+
+**80% of users never need advanced JSON** — budget + protection + failover.
+
+## 5-minute success
+
+```bash
+docker compose up -d
+# open http://127.0.0.1:8787/dashboard
+# set OPENAI_BASE_URL=http://127.0.0.1:8787/v1
+```
+
+Then:
+
+```text
+✓ Providers connected (Key.txt)
+✓ Budget / agent limits set
+✓ Failover on
+→ Agents stop burning money in loops
+```
+
+## Roadmap phases
 
 | Phase | Focus | Status |
 |-------|--------|--------|
-| **1 Stability** | Config back-compat, secrets, tests, doctor | continuous + PR #7 |
-| **2 Agent protection** | request/hour/minute/token hard stops | **v0.2.1 shipping** |
-| **3 Intelligence** | health-aware smart routing | **v0.2.2** |
-| **4 Visibility** | dashboard headlines that sell | mini `/dashboard` exists |
-| **5 Enterprise** | RBAC, teams, SSO, admin audit | later |
+| 1 Stability | Config, secrets, doctor, tests | continuous |
+| 2 Agent protection | request/hour/minute/tool hard stops | **done** |
+| 3 Intelligence | health-aware routing + explain | **done** |
+| 4 Visibility | feelable dashboard (spend, health, attention) | **shipping** |
+| 5 Enterprise | RBAC, teams, SSO | later |
 
-## Agent protection (killer surface)
+## Audiences
 
-Per consumer / agent lane:
-
-```yaml
-consumer_envelopes:
-  coding-agent:
-    max_usd_day: 20
-    max_usd_hour: 5
-    max_usd_request: 0.50
-    max_requests_minute: 30
-    max_tokens_request: 20000
-    max_tool_calls: 15   # when client sends tool_calls_est
-```
-
-On breach: **fail closed** → audit → optional alert. No silent bill.
-
-## Simple config (target UX)
-
-```yaml
-# conceptual — advanced keys_app remains available
-tollgate:
-  budget:
-    daily: 50
-  reliability:
-    failover: true
-  routing:
-    strategy: cost_optimized   # later
-  protection:
-    default_max_usd_request: 0.5
-```
-
-## Feelable proof
-
-```text
-$73 protected · 47 auto failovers · 12 agents under hard limits
-```
-
-`/dashboard` · `GET /v1/control` · `tollgate doctor` · `tollgate control`
+1. Agent builders / startups  
+2. Companies with many AI tools  
+3. n8n / automation  
+4. Self-hosted + paid APIs  

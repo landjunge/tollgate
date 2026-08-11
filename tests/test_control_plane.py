@@ -63,7 +63,8 @@ def test_provider_health_and_consumer_burn(monkeypatch, tmp_path):
     snap = control_snapshot()
     assert snap["ok"] is True
     assert "headline" in snap
-    assert snap["pillars"] == ["reliability", "cost", "control"]
+    assert snap["pillars"] == ["reliability", "cost", "agent_protection"]
+    assert "attention" in snap
     assert len(snap["providers"]) >= 2
     assert len(snap["consumers"]) >= 1
 
@@ -109,7 +110,8 @@ def test_control_http_and_dashboard(monkeypatch, tmp_path):
     d = client.get("/dashboard")
     assert d.status_code == 200
     assert "text/html" in d.headers.get("content-type", "")
-    assert "Control Plane" in d.text
+    assert "Tollgate" in d.text
+    assert "agents" in d.text.lower() or "Agent" in d.text
 
     route = client.post(
         "/v1/route?explain=true",

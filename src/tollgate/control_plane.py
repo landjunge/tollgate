@@ -7,6 +7,7 @@ Not agent memory — operational scores only.
 
 from __future__ import annotations
 
+import json
 import time
 from datetime import datetime, timezone
 from typing import Any
@@ -289,6 +290,59 @@ def explain_route(route_result: dict[str, Any], *, root: Any = None) -> dict[str
     }
 
 
+def _audit_protection_stats(*, root: Any = None, max_lines: int = 5000) -> dict[str, int]:
+    """Count recent admit denials / agent protection from audit.jsonl (ops only)."""
+    out = {"admit_denies": 0, "agent_protection_blocks": 0, "failovers_hint": 0}
+    try:
+        from tollgate.audit_log import audit_path
+
+        path = audit_path(root)
+        if not path.is_file():
+            return out
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()[-max_lines:]
+        for ln in lines:
+            try:
+                row = json.loads(ln)
+            except Exception:  # noqa: BLE001
+                continue
+            if not isinstance(row, dict):
+                continue
+            ev = str(row.get("event") or "")
+            if ev == "admit_deny":
+                out["admit_denies"] += 1
+                extra = row.get("extra") if isinstance(row.get("extra"), dict) else {}
+                if extra.get("protection") or "agent protection" in str(row.get("error") or "").lower():
+                    out["agent_protection_blocks"] += 1
+            if ev == "usage" and row.get("extra") and isinstance(row["extra"], dict):
+                if int(row["extra"].get("failover_hops") or 0) > 1:
+                    out["failovers_hint"] += 1
+    except Exception:  # noqa: BLE001
+        pass
+    return out
+
+
+def _protected_lane_count() -> int:
+    """How many named consumer envelopes have any hard protection field."""
+    cfg = load_config()
+    envs = cfg.get("consumer_envelopes") or {}
+    n = 0
+    keys = (
+        "max_usd_day",
+        "max_calls_day",
+        "max_usd_hour",
+        "max_usd_request",
+        "max_requests_minute",
+        "max_tokens_request",
+        "max_tool_calls",
+    )
+    for cid, block in envs.items():
+        if str(cid).startswith("_") or not isinstance(block, dict):
+            continue
+        if any(float(block.get(k) or 0) > 0 for k in keys):
+            n += 1
+    return n
+
+
 def control_snapshot(*, root: Any = None) -> dict[str, Any]:
     """Full control-plane pane for API / dashboard / CLI."""
     usage = load_usage(root=root)
@@ -297,26 +351,102 @@ def control_snapshot(*, root: Any = None) -> dict[str, Any]:
     consumers = consumer_burn(root=root)
     open_circuits = sum(1 for p in providers if p.get("circuit") == "open")
     degraded = sum(1 for p in providers if p.get("status") in ("degraded", "circuit_open"))
-    protected = sum(1 for c in consumers if c.get("max_usd_day") or c.get("max_calls_day"))
+    protected_cfg = _protected_lane_count()
+    protected = max(
+        protected_cfg,
+        sum(
+            1
+            for c in consumers
+            if c.get("max_usd_day") or c.get("max_calls_day")
+        ),
+    )
     over = [c for c in consumers if c.get("status") in ("over_budget", "likely_over", "warn")]
     day_usd = float(totals.get("usd") or 0.0)
     day_errors = int(totals.get("errors") or 0)
     day_calls = int(totals.get("calls") or 0)
+    audit = _audit_protection_stats(root=root)
+    blocks = int(audit.get("agent_protection_blocks") or 0)
+    denies = int(audit.get("admit_denies") or 0)
+
+    # Attention feed (product: "3 things need attention")
+    attention: list[dict[str, str]] = []
+    for c in over[:5]:
+        attention.append(
+            {
+                "level": "warn" if c.get("status") != "over_budget" else "error",
+                "code": "budget_pressure",
+                "message": (
+                    f"Agent/lane «{c.get('consumer')}» status={c.get('status')} "
+                    f"(${float(c.get('usd') or 0):.2f}"
+                    + (
+                        f" / ${c.get('max_usd_day')} day"
+                        if c.get("max_usd_day")
+                        else ""
+                    )
+                    + ")"
+                ),
+            }
+        )
+    for p in providers:
+        if p.get("status") in ("degraded", "circuit_open"):
+            attention.append(
+                {
+                    "level": "warn" if p.get("status") == "degraded" else "error",
+                    "code": "provider_health",
+                    "message": (
+                        f"Provider «{p.get('provider')}» {p.get('status')} "
+                        f"(score {p.get('score')}"
+                        + (
+                            f", success {float(p['success_rate'])*100:.0f}%"
+                            if p.get("success_rate") is not None
+                            else ""
+                        )
+                        + ")"
+                    ),
+                }
+            )
+    if open_circuits == 0 and day_errors > 0:
+        attention.append(
+            {
+                "level": "ok",
+                "code": "errors_absorbed",
+                "message": f"{day_errors} provider error(s) recorded today — circuits currently closed",
+            }
+        )
+    if blocks:
+        attention.append(
+            {
+                "level": "ok",
+                "code": "agent_protection",
+                "message": f"{blocks} agent protection stop(s) prevented runaway spend",
+            }
+        )
+    if protected == 0:
+        attention.append(
+            {
+                "level": "warn",
+                "code": "no_protection",
+                "message": "No agent lanes have hard budgets/limits — set consumer-budget",
+            }
+        )
 
     headline = (
-        f"${day_usd:.2f} metered today · "
-        f"{day_errors} provider errors recorded · "
-        f"{open_circuits} circuits open · "
-        f"{protected} consumer lanes with envelopes"
+        f"${day_usd:.2f} spent today · "
+        f"{blocks} agent stops · "
+        f"{day_errors} provider errors · "
+        f"{protected} agents protected"
     )
     if over:
-        headline += f" · ⚠ {len(over)} lane(s) budget pressure"
+        headline += f" · ⚠ {len(over)} need attention"
 
     return {
         "ok": True,
         "product": "Tollgate",
-        "tagline": "Existing gateways route traffic. Tollgate governs AI traffic.",
-        "pillars": ["reliability", "cost", "control"],
+        "tagline": "LiteLLM connects models. Helicone shows traffic. Tollgate keeps agents in line.",
+        "promise": (
+            "Prevents AI agents from becoming unreliable, expensive and uncontrollable."
+        ),
+        "pillars": ["reliability", "cost", "agent_protection"],
         "day": usage.get("day"),
         "updated_at": usage.get("updated_at") or datetime.now(timezone.utc).isoformat(),
         "headline": headline,
@@ -328,7 +458,10 @@ def control_snapshot(*, root: Any = None) -> dict[str, Any]:
             "providers_degraded": degraded,
             "consumers_protected": protected,
             "consumers_pressure": len(over),
+            "agent_protection_blocks": blocks,
+            "admit_denies": denies,
         },
+        "attention": attention[:12],
         "providers": providers,
         "consumers": consumers,
         "day_fraction": round(_day_fraction(), 4),

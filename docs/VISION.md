@@ -2,11 +2,11 @@
 
 **Product / repo:** **[landjunge/tollgate](https://github.com/landjunge/tollgate)**  
 **Status:** agreed 2026-08-11 · **name locked** · control-plane direction locked  
-**One-liner:** The **safety and control layer for AI agents** — protects apps from outages, runaway cost, and bad model choices.
+**One-liner:** The **simplest self-hosted AI control plane for agents** — stops outages, runaway cost, and agent loops.
 
 **Tagline:** *Pay the toll — or don't call.*  
-**Promise:** *Tollgate protects your AI applications from provider outages, runaway costs and bad model choices.*  
-**Category:** *Not another LLM gateway — the safety layer for agents.*
+**Promise:** *Prevents AI agents from becoming unreliable, expensive and uncontrollable.*  
+**Vs field:** *LiteLLM connects models · Helicone shows traffic · Tollgate keeps agents in line.*
 
 See **[PRODUCT.md](PRODUCT.md)** for audiences and priority table.
 

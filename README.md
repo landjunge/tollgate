@@ -20,14 +20,18 @@ Not another LLM gateway — Reliability · Cost · Agent protection · Control.
 | MCP users (Cursor / Claude Desktop) | One admission plane, not N auth setups |
 | Agencies (with care) | Need real consumer secrets first — we have hashed keys |
 
-**Not competing for:** full LiteLLM/Portkey cloud parity. Differentiator = **local, MCP-native, pre-admission, USB-portable**.
+**Not competing for:** LiteLLM catalog width or Portkey cloud suite.  
+**Wedge:** *LiteLLM connects models. Helicone shows traffic. **Tollgate keeps agents in line.***  
+Self-hosted · MCP-native · pre-admission hard stops · USB-portable. Details: [docs/PRODUCT.md](docs/PRODUCT.md).
 
-## vs LiteLLM / Portkey / OpenRouter
+## vs LiteLLM / Portkey / Helicone
 
-| | **Tollgate** | LiteLLM Proxy | Portkey | OpenRouter alone |
-|--|--------------|---------------|---------|------------------|
-| Runs fully local | ✅ | ✅ (self-host) | Cloud-first | Cloud API |
-| Pre-admission $ hard deny | ✅ core | optional | policies | no local budget |
+| | **Tollgate** | LiteLLM | Portkey | Helicone |
+|--|--------------|---------|---------|----------|
+| Core job | **Agent protection + control** | Multi-provider proxy | Managed prod stack | Observability + gateway |
+| Runs fully local | ✅ first-class | ✅ | cloud-first | cloud / hybrid |
+| Pre-admission $ / loop hard deny | ✅ core | optional | policies | mostly post-hoc |
+
 | Secrets never in agent | ✅ vault | yes | yes | keys in each client |
 | Distill-as-data (provider facts) | ✅ JSON SSoT | code/config mix | dashboard | catalog |
 | MCP stdio first-class | ✅ | via adapters | — | — |
