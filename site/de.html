@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Tollgate — Sicherheits-Schicht für AI-Agents</title>
+  <meta name="description" content="Tollgate ist die Sicherheits-Schicht zwischen deinen AI-Agents und dem Internet. Protect · Route · Prove."/>
+  <meta name="theme-color" content="#0a0c10"/>
+  <link rel="canonical" href="https://landjunge.github.io/tollgate/de.html"/>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml"/>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <header class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="de.html">
+        <span class="logo" aria-hidden="true">T</span>
+        Tollgate
+      </a>
+      <nav class="nav-links" aria-label="Hauptnavigation">
+        <a href="#saeulen">Säulen</a>
+        <a href="#demo">Demo</a>
+        <a href="#start">Start</a>
+        <a href="docs.html">Docs</a>
+        <a class="lang" href="index.html" title="English">EN</a>
+        <a class="btn" href="https://github.com/landjunge/tollgate">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero wrap">
+      <div class="eyebrow"><span class="dot" aria-hidden="true"></span> Agent-Safety · kein Gateway-Katalog</div>
+      <h1>„Mein AI-Agent darf niemals<br/><em>außer Kontrolle geraten.</em>“</h1>
+      <p class="lead">
+        <strong style="color:var(--fg)">Tollgate</strong> ist die Sicherheits-Schicht zwischen deinen AI-Agents und dem Internet.
+      </p>
+      <p class="sublead">
+        Kosten steuern. Provider-Ausfälle überleben. Beweisen, dass es funktioniert.
+      </p>
+      <div class="cta-row">
+        <a class="btn" href="#start">In 10 Minuten starten →</a>
+        <a class="btn ghost" href="https://github.com/landjunge/tollgate">GitHub</a>
+        <a class="btn ghost" href="https://github.com/landjunge/tollgate/blob/main/docs/HILFE.md">Hilfe (DE)</a>
+      </div>
+      <div class="pillars-strip" aria-hidden="true">
+        <span><b>Protect</b> Runaways stoppen</span>
+        <span><b>Route</b> Ausfälle überleben</span>
+        <span><b>Prove</b> Beweise liefern</span>
+      </div>
+    </section>
+
+    <section id="saeulen" class="alt">
+      <div class="wrap">
+        <p class="section-label reveal">Drei Säulen</p>
+        <h2 class="reveal">Protect · Route · Prove</h2>
+        <p class="section-lead reveal">
+          LiteLLM verbindet Modelle. Helicone zeigt Traffic.
+          <strong style="color:var(--fg)">Tollgate hält Agents in der Spur — und beweist Failover.</strong>
+        </p>
+        <div class="grid-3">
+          <article class="card protect reveal">
+            <div class="icon" aria-hidden="true">🛑</div>
+            <h3>Protect</h3>
+            <p>Harter Stop vor dem Netzwerkruf. Budgets, Tool-Loops, Scopes, Freeze, Audit.</p>
+            <ul>
+              <li><code>max_tool_calls</code> — Loop-Deny</li>
+              <li>Envelopes $ / Request / Stunde / Tag</li>
+              <li>Scopes: Provider · Intent · Op</li>
+              <li><code>tollgate freeze</code> Kill-Switch</li>
+            </ul>
+          </article>
+          <article class="card route reveal">
+            <div class="icon" aria-hidden="true">🔀</div>
+            <h3>Route</h3>
+            <p>Health-aware Routing, wenn der Primary nachts ausfällt. Circuits + Failover.</p>
+            <ul>
+              <li>Intent-Routing</li>
+              <li>Circuit Breaker</li>
+              <li>OpenAI- &amp; Anthropic-Drop-in</li>
+              <li>n8n · MCP · SDK</li>
+            </ul>
+          </article>
+          <article class="card prove reveal">
+            <div class="icon" aria-hidden="true">✅</div>
+            <h3>Prove</h3>
+            <p>Chaos-Tests, Resilience-Score, Certificate — Belege statt Bauchgefühl.</p>
+            <ul>
+              <li><code>tollgate chaos test</code></li>
+              <li>Resilience 0–100</li>
+              <li>Reliability Certificate</li>
+              <li>Control Room Dashboard</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="demo">
+      <div class="wrap split">
+        <div class="reveal">
+          <p class="section-label">Das Aha</p>
+          <h2>In einer Sitzung spüren</h2>
+          <p class="section-lead">
+            Keine Feature-Tour. Tool-Loop blockiert, DR-Signal, Certificate.
+          </p>
+          <div class="quote">
+            🛑 REQUEST BLOCKED — max_tool_calls
+            <cite>Protect-Demo braucht keine API-Keys</cite>
+          </div>
+          <p style="margin-top:1.25rem">
+            <a class="btn sm" href="https://github.com/landjunge/tollgate/blob/main/docs/HILFE.md">Handbuch DE</a>
+            <a class="btn sm ghost" href="https://github.com/landjunge/tollgate/blob/main/docs/TEN_MINUTE.md">10-Minuten-Pfad</a>
+          </p>
+        </div>
+        <div class="terminal reveal">
+          <div class="terminal-bar">
+            <i></i><i></i><i></i>
+            <span>~/tollgate · ten-minute.sh</span>
+          </div>
+          <pre><span class="c"># kalter Start</span>
+<span class="b">git clone</span> https://github.com/landjunge/tollgate.git
+<span class="b">cd</span> tollgate && python3 -m venv .venv
+.venv/bin/pip install -e .
+./scripts/ten-minute.sh
+
+<span class="r">🛑 REQUEST BLOCKED</span>
+<span class="y">reason:</span> max_tool_calls
+
+<span class="g">✓</span> certificate · Control Room
+open http://127.0.0.1:8787/dashboard</pre>
+        </div>
+      </div>
+    </section>
+
+    <section id="start" class="alt">
+      <div class="wrap">
+        <p class="section-label reveal">Loslegen</p>
+        <h2 class="reveal">In 10 Minuten geschützt</h2>
+        <div class="grid-2" style="margin-top:1.5rem">
+          <div class="steps reveal">
+            <div class="step">
+              <div>
+                <h3>Install &amp; Cold Path</h3>
+                <p><code>./scripts/ten-minute.sh</code></p>
+              </div>
+            </div>
+            <div class="step">
+              <div>
+                <h3>Control Room</h3>
+                <p><code>http://127.0.0.1:8787/dashboard</code></p>
+              </div>
+            </div>
+            <div class="step">
+              <div>
+                <h3>Agent anbinden</h3>
+                <p><code>OPENAI_BASE_URL=http://127.0.0.1:8787/v1</code></p>
+              </div>
+            </div>
+            <div class="step">
+              <div>
+                <h3>Budgets setzen</h3>
+                <p><code>tollgate consumer-budget … --max-tool-calls 20</code></p>
+              </div>
+            </div>
+          </div>
+          <div class="terminal reveal">
+            <div class="terminal-bar"><i></i><i></i><i></i><span>alltag</span></div>
+            <pre>tollgate serve
+tollgate status
+tollgate help
+tollgate help protect
+tollgate certificate
+tollgate freeze --reason "incident"</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <p class="section-label reveal">Dokumentation</p>
+        <h2 class="reveal">Hilfe &amp; Guides</h2>
+        <div class="grid-3" style="margin-top:1.25rem">
+          <a class="doc-link reveal" href="https://github.com/landjunge/tollgate/blob/main/docs/HILFE.md">
+            <strong>HILFE.md</strong>
+            <span>Deutsches Handbuch</span>
+          </a>
+          <a class="doc-link reveal" href="https://github.com/landjunge/tollgate/blob/main/docs/FAQ.md">
+            <strong>FAQ</strong>
+            <span>Häufige Fragen</span>
+          </a>
+          <a class="doc-link reveal" href="docs.html">
+            <strong>Docs-Index</strong>
+            <span>Alle Dokumente</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap footer-inner">
+      <div>
+        <strong>Tollgate</strong>
+        <div class="tagline">Pay the toll — or don't call.</div>
+        <p style="margin:0.75rem 0 0">MIT · Python ≥ 3.11 · © <span id="year">2026</span></p>
+      </div>
+      <div class="footer-links">
+        <a href="index.html">English</a>
+        <a href="docs.html">Docs</a>
+        <a href="https://github.com/landjunge/tollgate">GitHub</a>
+      </div>
+    </div>
+  </footer>
+  <script src="site.js"></script>
+</body>
+</html>

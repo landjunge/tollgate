@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Tollgate — Safety layer for AI agents</title>
+  <meta name="description" content="Tollgate is the safety layer between your AI agents and the internet. Protect · Route · Prove. Budgets, tool-loop hard stops, failover, chaos proof."/>
+  <meta name="theme-color" content="#0a0c10"/>
+  <meta property="og:title" content="Tollgate — My AI agent must never go out of control"/>
+  <meta property="og:description" content="Safety layer for AI agents. Protect cost & loops. Survive provider failures. Prove it with chaos + certificate."/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:url" content="https://landjunge.github.io/tollgate/"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <link rel="canonical" href="https://landjunge.github.io/tollgate/"/>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml"/>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <header class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="index.html">
+        <span class="logo" aria-hidden="true">T</span>
+        Tollgate
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a href="#pillars">Pillars</a>
+        <a href="#demo">Demo</a>
+        <a href="#start">Start</a>
+        <a href="#compare">vs gateways</a>
+        <a href="docs.html">Docs</a>
+        <a class="lang" href="de.html" title="Deutsch">DE</a>
+        <a class="btn" href="https://github.com/landjunge/tollgate">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero wrap">
+      <div class="eyebrow"><span class="dot" aria-hidden="true"></span> AI agent safety · not a gateway catalog</div>
+      <h1>“My AI agent must never<br/><em>go out of control.</em>”</h1>
+      <p class="lead">
+        <strong style="color:var(--fg)">Tollgate</strong> is the safety layer between your AI agents and the internet.
+      </p>
+      <p class="sublead">
+        Control cost. Survive provider failures. Prove your AI infrastructure works.
+      </p>
+      <div class="cta-row">
+        <a class="btn" href="#start">10-minute start →</a>
+        <a class="btn ghost" href="https://github.com/landjunge/tollgate">View on GitHub</a>
+        <a class="btn ghost" href="docs.html">Documentation</a>
+      </div>
+      <div class="pillars-strip" aria-hidden="true">
+        <span><b>Protect</b> stop runaways</span>
+        <span><b>Route</b> survive outages</span>
+        <span><b>Prove</b> show the evidence</span>
+      </div>
+    </section>
+
+    <section id="pillars" class="alt">
+      <div class="wrap">
+        <p class="section-label reveal">Three pillars</p>
+        <h2 class="reveal">Protect · Route · Prove</h2>
+        <p class="section-lead reveal">
+          LiteLLM connects models. Helicone shows traffic.
+          <strong style="color:var(--fg)">Tollgate keeps agents in line — and proves failover works.</strong>
+        </p>
+        <div class="grid-3">
+          <article class="card protect reveal">
+            <div class="icon" aria-hidden="true">🛑</div>
+            <h3>Protect</h3>
+            <p>Hard stops before the network call. Budgets, tool-loop depth, scopes, freeze, audit.</p>
+            <ul>
+              <li><code>max_tool_calls</code> — loop hard deny</li>
+              <li>$ / request / hour / day envelopes</li>
+              <li>Allow/block providers · intents · ops</li>
+              <li><code>tollgate freeze</code> kill switch</li>
+            </ul>
+          </article>
+          <article class="card route reveal">
+            <div class="icon" aria-hidden="true">🔀</div>
+            <h3>Route</h3>
+            <p>Health-aware routing when the primary dies at 3am. Circuits + failover, not vibes.</p>
+            <ul>
+              <li>Intent routing (<code>free_llm</code>, <code>llm</code>, …)</li>
+              <li>Circuit breakers per provider</li>
+              <li>OpenAI &amp; Anthropic drop-ins</li>
+              <li>n8n · MCP · OpenAI SDK</li>
+            </ul>
+          </article>
+          <article class="card prove reveal">
+            <div class="icon" aria-hidden="true">✅</div>
+            <h3>Prove</h3>
+            <p>Chaos tests, resilience score, certificate scorecard — evidence for ops and stakeholders.</p>
+            <ul>
+              <li><code>tollgate chaos test</code></li>
+              <li>Resilience score 0–100</li>
+              <li>AI Reliability certificate</li>
+              <li>Control Room dashboard</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="demo">
+      <div class="wrap split">
+        <div class="reveal">
+          <p class="section-label">The Aha</p>
+          <h2>Feel it in one sitting</h2>
+          <p class="section-lead">
+            No feature tour. You should see a blocked tool-loop, then a DR signal —
+            then a certificate.
+          </p>
+          <div class="quote">
+            🛑 REQUEST BLOCKED — max_tool_calls
+            <cite>Protect demo needs no API keys</cite>
+          </div>
+          <div class="badges">
+            <span class="chip ok">Budget protection</span>
+            <span class="chip ok">Agent loop protection</span>
+            <span class="chip warn">Provider failover</span>
+            <span class="chip">Certificate scorecard</span>
+          </div>
+          <p style="margin-top:1.25rem">
+            <a class="btn sm" href="https://github.com/landjunge/tollgate/blob/main/docs/DEMO.md">Demo script</a>
+            <a class="btn sm ghost" href="https://github.com/landjunge/tollgate/blob/main/docs/TEN_MINUTE.md">10-minute path</a>
+          </p>
+        </div>
+        <div class="terminal reveal" id="demo-term">
+          <div class="terminal-bar">
+            <i></i><i></i><i></i>
+            <span>~/tollgate · ten-minute.sh</span>
+          </div>
+          <pre id="install-snippet"><span class="c"># cold start — stranger path</span>
+<span class="b">git clone</span> https://github.com/landjunge/tollgate.git
+<span class="b">cd</span> tollgate
+python3 -m venv .venv && .venv/bin/pip install -e .
+./scripts/ten-minute.sh
+
+<span class="c"># Protect — no $ required</span>
+<span class="r">🛑 REQUEST BLOCKED</span>
+<span class="y">reason:</span> max_tool_calls  <span class="y">est:</span> 99  <span class="y">max:</span> 20
+
+<span class="c"># Prove</span>
+<span class="g">✓</span> chaos failover measured
+<span class="g">✓</span> certificate · resilience score
+
+<span class="c"># Control Room</span>
+open http://127.0.0.1:8787/dashboard</pre>
+        </div>
+      </div>
+    </section>
+
+    <section id="start" class="alt">
+      <div class="wrap">
+        <p class="section-label reveal">Get started</p>
+        <h2 class="reveal">10 minutes to protected</h2>
+        <p class="section-lead reveal">
+          Python ≥ 3.11. Protect demo works without provider keys.
+        </p>
+        <div class="grid-2">
+          <div class="steps reveal">
+            <div class="step">
+              <div>
+                <h3>Install &amp; run the cold path</h3>
+                <p><code>./scripts/ten-minute.sh</code> — Protect → Prove → certificate</p>
+              </div>
+            </div>
+            <div class="step">
+              <div>
+                <h3>Open Control Room</h3>
+                <p><code>http://127.0.0.1:8787/dashboard</code> — Setup wizard for the first agent</p>
+              </div>
+            </div>
+            <div class="step">
+              <div>
+                <h3>Point your agent at Tollgate</h3>
+                <p><code>OPENAI_BASE_URL=http://127.0.0.1:8787/v1</code> · key = lane label or <code>id:secret</code></p>
+              </div>
+            </div>
+            <div class="step">
+              <div>
+                <h3>Set envelopes</h3>
+                <p><code>tollgate consumer-budget support-agent --max-usd-day 2 --max-tool-calls 20</code></p>
+              </div>
+            </div>
+          </div>
+          <div class="reveal">
+            <div class="terminal">
+              <div class="terminal-bar">
+                <i></i><i></i><i></i>
+                <span>everyday</span>
+                <button type="button" class="btn sm ghost" style="margin-left:auto" data-copy="#everyday-snippet">Copy</button>
+              </div>
+              <pre id="everyday-snippet">export OPENAI_BASE_URL=http://127.0.0.1:8787/v1
+export OPENAI_API_KEY=support-agent
+
+tollgate status
+tollgate certificate --application "Support Agent"
+tollgate freeze --reason "incident"
+tollgate help
+tollgate help protect</pre>
+            </div>
+            <p style="margin-top:1rem;color:var(--muted);font-size:0.9rem">
+              Docker: <code>docker compose up -d --build</code>
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="compare">
+      <div class="wrap">
+        <p class="section-label reveal">Positioning</p>
+        <h2 class="reveal">Not another LLM gateway</h2>
+        <p class="section-lead reveal">
+          Lead with agent safety. Don’t compete on “100 providers.”
+        </p>
+        <div class="reveal" style="overflow-x:auto">
+          <table class="compare">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Tollgate</th>
+                <th>LiteLLM</th>
+                <th>Helicone</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Core job</td>
+                <td class="hi">Agent safety + DR proof</td>
+                <td class="meh">Multi-provider proxy</td>
+                <td class="meh">Observability</td>
+              </tr>
+              <tr>
+                <td>Pre-admission hard deny</td>
+                <td class="hi">Yes</td>
+                <td class="meh">Optional</td>
+                <td class="meh">Mostly post-hoc</td>
+              </tr>
+              <tr>
+                <td>Tool-loop stop</td>
+                <td class="hi">First-class</td>
+                <td class="meh">DIY</td>
+                <td class="meh">—</td>
+              </tr>
+              <tr>
+                <td>Chaos / prove</td>
+                <td class="hi">Certificate + score</td>
+                <td class="meh">DIY</td>
+                <td class="meh">—</td>
+              </tr>
+              <tr>
+                <td>Kill switch</td>
+                <td class="hi"><code>freeze</code></td>
+                <td class="meh">—</td>
+                <td class="meh">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="alt" id="for">
+      <div class="wrap">
+        <p class="section-label reveal">Who it’s for</p>
+        <h2 class="reveal">Production agent teams</h2>
+        <div class="grid-3" style="margin-top:1.5rem">
+          <div class="card reveal">
+            <h3>Agent frameworks</h3>
+            <p>LangGraph, CrewAI, custom loops — sit Tollgate in front of tools + LLMs.</p>
+          </div>
+          <div class="card reveal">
+            <h3>Automation</h3>
+            <p>n8n and workflow agents that must not burn the card overnight.</p>
+          </div>
+          <div class="card reveal">
+            <h3>Ops / reliability</h3>
+            <p>Need a freeze button, audit trail, and a certificate you can show.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="docs-teaser">
+      <div class="wrap">
+        <p class="section-label reveal">Documentation</p>
+        <h2 class="reveal">Handbooks &amp; help</h2>
+        <p class="section-lead reveal">Offline CLI: <code>tollgate help</code> · Full site index on the docs page.</p>
+        <div class="grid-3">
+          <a class="doc-link reveal" href="https://github.com/landjunge/tollgate/blob/main/docs/HILFE.md">
+            <strong>Hilfe (Deutsch)</strong>
+            <span>Vollständiges Handbuch</span>
+          </a>
+          <a class="doc-link reveal" href="https://github.com/landjunge/tollgate/blob/main/docs/USER_GUIDE.md">
+            <strong>User Guide (EN)</strong>
+            <span>Install, protect, API, recipes</span>
+          </a>
+          <a class="doc-link reveal" href="https://github.com/landjunge/tollgate/blob/main/docs/FAQ.md">
+            <strong>FAQ</strong>
+            <span>Blocks, auth, chaos, keys</span>
+          </a>
+          <a class="doc-link reveal" href="https://github.com/landjunge/tollgate/blob/main/docs/TEN_MINUTE.md">
+            <strong>10-minute test</strong>
+            <span>Cold stranger path</span>
+          </a>
+          <a class="doc-link reveal" href="https://github.com/landjunge/tollgate/blob/main/docs/OPENAI.md">
+            <strong>OpenAI drop-in</strong>
+            <span>BASE_URL → Tollgate</span>
+          </a>
+          <a class="doc-link reveal" href="docs.html">
+            <strong>All docs →</strong>
+            <span>Searchable index</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap footer-inner">
+      <div>
+        <strong>Tollgate</strong>
+        <div class="tagline">Pay the toll — or don't call.</div>
+        <p style="margin:0.75rem 0 0;max-width:22rem">
+          MIT · Python ≥ 3.11 · v1.0+ ·
+          Safety layer for AI agents
+        </p>
+        <p style="margin:0.35rem 0 0">© <span id="year">2026</span> landjunge</p>
+      </div>
+      <div class="footer-links">
+        <a href="de.html">Deutsch</a>
+        <a href="docs.html">Docs</a>
+        <a href="https://github.com/landjunge/tollgate">GitHub</a>
+        <a href="https://github.com/landjunge/tollgate/blob/main/CHANGELOG.md">Changelog</a>
+        <a href="https://github.com/landjunge/tollgate/blob/main/LICENSE">License</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="site.js"></script>
+</body>
+</html>

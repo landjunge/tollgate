@@ -1,10 +1,12 @@
 # Tollgate
 
-**v1.0.7** · *Pay the toll — or don't call.*
+**v1.0.8** · *Pay the toll — or don't call.*
 
 # “My AI agent must never go out of control.”
 
 > **Tollgate is the safety layer between your AI agents and the internet.**
+
+**Website:** [landjunge.github.io/tollgate](https://landjunge.github.io/tollgate/) · [DE](https://landjunge.github.io/tollgate/de.html) · [Docs](https://landjunge.github.io/tollgate/docs.html)
 
 **Protects AI agents in production** — not an API gateway, not a model catalog.
 

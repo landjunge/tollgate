@@ -2,6 +2,13 @@
 
 All notable releases of [landjunge/tollgate](https://github.com/landjunge/tollgate).
 
+## 1.0.8 — 2026-08-11
+
+### Product website (GitHub Pages)
+- Static site in `site/` — EN landing, DE page, docs index
+- Control Room aesthetic · Protect · Route · Prove positioning
+- Workflow `.github/workflows/pages.yml` → https://landjunge.github.io/tollgate/
+
 ## 1.0.7 — 2026-08-11
 
 ### Documentation & help (expanded)
