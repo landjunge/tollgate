@@ -1,6 +1,6 @@
 # Tollgate
 
-**v1.0.2** · *Pay the toll — or don't call.*
+**v1.0.7** · *Pay the toll — or don't call.*
 
 # “My AI agent must never go out of control.”
 
@@ -41,8 +41,8 @@ docker compose exec tollgate tollgate certificate
 ```
 
 **Stranger test:** [docs/TEN_MINUTE.md](docs/TEN_MINUTE.md)  
-**Full help:** [docs/HILFE.md](docs/HILFE.md) (DE) · [docs/USER_GUIDE.md](docs/USER_GUIDE.md) (EN)  
-**Demo:** [docs/DEMO.md](docs/DEMO.md) · `tollgate help`
+**Full help:** [docs/HILFE.md](docs/HILFE.md) (DE) · [docs/USER_GUIDE.md](docs/USER_GUIDE.md) (EN) · [docs/FAQ.md](docs/FAQ.md)  
+**Demo:** [docs/DEMO.md](docs/DEMO.md) · `tollgate help` · `tollgate help env`
 
 If that path is confusing, **stop shipping features** — fix the path.
 
@@ -108,6 +108,7 @@ export OPENAI_API_KEY=support-agent   # open mode label, or id:secret
 |-----|------|
 | [HILFE.md](docs/HILFE.md) | **Hilfe (Deutsch)** |
 | [USER_GUIDE.md](docs/USER_GUIDE.md) | **User guide (English)** |
+| [FAQ.md](docs/FAQ.md) | **FAQ** |
 | [TEN_MINUTE.md](docs/TEN_MINUTE.md) | First 10 minutes |
 | [DEMO.md](docs/DEMO.md) | Pitch / screen share |
 | [GETTING_STARTED.md](docs/GETTING_STARTED.md) | Setup details |

@@ -76,8 +76,15 @@ CONCEPTS: list[dict[str, Any]] = [
         "id": "user-guide",
         "title": "User Guide (English)",
         "path": "docs/USER_GUIDE.md",
-        "summary": "Full English handbook: install, protect, UI, CLI, API, troubleshoot.",
+        "summary": "Full English handbook: install, protect, UI, CLI, API, env, recipes.",
         "keywords": "user guide handbook documentation help english manual",
+    },
+    {
+        "id": "faq",
+        "title": "FAQ",
+        "path": "docs/FAQ.md",
+        "summary": "Common questions: keys, auth, blocks, chaos, OpenAI drop-in, metrics.",
+        "keywords": "faq questions blocked freeze auth keys chaos certificate help",
     },
     {
         "id": "agent-protection",

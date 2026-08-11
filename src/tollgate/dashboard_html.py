@@ -276,6 +276,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
     <a href="/docs">API</a> ·
     <a href="https://github.com/landjunge/tollgate/blob/main/docs/HILFE.md" target="_blank" rel="noopener">Hilfe</a> ·
     <a href="https://github.com/landjunge/tollgate/blob/main/docs/USER_GUIDE.md" target="_blank" rel="noopener">User Guide</a> ·
+    <a href="https://github.com/landjunge/tollgate/blob/main/docs/FAQ.md" target="_blank" rel="noopener">FAQ</a> ·
     <a href="https://github.com/landjunge/tollgate">GitHub</a> ·
     <code>tollgate help</code>
   </footer>

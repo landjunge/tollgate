@@ -140,6 +140,65 @@ def _format_help(topic: str = "") -> str:
     tollgate certificate
     tollgate demo --skip-chaos
 """,
+        "env": """
+# Environment variables
+
+  TOLLGATE_HOME              data root (contains User/)
+  GNOM_WS                    fallback data root
+  TOLLGATE_CONFIG            absolute keys_app.json override
+  GNOM_KEYS_CONFIG           alias for config override
+  TOLLGATE_PORTABLE=1        portable path resolution
+  TOLLGATE_REQUIRE_AUTH=1    force auth mode (id:secret)
+  TOLLGATE_CONSUMERS         consumers.json path override
+  TOLLGATE_FROZEN=1          kill switch (also TOLLGATE_ADMISSION_FROZEN)
+  TOLLGATE_ALERT_WEBHOOK     alert URL (or cost_guard.alert_webhook_url)
+  TOLLGATE_METRICS_TOKEN     Bearer for /metrics
+  TOLLGATE_METRICS_PUBLIC=1  open /metrics (lab only)
+  TOLLGATE_STRICT_CONFIG=1   hard-fail invalid config
+  TOLLGATE_URL               client base (default http://127.0.0.1:8787)
+  TOLLGATE_CONSUMER          client default lane
+  HOST / PORT                tollgate serve bind (127.0.0.1 / 8787)
+
+  Provider keys: $TOLLGATE_HOME/User/Key.txt or process env
+  Handbook: docs/HILFE.md §18 · docs/USER_GUIDE.md §16
+""",
+        "config": """
+# Config (keys_app.json)
+
+  Path: $TOLLGATE_HOME/User/keys_app.json
+  Defaults: src/tollgate/app_config.py DEFAULT_CONFIG
+
+  Main blocks:
+    cost_guard          global $ cap, high_risk, soft_warn, webhook
+    consumer_envelopes  per-lane budgets + scopes + tool_calls
+    providers.<id>      enabled, max_usd_day, …
+    circuits            breaker thresholds / cooldown
+    reliability         Prove targets
+    admission           freeze flags
+
+  CLI:
+    tollgate consumer-budget …     # envelopes
+    tollgate high-risk list|add
+    tollgate freeze / unfreeze
+
+  HTTP:
+    GET  /v1/config
+    POST /v1/config   # deep-merge; invalid → 400 not written
+
+  Detail: docs/COST_LIMITS.md · docs/HILFE.md §19
+""",
+        "faq": """
+# FAQ (short)
+
+  Keys for demo?     No for Protect tool-loop; yes for real chat/chaos
+  vs LiteLLM?        LiteLLM routes models; Tollgate stops agents + proves DR
+  Always blocked?    freeze · envelope · scope · audit --event admit_deny
+  tool_calls_est?    Client must send loop depth for max_tool_calls
+  Unlimited budget?  Set dimension to 0 (other dims still apply)
+  Multi-worker?      Share TOLLGATE_HOME (see docs/STABILITY.md)
+  Find code?         tollgate search <q> · tollgate search --map
+  Full FAQ:          docs/FAQ.md · DE handbook docs/HILFE.md
+""",
     }
     if t in topics:
         return topics[t].strip() + "\n"
@@ -168,10 +227,14 @@ Help topics
   tollgate help ops            doctor, audit, snapshot, alerts
   tollgate help troubleshoot   common failures
   tollgate help commands       full command list
+  tollgate help env            environment variables
+  tollgate help config         keys_app.json recipes
+  tollgate help faq            short FAQ
 
 Handbooks
   docs/HILFE.md        German detailed help
   docs/USER_GUIDE.md   English user guide
+  docs/FAQ.md          FAQ
   docs/TEN_MINUTE.md   10-minute stranger test
   docs/DEMO.md         killer demo script
   docs/PRODUCT.md      positioning
@@ -196,7 +259,7 @@ def main(argv: list[str] | None = None) -> None:
         "topic",
         nargs="?",
         default="",
-        help="start|protect|route|prove|ui|api|ops|troubleshoot|commands",
+        help="start|protect|route|prove|ui|api|ops|troubleshoot|commands|env|config|faq",
     )
 
     sub.add_parser("serve", help="Run HTTP server (uvicorn)")

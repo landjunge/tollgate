@@ -2,6 +2,15 @@
 
 All notable releases of [landjunge/tollgate](https://github.com/landjunge/tollgate).
 
+## 1.0.7 — 2026-08-11
+
+### Documentation & help (expanded)
+- `docs/HILFE.md` — full DE handbook (+ env, config recipes, admit path, recipes, glossary, FAQ)
+- `docs/USER_GUIDE.md` — EN parity with DE handbook
+- `docs/FAQ.md` — standalone FAQ
+- CLI help topics: `env`, `config`, `faq` (+ existing start/protect/…)
+- Dashboard footer → FAQ link; indexes updated
+
 ## 1.0.6 — 2026-08-11
 
 ### Documentation & help

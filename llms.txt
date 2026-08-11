@@ -8,7 +8,8 @@
 ## Start here
 
 - [README](README.md) — 10-minute path first
-- [Help DE](docs/HILFE.md) · [User Guide EN](docs/USER_GUIDE.md)
+- [Help DE](docs/HILFE.md) · [User Guide EN](docs/USER_GUIDE.md) · [FAQ](docs/FAQ.md)
+- CLI: `tollgate help` · `tollgate help env` · `tollgate help faq`
 - [10-minute cold test](docs/TEN_MINUTE.md)
 - [Demo (killer use case)](docs/DEMO.md)
 - [Product wedge](docs/PRODUCT.md)

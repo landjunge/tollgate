@@ -7,6 +7,7 @@
 |-----|--------|
 | **[HILFE.md](HILFE.md)** | **Deutsche Hilfe & Handbuch** |
 | **[USER_GUIDE.md](USER_GUIDE.md)** | **English user handbook** |
+| **[FAQ.md](FAQ.md)** | **FAQ (DE/EN questions)** |
 | [TEN_MINUTE.md](TEN_MINUTE.md) | **Cold customer — first 10 minutes** |
 | [GETTING_STARTED.md](GETTING_STARTED.md) | Setup details |
 | [DEMO.md](DEMO.md) | **Killer demo — agent loop + DR proof** |
@@ -28,6 +29,9 @@
 ```bash
 tollgate help
 tollgate help protect
+tollgate help env
+tollgate help config
+tollgate help faq
 tollgate help troubleshoot
 ```
 
