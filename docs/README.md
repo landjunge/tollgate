@@ -46,3 +46,4 @@ spec = load_distill("brave")
 for op in ops_for("brave"):
     print(op["name"], "→", op["maps_to"])
 ```
+| [DESK.md](DESK.md) | Gnom + n8n runbook |
