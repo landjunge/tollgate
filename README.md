@@ -25,6 +25,7 @@ tollgate chaos test opencode_zen --requests 5
 tollgate resilience
 tollgate audit --event admit_deny   # who was stopped and why
 tollgate report                     # daily Protect·Route·Prove brief
+tollgate snapshot export -o desk.tgz  # portable desk migrate
 tollgate search circuit breaker     # repo map / modules
 ```
 

@@ -64,6 +64,7 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | `tollgate search` | Search repo modules / docs / routes |
 | `tollgate audit` | Query audit trail — who was denied and why |
 | `tollgate report` | Daily operator report Protect·Route·Prove |
+| `tollgate snapshot` | Export/import desk ops state (USB migrate) |
 
 ## Concepts → code
 
@@ -86,6 +87,7 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | Usage ledger (fail-closed) | `src/tollgate/usage_ledger.py` |
 | Append-only audit trail + query | `src/tollgate/audit_log.py` |
 | Daily operator report | `src/tollgate/report.py` |
+| Desk snapshot export/import | `src/tollgate/snapshot.py` |
 | Consumer auth (id:secret) | `src/tollgate/consumers.py` |
 | Cost guard + high-risk providers | `src/tollgate/cost.py` |
 | keys_app.json config + validate | `src/tollgate/app_config.py` |
@@ -168,6 +170,7 @@ Living map of modules, HTTP, CLI, docs, configs. If a path moved, search still f
 | `secrets.py` | Key. |
 | `server_v1.py` | Standalone multi-consumer HTTP surface. |
 | `service.py` | KeysService — flagship facade: inventory, dashboard, policy, ops. |
+| `snapshot.py` | Desk snapshot export / import — portable migration without guessing paths. |
 | `suggest.py` | Config suggestions from ledger patterns — propose only, never auto-apply. |
 | `usage_ledger.py` | Token / call / char ledger — daily buckets, persistent. |
 

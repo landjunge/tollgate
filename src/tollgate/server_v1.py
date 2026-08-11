@@ -78,7 +78,7 @@ _bootstrap_env()
 
 app = FastAPI(
     title="Tollgate",
-    version="0.3.2",
+    version="0.3.3",
     description=(
         "Tollgate — AI reliability & control plane. "
         "Protect · Route · Prove (chaos failover tests). "
@@ -144,7 +144,7 @@ def health() -> dict[str, Any]:
         "ok": True,
         "service": "tollgate",
         "product": "Tollgate",
-        "version": "0.3.2",
+        "version": "0.3.3",
         "extractable": True,
         "multi_consumer": True,
         "portable": path_snapshot(),
@@ -579,6 +579,12 @@ class ChatCompletionsBody(BaseModel):
     request_class: str | None = None
     prefer_free: bool | None = None
     user: str | None = None  # OpenAI user field → agent_id hint
+    tokens_est: int = Field(0, ge=0, description="Prompt size hint for admit")
+    tool_calls_est: int = Field(
+        0,
+        ge=0,
+        description="Agent loop depth this turn — max_tool_calls protection",
+    )
 
 
 @app.get("/v1/models")
@@ -637,6 +643,9 @@ def openai_chat_completions(
     max_tok = int(body.max_tokens or 1024)
     temp = float(body.temperature if body.temperature is not None else 0.7)
 
+    tools_est = int(body.tool_calls_est or 0)
+    tok_est = int(body.tokens_est or 0)
+
     if body.stream:
         from tollgate.chat_stream import start_chat_stream
 
@@ -647,6 +656,8 @@ def openai_chat_completions(
             provider=provider,
             max_tokens=max_tok,
             temperature=temp,
+            tokens_est=tok_est,
+            tool_calls_est=tools_est,
             agent_id=agent,
             consumer=consumer,
             request_class=rclass,
@@ -675,6 +686,8 @@ def openai_chat_completions(
         provider=provider,
         max_tokens=max_tok,
         temperature=temp,
+        tokens_est=tok_est,
+        tool_calls_est=tools_est,
         agent_id=agent,
         consumer=consumer,
         request_class=rclass,

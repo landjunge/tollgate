@@ -109,6 +109,48 @@ def main(argv: list[str] | None = None) -> None:
         help="Propose routing/budget tweaks from ledger (never auto-applies)",
     )
 
+    snap = sub.add_parser(
+        "snapshot",
+        help="Export/import desk ops state (portable USB migration)",
+    )
+    snap.add_argument(
+        "action",
+        choices=["export", "import", "info"],
+        help="export | import | info",
+    )
+    snap.add_argument(
+        "path",
+        nargs="?",
+        default="",
+        help="archive path (.tgz)",
+    )
+    snap.add_argument(
+        "-o",
+        "--output",
+        default="",
+        help="export destination (default: tollgate-snapshot-<day>.tgz)",
+    )
+    snap.add_argument(
+        "--include-secrets",
+        action="store_true",
+        help="export Key.txt / .env (sensitive — off by default)",
+    )
+    snap.add_argument(
+        "--no-audit",
+        action="store_true",
+        help="omit audit.jsonl from export",
+    )
+    snap.add_argument(
+        "--replace",
+        action="store_true",
+        help="import: overwrite existing files (default merges keys_app only)",
+    )
+    snap.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="import: show plan without writing",
+    )
+
     rep = sub.add_parser(
         "report",
         help="Daily operator report — Protect · Route · Prove evidence",
@@ -287,6 +329,48 @@ def main(argv: list[str] | None = None) -> None:
             print(f"wrote {out_path}", file=sys.stderr)
         print(text)
         return
+
+    if args.cmd == "snapshot":
+        from datetime import date
+        from pathlib import Path
+
+        from tollgate.paths import pin_data_home_env
+        from tollgate.snapshot import export_snapshot, import_snapshot, snapshot_info
+
+        pin_data_home_env()
+        action = args.action
+        if action == "export":
+            out = (args.output or args.path or "").strip()
+            if not out:
+                out = f"tollgate-snapshot-{date.today().isoformat()}.tgz"
+            result = export_snapshot(
+                out,
+                include_secrets=bool(args.include_secrets),
+                include_audit=not bool(args.no_audit),
+            )
+            print(json.dumps(result, indent=2, default=str))
+            raise SystemExit(0 if result.get("ok") else 1)
+        path = (args.path or args.output or "").strip()
+        if not path:
+            print(
+                json.dumps(
+                    {
+                        "ok": False,
+                        "error": "path required: tollgate snapshot import <file.tgz>",
+                    }
+                )
+            )
+            raise SystemExit(2)
+        if action == "info":
+            print(json.dumps(snapshot_info(path), indent=2, default=str))
+            return
+        result = import_snapshot(
+            path,
+            dry_run=bool(args.dry_run),
+            replace=bool(args.replace),
+        )
+        print(json.dumps(result, indent=2, default=str))
+        raise SystemExit(0 if result.get("ok") else 1)
 
     if args.cmd == "health":
         from tollgate import get_keys_service

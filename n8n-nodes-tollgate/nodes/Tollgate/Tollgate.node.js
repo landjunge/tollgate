@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tollgate community node — chat / route / budget / invoke / search.
+ * Tollgate community node — chat / route / budget / invoke / search / control.
  * Secrets for providers stay in Tollgate; n8n only holds a consumer key.
  */
 class Tollgate {
@@ -11,10 +11,10 @@ class Tollgate {
 			name: 'tollgate',
 			icon: 'file:tollgate.svg',
 			group: ['transform'],
-			version: 1,
+			version: 2,
 			subtitle: '={{$parameter["operation"]}}',
 			description:
-				'API admission gateway: OpenAI chat, route, budget, invoke, Brave search',
+				'Tollgate control plane: OpenAI chat, route, budget, invoke, report, protect',
 			defaults: {
 				name: 'Tollgate',
 			},
@@ -76,6 +76,30 @@ class Tollgate {
 							description: 'GET /v1/health',
 							action: 'Health check',
 						},
+						{
+							name: 'Control',
+							value: 'control',
+							description: 'Control plane snapshot (burn, health, attention)',
+							action: 'Control plane',
+						},
+						{
+							name: 'Report',
+							value: 'report',
+							description: 'Daily Protect·Route·Prove operator report (JSON)',
+							action: 'Daily report',
+						},
+						{
+							name: 'Resilience',
+							value: 'resilience',
+							description: 'AI Resilience Score 0–100',
+							action: 'Resilience score',
+						},
+						{
+							name: 'Audit',
+							value: 'audit',
+							description: 'Query admit denies / usage trail',
+							action: 'Audit trail',
+						},
 					],
 					default: 'chat',
 				},
@@ -130,6 +154,16 @@ class Tollgate {
 					default: true,
 					displayOptions: { show: { operation: ['chat'] } },
 				},
+				{
+					displayName: 'Tool Calls Estimate',
+					name: 'toolCallsEst',
+					type: 'number',
+					default: 0,
+					description:
+						'Agent loop depth this turn — enforced via max_tool_calls envelope (Protect)',
+					typeOptions: { minValue: 0 },
+					displayOptions: { show: { operation: ['chat', 'invoke'] } },
+				},
 
 				// ── Route ───────────────────────────────────────────
 				{
@@ -151,7 +185,7 @@ class Tollgate {
 					name: 'tokensEst',
 					type: 'number',
 					default: 1000,
-					displayOptions: { show: { operation: ['route'] } },
+					displayOptions: { show: { operation: ['route', 'invoke', 'chat'] } },
 				},
 
 				// ── Budget ──────────────────────────────────────────
@@ -226,6 +260,31 @@ class Tollgate {
 					typeOptions: { minValue: 1, maxValue: 20 },
 					displayOptions: { show: { operation: ['search'] } },
 				},
+
+				// ── Audit ───────────────────────────────────────────
+				{
+					displayName: 'Event Filter',
+					name: 'auditEvent',
+					type: 'string',
+					default: 'admit_deny',
+					description: 'admit_deny · usage · empty for all',
+					displayOptions: { show: { operation: ['audit'] } },
+				},
+				{
+					displayName: 'Limit',
+					name: 'auditLimit',
+					type: 'number',
+					default: 40,
+					typeOptions: { minValue: 1, maxValue: 500 },
+					displayOptions: { show: { operation: ['audit'] } },
+				},
+				{
+					displayName: 'Summary Only',
+					name: 'auditSummary',
+					type: 'boolean',
+					default: false,
+					displayOptions: { show: { operation: ['audit'] } },
+				},
 			],
 		};
 	}
@@ -255,6 +314,43 @@ class Tollgate {
 				out = await this.helpers.httpRequest({
 					method: 'GET',
 					url: `${baseUrl}/v1/health`,
+					headers,
+					json: true,
+				});
+			} else if (operation === 'control') {
+				out = await this.helpers.httpRequest({
+					method: 'GET',
+					url: `${baseUrl}/v1/control`,
+					headers,
+					json: true,
+				});
+			} else if (operation === 'report') {
+				out = await this.helpers.httpRequest({
+					method: 'GET',
+					url: `${baseUrl}/v1/report`,
+					headers,
+					json: true,
+				});
+			} else if (operation === 'resilience') {
+				out = await this.helpers.httpRequest({
+					method: 'GET',
+					url: `${baseUrl}/v1/resilience`,
+					headers,
+					json: true,
+				});
+			} else if (operation === 'audit') {
+				const event = this.getNodeParameter('auditEvent', i, 'admit_deny');
+				const limit = this.getNodeParameter('auditLimit', i, 40);
+				const summary = this.getNodeParameter('auditSummary', i, false);
+				const params = new URLSearchParams();
+				if (summary) params.set('summary', 'true');
+				else {
+					if (event) params.set('event', String(event));
+					params.set('limit', String(limit));
+				}
+				out = await this.helpers.httpRequest({
+					method: 'GET',
+					url: `${baseUrl}/v1/audit?${params.toString()}`,
 					headers,
 					json: true,
 				});
@@ -290,29 +386,40 @@ class Tollgate {
 				const preferFree = this.getNodeParameter('preferFree', i, true);
 				const requestClass = this.getNodeParameter('requestClass', i, 'batch');
 				const agentId = this.getNodeParameter('agentId', i, 'n8n');
+				const toolCallsEst = this.getNodeParameter('toolCallsEst', i, 0);
+				const tokensEst = this.getNodeParameter('tokensEst', i, 0);
 				const messages = [];
 				if (system) {
 					messages.push({ role: 'system', content: system });
 				}
 				messages.push({ role: 'user', content: prompt });
+				const body = {
+					model,
+					messages,
+					max_tokens: maxTokens,
+					temperature,
+					prefer_free: preferFree,
+					request_class: requestClass,
+					user: agentId,
+				};
+				// tool_calls_est / tokens_est if server supports extras on chat
+				if (toolCallsEst > 0) body.tool_calls_est = toolCallsEst;
+				if (tokensEst > 0) body.tokens_est = tokensEst;
 				out = await this.helpers.httpRequest({
 					method: 'POST',
 					url: `${baseUrl}/v1/chat/completions`,
 					headers,
-					body: {
-						model,
-						messages,
-						max_tokens: maxTokens,
-						temperature,
-						prefer_free: preferFree,
-						request_class: requestClass,
-						user: agentId,
-					},
+					body,
 					json: true,
 				});
 				// Convenience fields for Set / IF nodes
 				if (out && out.choices && out.choices[0] && out.choices[0].message) {
 					out.text = out.choices[0].message.content;
+				}
+				// Surface tollgate deny meta when present
+				if (out && out.error && out.error.tollgate) {
+					out.tollgate = out.error.tollgate;
+					out.protection = out.error.tollgate.protection;
 				}
 			} else if (operation === 'invoke') {
 				const provider = this.getNodeParameter('provider', i);
@@ -327,6 +434,8 @@ class Tollgate {
 				}
 				const requestClass = this.getNodeParameter('requestClass', i, 'batch');
 				const agentId = this.getNodeParameter('agentId', i, 'n8n');
+				const toolCallsEst = this.getNodeParameter('toolCallsEst', i, 0);
+				const tokensEst = this.getNodeParameter('tokensEst', i, 0);
 				out = await this.helpers.httpRequest({
 					method: 'POST',
 					url: `${baseUrl}/v1/invoke`,
@@ -338,6 +447,8 @@ class Tollgate {
 						request_class: requestClass,
 						agent_id: agentId,
 						job_id: `n8n-${i}`,
+						tool_calls_est: toolCallsEst || 0,
+						tokens_est: tokensEst || 0,
 					},
 					json: true,
 				});

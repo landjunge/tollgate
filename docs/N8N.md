@@ -35,7 +35,7 @@ See [COST_LIMITS.md](COST_LIMITS.md).
 
 ## A) Community node (recommended)
 
-Package in-repo: [`n8n-nodes-tollgate/`](../n8n-nodes-tollgate/)
+Package in-repo: [`n8n-nodes-tollgate/`](../n8n-nodes-tollgate/) (**v0.2** — control, report, resilience, audit, `tool_calls_est`)
 
 ```bash
 mkdir -p ~/.n8n/custom && cd ~/.n8n/custom
@@ -61,6 +61,20 @@ Many n8n AI nodes speak OpenAI format:
 - Model: `tollgate/free` or `tollgate/auto`
 
 Siehe [OPENAI.md](OPENAI.md). Env template: [`configs/n8n-openai.env.example`](../configs/n8n-openai.env.example).
+
+### Community node operations (v0.2)
+
+| Op | Path | Notes |
+|----|------|--------|
+| Chat | `POST /v1/chat/completions` | + `tool_calls_est` for loop protection |
+| Invoke | `POST /v1/invoke` | + `tool_calls_est` / `tokens_est` |
+| Budget / Route / Search / Health | as before | |
+| **Control** | `GET /v1/control` | burn + attention |
+| **Report** | `GET /v1/report` | daily brief JSON |
+| **Resilience** | `GET /v1/resilience` | score 0–100 |
+| **Audit** | `GET /v1/audit` | who was denied |
+
+On 402/429 denies, body may include `error.tollgate.protection` for IF nodes.
 
 ## C) Import HTTP workflows
 

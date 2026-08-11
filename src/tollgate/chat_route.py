@@ -23,6 +23,7 @@ def routed_chat(
     max_tokens: int = 1024,
     temperature: float = 0.7,
     tokens_est: int = 0,
+    tool_calls_est: int = 0,
     agent_id: str = "gnom",
     consumer: str = "",
     job_id: str = "",
@@ -73,6 +74,7 @@ def routed_chat(
         session_id=session_id,
         request_class=rclass,
         allow_paid_fallback=allow_paid_fallback,
+        tool_calls_est=max(0, int(tool_calls_est or 0)),
     )
 
     tried: list[dict[str, Any]] = []

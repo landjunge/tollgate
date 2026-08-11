@@ -171,6 +171,13 @@ CONCEPTS: list[dict[str, Any]] = [
         "keywords": "report daily operator status brief markdown analytics prove",
     },
     {
+        "id": "snapshot",
+        "title": "Desk snapshot export/import",
+        "path": "src/tollgate/snapshot.py",
+        "summary": "tollgate snapshot export/import — portable migrate without Key.txt by default.",
+        "keywords": "snapshot export import portable usb migrate backup desk",
+    },
+    {
         "id": "consumers-auth",
         "title": "Consumer auth (id:secret)",
         "path": "src/tollgate/consumers.py",
@@ -328,6 +335,7 @@ CLI_COMMANDS: list[dict[str, str]] = [
     {"cmd": "search", "summary": "Search repo modules / docs / routes"},
     {"cmd": "audit", "summary": "Query audit trail — who was denied and why"},
     {"cmd": "report", "summary": "Daily operator report Protect·Route·Prove"},
+    {"cmd": "snapshot", "summary": "Export/import desk ops state (USB migrate)"},
 ]
 
 

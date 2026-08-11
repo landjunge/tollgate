@@ -243,4 +243,4 @@ def _version() -> str:
 
         return str(__version__)
     except Exception:  # noqa: BLE001
-        return "0.3.2"
+        return "0.3.3"

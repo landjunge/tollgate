@@ -86,6 +86,7 @@ Agents ────┘         HTTP + MCP + OpenAI/Anthropic drop-ins
 | Safe defaults | Protect-on `_default`, metrics auth, circuit jitter | **done (v0.3.0)** |
 | Audit query | who/why denied — CLI · HTTP · dashboard · MCP | **done (v0.3.1)** |
 | Operator report | daily Protect·Route·Prove brief + deny meta headers | **done (v0.3.2)** |
+| Snapshot + n8n v0.2 | portable export/import · tool_calls on chat · control ops | **done (v0.3.3)** |
 | Enterprise | Teams, SSO/RBAC | later |
 
 ---

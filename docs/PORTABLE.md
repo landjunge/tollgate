@@ -46,6 +46,28 @@ cd /path/to/tollgate
 ./scripts/run.sh
 ```
 
+## Snapshot migrate (v0.3.3+)
+
+Move **ops state** between hosts / sticks without re-typing envelopes:
+
+```bash
+# on source desk (Key.txt NOT included by default)
+tollgate snapshot export -o desk.tgz
+tollgate snapshot info desk.tgz
+
+# on target (set TOLLGATE_HOME first)
+tollgate snapshot import desk.tgz --dry-run
+tollgate snapshot import desk.tgz
+# optional full overwrite:
+# tollgate snapshot import desk.tgz --replace
+
+# only if you deliberately want secrets in the archive:
+tollgate snapshot export -o desk-secrets.tgz --include-secrets
+```
+
+Includes: `keys_app.json`, `consumers.json` (hashes), ledger, circuits, chaos, audit.  
+Excludes: `Key.txt` / `.env` unless `--include-secrets`.
+
 Health shows where data landed::
 
 ```bash
