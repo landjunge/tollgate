@@ -682,14 +682,23 @@ class KeysService:
         tokens_est: int = 0,
         chars_est: int = 0,
         live: bool = False,
+        prefer_free: bool | None = None,
     ) -> dict[str, Any]:
-        return route_intent(
+        r = route_intent(
             self,
             intent,
             tokens_est=tokens_est,
             chars_est=chars_est,
             live=live,
+            prefer_free=prefer_free,
         )
+        # Flatten primary for HTTP/OpenAI clients that expect top-level provider/model
+        primary = r.get("route") if isinstance(r.get("route"), dict) else None
+        if primary:
+            r.setdefault("provider", primary.get("provider"))
+            r.setdefault("model", primary.get("model"))
+            r.setdefault("base_url", primary.get("base_url"))
+        return r
 
     def route_execute(self, intent: str, **kwargs: Any) -> dict[str, Any]:
         return execute_routed(self, intent, **kwargs)

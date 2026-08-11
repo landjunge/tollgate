@@ -47,16 +47,30 @@ def routed_chat(
         intent_use = intent
         if prefer_free is True and intent in ("llm", "paid_llm"):
             intent_use = "free_llm"
-        route = get_keys_service().route(intent_use, tokens_est=est, live=False)
+        route = get_keys_service().route(
+            intent_use,
+            tokens_est=est,
+            live=False,
+            prefer_free=prefer_free,
+        )
         if not route.get("ok"):
             return {
                 "ok": False,
                 "error": route.get("error") or "no provider for intent",
                 "route": route,
             }
-        pid = str(route.get("provider") or "").strip().lower()
+        # route() nests primary under "route"; also accept flat provider/model
+        primary = route.get("route") if isinstance(route.get("route"), dict) else {}
+        pid = str(route.get("provider") or primary.get("provider") or "").strip().lower()
         if not mid:
-            mid = str(route.get("model") or "").strip()
+            mid = str(route.get("model") or primary.get("model") or "").strip()
+        if not pid:
+            # last resort: first fallback
+            fb = route.get("fallbacks") or []
+            if fb and isinstance(fb[0], dict):
+                pid = str(fb[0].get("provider") or "").strip().lower()
+                if not mid:
+                    mid = str(fb[0].get("model") or "").strip()
         if not pid:
             return {"ok": False, "error": "router returned empty provider", "route": route}
 

@@ -30,6 +30,21 @@ def test_models_list(client):
     assert "tollgate/auto" in ids or "tollgate/free" in ids
 
 
+def test_route_flattens_provider():
+    from tollgate import get_keys_service
+
+    # nested primary is flattened by KeysService.route
+    with patch("tollgate.service.route_intent") as ri:
+        ri.return_value = {
+            "ok": True,
+            "route": {"provider": "nvidia", "model": "x", "base_url": "https://n"},
+            "fallbacks": [],
+        }
+        r = get_keys_service().route("free_llm")
+    assert r.get("provider") == "nvidia"
+    assert r.get("model") == "x"
+
+
 def test_chat_completions_shape(client):
     fake = {
         "ok": True,
