@@ -34,18 +34,24 @@ def gateway_call(
 
     ctx = ctx or RequestContext()
     mid = model or str(kwargs.get("model") or "")
-    # Chaos inject: fail closed for targeted provider (DR / chaos tests)
+    # Chaos inject / gradual recovery: fail closed for diverted traffic
     try:
-        from tollgate.chaos import is_provider_in_chaos
+        from tollgate.chaos import is_provider_in_chaos, is_provider_unavailable
 
-        if is_provider_in_chaos(provider):
+        if is_provider_unavailable(provider):
+            chaos = is_provider_in_chaos(provider)
             return {
                 "ok": False,
-                "error": f"chaos inject: provider {provider} simulated unavailable",
+                "error": (
+                    f"chaos inject: provider {provider} simulated unavailable"
+                    if chaos
+                    else f"gradual recovery: provider {provider} not yet fully restored"
+                ),
                 "error_class": "PROVIDER_DOWN",
                 "provider": provider,
                 "op": op,
-                "chaos": True,
+                "chaos": chaos,
+                "recovery": not chaos,
             }
     except Exception:  # noqa: BLE001
         pass

@@ -85,6 +85,12 @@ def test_resilience_score_shape(monkeypatch, tmp_path):
     cfg = load_config(force=True)
     cfg["consumer_envelopes"] = {"desk": {"max_usd_day": 5}}
     cfg["auto_failover"] = True
+    cfg["reliability"] = {
+        "availability_target": 99.9,
+        "max_failover_time_s": 5.0,
+        "required_fallbacks": 2,
+        "gradual_recovery_s": 0,
+    }
     save_config(cfg)
 
     s = resilience_score()
@@ -92,4 +98,47 @@ def test_resilience_score_shape(monkeypatch, tmp_path):
     assert 0 <= s["score"] <= 100
     assert "reliability" in s["dimensions"]
     assert "failover" in s["dimensions"]
+    assert "policy" in s
+    assert s["policy"]["required_fallbacks"] == 2
+    assert "availability_estimate_pct" in s
     assert isinstance(s["warnings"], list)
+
+
+def test_gradual_recovery_after_stop(monkeypatch, tmp_path):
+    monkeypatch.setenv("TOLLGATE_HOME", str(tmp_path))
+    (tmp_path / "User").mkdir(parents=True)
+    from tollgate.app_config import load_config, save_config
+    from tollgate.chaos import is_provider_unavailable, start_chaos, status, stop_chaos
+
+    cfg = load_config(force=True)
+    cfg["reliability"] = {"gradual_recovery_s": 120.0}
+    save_config(cfg)
+
+    start_chaos("deepseek", duration_s=30)
+    stop_chaos("deepseek", start_gradual_recovery=True)
+    st = status()
+    assert any(r.get("provider") == "deepseek" for r in (st.get("recovering") or []))
+    # right after stop, progress ~0 → should divert
+    assert is_provider_unavailable("deepseek") is True
+
+
+def test_failover_report_includes_policy_and_cost(monkeypatch, tmp_path):
+    monkeypatch.setenv("TOLLGATE_HOME", str(tmp_path))
+    (tmp_path / "User").mkdir(parents=True)
+    from tollgate.app_config import load_config, save_config
+
+    cfg = load_config(force=True)
+    cfg["reliability"] = {"gradual_recovery_s": 0, "max_failover_time_s": 5.0}
+    save_config(cfg)
+
+    mock_ks = MagicMock()
+    mock_ks.route.return_value = {
+        "ok": True,
+        "provider": "deepseek",
+        "route": {"provider": "deepseek"},
+    }
+    with patch("tollgate.get_keys_service", return_value=mock_ks):
+        rep = run_failover_test("opencode_zen", requests=2, duration_s=10)
+    assert "policy" in rep
+    assert "extra_cost_usd" in rep
+    assert rep["extra_cost_usd"] == 0.0

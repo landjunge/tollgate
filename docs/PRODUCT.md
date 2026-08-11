@@ -21,16 +21,35 @@ Not another LiteLLM. Not only observability.
 > LiteLLM connects models. Helicone shows traffic.  
 > **Tollgate keeps agents in line — and proves failover works.**
 
+## Reliability policy (config)
+
+```json
+"reliability": {
+  "availability_target": 99.9,
+  "max_failover_time_s": 5.0,
+  "required_fallbacks": 2,
+  "gradual_recovery_s": 60.0
+}
+```
+
+| Field | Meaning |
+|-------|---------|
+| `availability_target` | Reported aspirational % (with score) |
+| `max_failover_time_s` | Chaos test recovery SLA |
+| `required_fallbacks` | Min enabled providers per LLM intent |
+| `gradual_recovery_s` | After chaos stop, ramp traffic back (0 = instant) |
+
 ## Chaos / DR (Prove)
 
 ```bash
 # Simulate provider outage for 5 minutes (router + invoke skip it)
 tollgate chaos start opencode_zen --duration 5m
 tollgate chaos status
-tollgate chaos stop opencode_zen
+tollgate chaos stop opencode_zen   # starts gradual recovery if configured
 
-# Active test: inject → N routes → report
+# Active test: inject → N routes → report (+ optional live chat cost)
 tollgate chaos test opencode_zen --requests 10 --duration 2m
+tollgate chaos test deepseek --requests 5 --live-chat   # measures extra_cost_usd
 tollgate resilience
 ```
 
@@ -43,6 +62,8 @@ Successful             10
 Failed                  0
 Automatic failover    100%
 Recovery time        ~ms
+Extra cost           $0.00
+Policy: within max_failover_time
 ✓ Application survived opencode_zen outage
 ```
 
@@ -54,12 +75,13 @@ tollgate resilience
 ```
 
 ```text
-AI RESILIENCE  87/100
+AI RESILIENCE  87/100  (~98.7% est.)
   reliability        94
   failover           91
   budget_control     82
   provider_diversity 75
   observability      89
+Policy: required_fallbacks=2 met · last recovery within 5s
 ```
 
 ## Competitive wedge

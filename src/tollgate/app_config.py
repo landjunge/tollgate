@@ -28,6 +28,19 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "prefer_free": True,
     "auto_failover": True,
     "record_usage": True,
+    # Prove pillar — continuous reliability targets (DR / chaos)
+    "reliability": {
+        "availability_target": 99.9,
+        "max_failover_time_s": 5.0,
+        "required_fallbacks": 2,
+        "gradual_recovery_s": 60.0,
+        "notes": (
+            "availability_target is aspirational for reporting. "
+            "required_fallbacks = min enabled providers per LLM intent. "
+            "max_failover_time_s checked against last chaos test recovery_time. "
+            "gradual_recovery_s > 0 ramps traffic back after chaos stop (0 = immediate)."
+        ),
+    },
     # Hard money guards — Google/Gemini etc. bill silently and fast
     "cost_guard": {
         "enabled": True,

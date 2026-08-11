@@ -196,13 +196,18 @@ def route(
             entry["skip"] = "disabled in keys_app.json"
             tried.append(entry)
             continue
-        # Chaos / DR inject — treat as unavailable (prove failover)
+        # Chaos / DR inject or gradual recovery divert
         try:
-            from tollgate.chaos import is_provider_in_chaos
+            from tollgate.chaos import is_provider_in_chaos, is_provider_unavailable
 
-            if is_provider_in_chaos(pid):
-                entry["skip"] = "chaos inject — provider simulated down"
-                entry["chaos"] = True
+            if is_provider_unavailable(pid):
+                entry["skip"] = (
+                    "chaos inject — provider simulated down"
+                    if is_provider_in_chaos(pid)
+                    else "gradual recovery — traffic ramping back"
+                )
+                entry["chaos"] = is_provider_in_chaos(pid)
+                entry["recovery"] = not entry["chaos"]
                 tried.append(entry)
                 continue
         except Exception:  # noqa: BLE001
