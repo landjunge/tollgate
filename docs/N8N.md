@@ -24,7 +24,17 @@ tollgate consumer-add n8n
 
 Without consumers.json, open mode accepts any `X-Consumer-Key` label (desk).
 
-## Example HTTP nodes
+## OpenAI-Node (einfachste Variante)
+
+Viele n8n AI-Nodes sprechen OpenAI-Format:
+
+- Base URL: `http://127.0.0.1:8787/v1`
+- API Key: `n8n` (open) oder `n8n:<secret>`
+- Model: `tollgate/free` oder `tollgate/auto`
+
+Siehe [OPENAI.md](OPENAI.md).
+
+## Example HTTP nodes (native)
 
 ### 1) Route free LLM
 

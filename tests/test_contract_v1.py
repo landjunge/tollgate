@@ -36,6 +36,8 @@ def test_openapi_lists_v1_paths(client):
         "/v1/providers",
         "/v1/usage",
         "/v1/config",
+        "/v1/models",
+        "/v1/chat/completions",
     ):
         assert p in paths, f"missing {p} in OpenAPI"
 

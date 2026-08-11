@@ -1,0 +1,20 @@
+# Desk / home-lab drop-in
+#   docker compose up -d
+#   export OPENAI_BASE_URL=http://127.0.0.1:8787/v1
+#   export OPENAI_API_KEY=local  # open mode until consumers.json is mounted
+services:
+  tollgate:
+    build: .
+    ports:
+      - "8787:8787"
+    environment:
+      TOLLGATE_HOME: /data
+      TOLLGATE_PORTABLE: "1"
+      # TOLLGATE_REQUIRE_AUTH: "1"
+      # TOLLGATE_ALERT_WEBHOOK: https://…
+    volumes:
+      - tollgate-data:/data
+    restart: unless-stopped
+
+volumes:
+  tollgate-data:

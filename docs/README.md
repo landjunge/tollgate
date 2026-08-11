@@ -12,6 +12,7 @@
 | [N8N.md](N8N.md) | n8n as consumer |
 | [KEYS_MODULE.md](KEYS_MODULE.md) | Module map (legacy name) |
 | [PORTABLE.md](PORTABLE.md) | USB stick / no host paths |
+| [OPENAI.md](OPENAI.md) | OpenAI drop-in base_url |
 
 ## Rule (no more code thrash)
 

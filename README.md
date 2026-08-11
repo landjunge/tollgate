@@ -76,18 +76,29 @@ At 80% of day budget (configurable), admit returns soft pressure and can POST to
 
 Or env: `TOLLGATE_ALERT_WEBHOOK=…`
 
-## HTTP (kurz)
+## OpenAI drop-in (größter Kompatibilitäts-Hebel)
 
-**Signaturen:** laufender Server → `/docs` (nicht die Tabelle pflegen).
+```bash
+export OPENAI_BASE_URL=http://127.0.0.1:8787/v1
+export OPENAI_API_KEY=n8n:secret   # open mode: any label works
+# POST /v1/chat/completions  ·  GET /v1/models  ·  stream: true → SSE
+docker compose up -d               # optional
+```
+
+→ [docs/OPENAI.md](docs/OPENAI.md)
+
+## HTTP native (kurz)
+
+**Signaturen:** laufender Server → `/docs`.
 
 | Path | Zweck |
 |------|--------|
 | `GET /v1/health` | portable + auth mode |
 | `POST /v1/route` | intent → provider |
 | `POST /v1/invoke` | admit + call + meter |
-| `GET|POST /v1/config` | policy (admin when auth on) |
+| `GET` / `POST /v1/config` | policy (admin when auth on) |
 
-Contract tests: `tests/test_contract_v1.py`.
+Contract tests: `tests/test_contract_v1.py`, `tests/test_openai_compat.py`.
 
 ## MCP
 
@@ -110,7 +121,7 @@ Portable/USB: [docs/PORTABLE.md](docs/PORTABLE.md).
 
 ## Docs & quality gates
 
-- [VISION.md](docs/VISION.md) · [ARCHITECTURE.md](docs/ARCHITECTURE.md) · [COST_LIMITS.md](docs/COST_LIMITS.md) · [N8N.md](docs/N8N.md)
+- [OPENAI.md](docs/OPENAI.md) · [VISION.md](docs/VISION.md) · [ARCHITECTURE.md](docs/ARCHITECTURE.md) · [N8N.md](docs/N8N.md)
 
 ```bash
 ./scripts/check_docs_drift.sh

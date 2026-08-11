@@ -4,15 +4,15 @@ Standalone multi-consumer HTTP surface.
   tollgate serve
   → http://127.0.0.1:8787/docs
 
-Contract:
-  GET  /v1/health
-  GET  /v1/providers
-  GET  /v1/budget
-  POST /v1/route
-  POST /v1/invoke
-  GET  /v1/usage
-  GET|POST /v1/config   (admin when auth mode)
-  GET  /v1/auth
+Native:
+  GET  /v1/health | /v1/auth | /v1/providers | /v1/budget | /v1/usage
+  POST /v1/route | /v1/invoke
+  GET|POST /v1/config
+
+OpenAI-compatible drop-in:
+  GET  /v1/models
+  POST /v1/chat/completions
+  Authorization: Bearer <consumer_id>:<secret>  (or X-Consumer-Key)
 """
 
 from __future__ import annotations
@@ -20,13 +20,24 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from fastapi import FastAPI, Header, HTTPException, Query
+from fastapi import FastAPI, Header, HTTPException, Query, Request
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from tollgate import get_keys_service
+from tollgate import get_keys_service, routed_chat
 from tollgate.consumers import auth_status, verify_consumer
 from tollgate.gateway.context import RequestClass, RequestContext
 from tollgate.gateway.entry import gateway_call
+from tollgate.openai_compat import (
+    list_models_openai,
+    map_tollgate_error,
+    normalize_messages,
+    openai_error,
+    parse_bearer,
+    resolve_intent,
+    stream_sse_chunks,
+    to_openai_completion,
+)
 
 
 def _bootstrap_env() -> None:
@@ -51,11 +62,11 @@ _bootstrap_env()
 
 app = FastAPI(
     title="Tollgate",
-    version="0.1.2",
+    version="0.1.4",
     description=(
         "Tollgate — multi-consumer API admission + router. "
-        "Budgets, circuits, distill-backed providers. "
-        "Portable/USB friendly. "
+        "OpenAI-compatible /v1/chat/completions drop-in. "
+        "Budgets, circuits, portable/USB. "
         "https://github.com/landjunge/tollgate"
     ),
 )
@@ -66,8 +77,13 @@ def _require(
     x_consumer_id: str | None = None,
     *,
     need_admin: bool = False,
+    authorization: str | None = None,
 ) -> dict[str, Any]:
-    auth = verify_consumer(x_consumer_key, x_consumer_id, need_admin=need_admin)
+    # Bearer takes precedence when X-Consumer-Key empty (OpenAI SDK style)
+    key = x_consumer_key
+    if not (key or "").strip():
+        key = parse_bearer(authorization)
+    auth = verify_consumer(key, x_consumer_id, need_admin=need_admin)
     if not auth.get("ok"):
         raise HTTPException(status_code=401, detail=auth.get("error") or "unauthorized")
     return auth
@@ -238,9 +254,10 @@ def usage(
 def config_get(
     x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
     x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     """Read keys_app.json policy (admin when auth mode)."""
-    auth = _require(x_consumer_key, x_consumer_id, need_admin=True)
+    auth = _require(x_consumer_key, x_consumer_id, need_admin=True, authorization=authorization)
     out = get_keys_service().get_config()
     out["consumer"] = auth["consumer"]
     out["warning"] = (
@@ -254,9 +271,10 @@ def config_patch(
     body: dict[str, Any],
     x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
     x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
     """Deep-merge patch into keys_app.json (admin when auth mode)."""
-    auth = _require(x_consumer_key, x_consumer_id, need_admin=True)
+    auth = _require(x_consumer_key, x_consumer_id, need_admin=True, authorization=authorization)
     if not isinstance(body, dict) or not body:
         raise HTTPException(status_code=400, detail="JSON object patch required")
     patch = (
@@ -271,6 +289,104 @@ def config_patch(
     return out
 
 
+# ── OpenAI-compatible drop-in ─────────────────────────────────────────
+
+
+class ChatCompletionsBody(BaseModel):
+    model: str = "tollgate/auto"
+    messages: list[dict[str, Any]] = Field(default_factory=list)
+    temperature: float | None = 0.7
+    max_tokens: int | None = 1024
+    stream: bool = False
+    # Tollgate extras (optional; ignored by OpenAI SDKs)
+    intent: str | None = None
+    provider: str | None = None
+    request_class: str | None = None
+    prefer_free: bool | None = None
+    user: str | None = None  # OpenAI user field → agent_id hint
+
+
+@app.get("/v1/models")
+def openai_models(
+    x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+    x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> dict[str, Any]:
+    """OpenAI-compatible model list."""
+    _require(x_consumer_key, x_consumer_id, authorization=authorization)
+    return list_models_openai()
+
+
+@app.post("/v1/chat/completions")
+def openai_chat_completions(
+    body: ChatCompletionsBody,
+    x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+    x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> Any:
+    """
+    OpenAI-compatible chat completions (admission + route + meter).
+
+    Drop-in::
+
+        export OPENAI_BASE_URL=http://127.0.0.1:8787/v1
+        export OPENAI_API_KEY=n8n:secret   # or any label in open mode
+
+    ``stream: true`` returns SSE (synthetic chunks from full completion today).
+    """
+    auth = _require(x_consumer_key, x_consumer_id, authorization=authorization)
+    consumer = auth["consumer"]
+    msgs = normalize_messages(body.messages)
+    if not msgs:
+        err, code = openai_error("messages is required", status=400)
+        return JSONResponse(err, status_code=code)
+
+    intent = (body.intent or "").strip()
+    prefer_free = body.prefer_free
+    if not intent:
+        intent, auto_free = resolve_intent(body.model, prefer_free=prefer_free)
+        if prefer_free is None:
+            prefer_free = auto_free
+    else:
+        prefer_free = bool(prefer_free) if prefer_free is not None else intent == "free_llm"
+
+    # model may be provider-specific id; empty provider → router picks
+    mid = (body.model or "").strip()
+    provider = (body.provider or "").strip()
+    if mid.startswith("tollgate/"):
+        mid = ""  # let router choose
+    rclass = (body.request_class or "interactive").strip() or "interactive"
+    agent = (body.user or f"openai:{consumer}")[:64]
+
+    result = routed_chat(
+        msgs,
+        intent=intent or "llm",
+        model=mid,
+        provider=provider,
+        max_tokens=int(body.max_tokens or 1024),
+        temperature=float(body.temperature if body.temperature is not None else 0.7),
+        agent_id=agent,
+        request_class=rclass,
+        prefer_free=prefer_free,
+    )
+
+    if not result.get("ok"):
+        err, code = map_tollgate_error(result)
+        return JSONResponse(err, status_code=code)
+
+    completion = to_openai_completion(result, model=body.model or "tollgate", consumer=consumer)
+    if body.stream:
+        return StreamingResponse(
+            stream_sse_chunks(completion),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Tollgate-Consumer": consumer,
+            },
+        )
+    return completion
+
+
 @app.get("/")
 def root() -> dict[str, Any]:
     return {
@@ -278,6 +394,8 @@ def root() -> dict[str, Any]:
         "product": "Tollgate",
         "docs": "/docs",
         "repo": "https://github.com/landjunge/tollgate",
+        "openai_base_url": "/v1",
+        "openai": ["/v1/chat/completions", "/v1/models"],
         "vision": "docs/VISION.md",
         "architecture": "docs/ARCHITECTURE.md",
         "mcp": "docs/MCP.md",
@@ -286,6 +404,8 @@ def root() -> dict[str, Any]:
         "v1": [
             "/v1/health",
             "/v1/auth",
+            "/v1/models",
+            "/v1/chat/completions",
             "/v1/route",
             "/v1/invoke",
             "/v1/budget",
