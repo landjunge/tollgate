@@ -9,6 +9,8 @@ cd ~/tollgate
 # optional auth: TOLLGATE_DESK_AUTH=1 ./scripts/desk-ready.sh
 ```
 
+First time? **[GETTING_STARTED.md](GETTING_STARTED.md)** (5 minutes → dashboard + protect + optional DR).
+
 ## Clients
 
 | Client | Config |

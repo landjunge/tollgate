@@ -5,8 +5,9 @@
 
 | Doc | Topic |
 |-----|--------|
+| [GETTING_STARTED.md](GETTING_STARTED.md) | **5-minute setup** |
 | [VISION.md](VISION.md) | Product lock, multi-consumer |
-| [PRODUCT.md](PRODUCT.md) | Control plane positioning, audiences, priorities |
+| [PRODUCT.md](PRODUCT.md) | Protect · Route · Prove positioning |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 7 layers, circuits, taxonomy |
 | [COST_LIMITS.md](COST_LIMITS.md) | Google off, budgets, `/v1/config` |
 | [MCP.md](MCP.md) | stdio MCP + HTTP `/v1/*` |

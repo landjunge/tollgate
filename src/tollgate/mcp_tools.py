@@ -139,6 +139,71 @@ KEYS_MCP_TOOLS: list[dict[str, Any]] = [
         "handler": lambda **_k: _ks().usage(),
     },
     {
+        "name": "keys_control",
+        "description": (
+            "Control plane pane: provider health, consumer burn, resilience, "
+            "attention feed, chaos status. Protect · Route · Prove."
+        ),
+        "inputSchema": {"type": "object", "properties": {}},
+        "handler": lambda **_k: __import__(
+            "tollgate.control_plane", fromlist=["control_snapshot"]
+        ).control_snapshot(),
+    },
+    {
+        "name": "keys_resilience",
+        "description": (
+            "AI Resilience Score 0–100 + policy compliance + warnings. "
+            "Prove pillar for CTOs."
+        ),
+        "inputSchema": {"type": "object", "properties": {}},
+        "handler": lambda **_k: __import__(
+            "tollgate.resilience", fromlist=["resilience_score"]
+        ).resilience_score(),
+    },
+    {
+        "name": "keys_chaos_status",
+        "description": (
+            "Active chaos injects, gradual recovery, last failover test report + history."
+        ),
+        "inputSchema": {"type": "object", "properties": {}},
+        "handler": lambda **_k: __import__(
+            "tollgate.chaos", fromlist=["status"]
+        ).status(),
+    },
+    {
+        "name": "keys_agent_protect_check",
+        "description": (
+            "Dry-run agent protection for a consumer lane: would this request be allowed? "
+            "Pass tokens_est and tool_calls_est (loop depth)."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "consumer": {
+                    "type": "string",
+                    "description": "Consumer/agent id (default gnom)",
+                    "default": "gnom",
+                },
+                "tokens_est": {"type": "integer", "default": 0},
+                "tool_calls_est": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "Tool steps this turn (max_tool_calls envelope)",
+                },
+                "usd_est": {"type": "number", "default": 0},
+            },
+        },
+        "handler": lambda consumer="gnom", tokens_est=0, tool_calls_est=0, usd_est=0, **_k: __import__(
+            "tollgate.limits", fromlist=["check_consumer_limits"]
+        ).check_consumer_limits(
+            str(consumer or "gnom"),
+            tokens_est=int(tokens_est or 0),
+            tool_calls_est=int(tool_calls_est or 0),
+            usd_est=float(usd_est or 0),
+        ),
+    },
+
+    {
         "name": "keys_config_get",
         "description": "Read keys_app.json (limits, routing, auto_update, enabled providers).",
         "inputSchema": {"type": "object", "properties": {}},

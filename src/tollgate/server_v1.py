@@ -78,7 +78,7 @@ _bootstrap_env()
 
 app = FastAPI(
     title="Tollgate",
-    version="0.2.6",
+    version="0.2.7",
     description=(
         "Tollgate — AI reliability & control plane. "
         "Protect · Route · Prove (chaos failover tests). "
@@ -121,6 +121,11 @@ class InvokeBody(BaseModel):
     arguments: dict[str, Any] = Field(default_factory=dict)
     tokens_est: int = Field(0, ge=0)
     chars_est: int = Field(0, ge=0)
+    tool_calls_est: int = Field(
+        0,
+        ge=0,
+        description="Agent loop depth this turn — enforced via max_tool_calls envelope",
+    )
     model: str = ""
     agent_id: str = ""
     job_id: str = ""
@@ -139,7 +144,7 @@ def health() -> dict[str, Any]:
         "ok": True,
         "service": "tollgate",
         "product": "Tollgate",
-        "version": "0.2.6",
+        "version": "0.2.7",
         "extractable": True,
         "multi_consumer": True,
         "portable": path_snapshot(),
@@ -328,6 +333,20 @@ def invoke(
         rclass = RequestClass(body.request_class or "interactive")
     except ValueError:
         rclass = RequestClass.INTERACTIVE
+    args = dict(body.arguments or {})
+    if body.model and "model" not in args:
+        args["model"] = body.model
+    # tool_calls_est: explicit body field, or count tools/tool_calls in arguments
+    tools_est = int(body.tool_calls_est or 0)
+    if tools_est <= 0:
+        for key in ("tool_calls", "tools", "tool_calls_est"):
+            raw = args.get(key)
+            if isinstance(raw, list):
+                tools_est = len(raw)
+                break
+            if isinstance(raw, (int, float)) and key == "tool_calls_est":
+                tools_est = int(raw)
+                break
     ctx = RequestContext(
         agent_id=body.agent_id or consumer,
         consumer=consumer,
@@ -335,10 +354,8 @@ def invoke(
         session_id=body.session_id,
         request_class=rclass,
         allow_paid_fallback=body.allow_paid_fallback,
+        tool_calls_est=max(0, tools_est),
     )
-    args = dict(body.arguments or {})
-    if body.model and "model" not in args:
-        args["model"] = body.model
     out = gateway_call(
         body.provider,
         body.op,
@@ -349,6 +366,8 @@ def invoke(
         **args,
     )
     out["consumer"] = consumer
+    if tools_est:
+        out["tool_calls_est"] = tools_est
     return out
 
 
