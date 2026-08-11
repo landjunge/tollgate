@@ -27,7 +27,7 @@ def main(argv: list[str] | None = None) -> None:
 
     cbud = sub.add_parser(
         "consumer-budget",
-        help="Set / list per-consumer day envelopes (keys_app.json consumer_envelopes)",
+        help="Set / list day envelopes + agent protection (consumer_envelopes)",
     )
     cbud.add_argument(
         "id",
@@ -39,6 +39,15 @@ def main(argv: list[str] | None = None) -> None:
     cbud.add_argument("--max-calls-day", type=int, default=None, dest="max_calls_day")
     cbud.add_argument("--max-tokens-day", type=int, default=None, dest="max_tokens_day")
     cbud.add_argument("--max-usd-day", type=float, default=None, dest="max_usd_day")
+    cbud.add_argument("--max-usd-request", type=float, default=None, dest="max_usd_request")
+    cbud.add_argument("--max-usd-hour", type=float, default=None, dest="max_usd_hour")
+    cbud.add_argument(
+        "--max-requests-minute", type=int, default=None, dest="max_requests_minute"
+    )
+    cbud.add_argument(
+        "--max-tokens-request", type=int, default=None, dest="max_tokens_request"
+    )
+    cbud.add_argument("--max-tool-calls", type=int, default=None, dest="max_tool_calls")
     cbud.add_argument(
         "--clear",
         action="store_true",
@@ -230,12 +239,25 @@ def main(argv: list[str] | None = None) -> None:
             block["max_tokens_day"] = int(args.max_tokens_day)
         if args.max_usd_day is not None:
             block["max_usd_day"] = float(args.max_usd_day)
+        if args.max_usd_request is not None:
+            block["max_usd_request"] = float(args.max_usd_request)
+        if args.max_usd_hour is not None:
+            block["max_usd_hour"] = float(args.max_usd_hour)
+        if args.max_requests_minute is not None:
+            block["max_requests_minute"] = int(args.max_requests_minute)
+        if args.max_tokens_request is not None:
+            block["max_tokens_request"] = int(args.max_tokens_request)
+        if args.max_tool_calls is not None:
+            block["max_tool_calls"] = int(args.max_tool_calls)
         if not block:
             print(
                 json.dumps(
                     {
                         "ok": False,
-                        "error": "pass --max-usd-day / --max-calls-day / --max-tokens-day or --clear",
+                        "error": (
+                            "pass --max-usd-day / --max-usd-request / "
+                            "--max-requests-minute / … or --clear"
+                        ),
                     }
                 )
             )

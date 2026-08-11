@@ -54,8 +54,23 @@ def gateway_call(
                 consumer=ctx.consumer_id(),
                 error=reason,
                 ok=False,
-                extra={"error_class": decision.code.value},
+                extra={
+                    "error_class": decision.code.value,
+                    "protection": (decision.limits or {}).get("protection"),
+                },
             )
+        except Exception:  # noqa: BLE001
+            pass
+        try:
+            from tollgate.alerts import maybe_alert
+
+            if (decision.limits or {}).get("protection") or "agent protection" in reason.lower():
+                maybe_alert(
+                    "agent_protection",
+                    provider=provider,
+                    message=reason,
+                    extra={"consumer": ctx.consumer_id(), "op": op},
+                )
         except Exception:  # noqa: BLE001
             pass
         return {
@@ -66,6 +81,21 @@ def gateway_call(
             "provider": provider,
             "op": op,
         }
+
+    # Count against agent short-window protection after admit allows
+    try:
+        from tollgate.agent_guard import estimate_request_usd, record_attempt
+
+        record_attempt(
+            ctx.consumer_id(),
+            tokens_est=tokens_est,
+            usd_est=float(
+                (decision.limits or {}).get("request_usd_est")
+                or estimate_request_usd(tokens_est)
+            ),
+        )
+    except Exception:  # noqa: BLE001
+        pass
 
     # Operational response cache (not agent memory) — free/batch search & probes only
     cache_key = ""

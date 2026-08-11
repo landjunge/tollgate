@@ -2,10 +2,10 @@
 
 **Pay the toll — or don't call.**
 
-> **Existing gateways route traffic. Tollgate governs AI traffic.**
+> **The safety and control layer for AI agents.**
 
-Local **AI traffic control plane** — Reliability · Cost · Control.  
-One place holds secrets, budgets, health, and routing — so Gnom, n8n, Cursor/MCP, and agents never each invent their own spend logic.
+Protects apps from **provider outages**, **runaway costs**, and **bad model choices**.  
+Not another LLM gateway — Reliability · Cost · Agent protection · Control.
 
 > As soon as you run **more than one** AI tool against paid keys, you need an instance that never puts secrets in agent memory and never spends more than you allowed — no matter which tool calls.
 

@@ -84,6 +84,7 @@ def admit(
         chars_est=chars_est,
         op=op,
         consumer=ctx.consumer_id(),
+        tool_calls_est=int(getattr(ctx, "tool_calls_est", 0) or 0),
     )
     if not lim.get("allowed"):
         code = ErrorClass.BUDGET_HARD

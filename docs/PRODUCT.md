@@ -1,55 +1,96 @@
 # Tollgate product direction
 
-**Positioning (locked direction 2026-08-11):**
+## Core promise (sharp)
 
-> **Tollgate is the control plane between your AI applications and model providers.**
+> **Tollgate protects your AI applications from provider outages, runaway costs and bad model choices.**
 
-Not “another AI gateway.” Existing gateways **route** traffic. Tollgate **governs AI traffic**.
+Not “another LLM gateway.” Category line:
 
-## Three promises
+> **The safety and control layer for AI agents.**
 
-| Pillar | Promise |
-|--------|---------|
-| **Reliability** | Failover, circuits, provider health — agents keep working when a provider degrades |
-| **Cost** | Hard budgets, envelopes per consumer/agent, burn projection — no silent $500 nights |
-| **Control** | Admission, audit, “why this model?”, policy — spend is explainable |
+Existing gateways **route** traffic. Tollgate **protects and governs** AI traffic.
 
-Everything shipping maps under those three.
+## Why this exists
 
-## What we are not
+LLM providers multiply. Agents get more autonomous. That creates three operational failures:
 
-- Competing with Kong/Envoy/LiteLLM on “more protocol adapters”
-- Cloud multi-tenant SaaS first
-- Semantic ranking before admission is boring and correct
+1. **Outages** without controlled failover  
+2. **Runaway cost** from loops, bugs, unbounded tools  
+3. **Opaque routing** nobody can audit  
 
-## Audiences (priority order)
+Tollgate is the place those problems stop.
 
-1. **AI-agent builders / startups** — multi-provider agents, bill-shock, automatic cheaper/healthier paths  
-2. **Companies with many AI tools** — one control plane for 20 devs / N tools  
-3. **n8n / automation** — workflows + loops + retries without unbounded spend  
-4. **Self-hosted AI** — Ollama/vLLM + paid APIs behind one admit surface  
+## Three product layers
 
-## Priority roadmap
+| Layer | Job | User-visible |
+|-------|-----|----------------|
+| **Reliability** | Health, circuits, failover | Provider scores, auto-failover |
+| **Cost intelligence** | Day/hour/request spend by agent | Burn, projection, alerts |
+| **Agent protection** | Stop loops before the invoice | Per-request / per-minute / per-hour hard stops |
 
-| P | Feature | Status |
-|---|---------|--------|
-| P0 | Stability + config back-compat | continuous (see PR #7 legacy circuits) |
-| P0 | **Provider health intelligence** | **v0.2** — `/v1/control` |
-| P0 | **Cost per consumer/agent + projection** | **v0.2** — control plane + budget |
-| P1 | Smarter health-aware routing | partial (failover + scores feed) |
-| P1 | **Why this model?** explainability | **v0.2** — `explain` on route |
-| P1 | Budget alerts / webhooks | soft_warn exists; expand |
-| P2 | Team/org management | later |
-| P2 | Richer audit product | `audit.jsonl` exists |
-| P2 | Web dashboard (feelable) | **v0.2 mini** — `/dashboard` |
-| P3 | Enterprise SSO/RBAC | later |
+Everything else (OpenAI/Anthropic drop-ins, MCP, n8n, cache) is **distribution** — not the product story.
 
-## Feelable product
+## What we are not doing now
 
-A control plane must be **seen**, not only curled:
+- Twenty more integrations (Zapier, Slack, K8s operator, …)  
+- Competing with Kong/Envoy/LiteLLM as “more protocols”  
+- Enterprise SSO before the safety layer is excellent  
 
-```text
-$73 protected today · 4 provider failures absorbed · 12 agent lanes under envelope
+**80% of users should never need advanced JSON.** Simple budgets + protection first.
+
+## Audiences
+
+1. AI-agent builders / startups  
+2. Companies with many AI tools / teams  
+3. n8n / automation  
+4. Self-hosted + paid APIs  
+
+## Roadmap (product phases)
+
+| Phase | Focus | Status |
+|-------|--------|--------|
+| **1 Stability** | Config back-compat, secrets, tests, doctor | continuous + PR #7 |
+| **2 Agent protection** | request/hour/minute/token hard stops | **v0.2.1 shipping** |
+| **3 Intelligence** | health-aware smart routing | next |
+| **4 Visibility** | dashboard headlines that sell | mini `/dashboard` exists |
+| **5 Enterprise** | RBAC, teams, SSO, admin audit | later |
+
+## Agent protection (killer surface)
+
+Per consumer / agent lane:
+
+```yaml
+consumer_envelopes:
+  coding-agent:
+    max_usd_day: 20
+    max_usd_hour: 5
+    max_usd_request: 0.50
+    max_requests_minute: 30
+    max_tokens_request: 20000
+    max_tool_calls: 15   # when client sends tool_calls_est
 ```
 
-`/dashboard` and `GET /v1/control` are the first surface for that headline.
+On breach: **fail closed** → audit → optional alert. No silent bill.
+
+## Simple config (target UX)
+
+```yaml
+# conceptual — advanced keys_app remains available
+tollgate:
+  budget:
+    daily: 50
+  reliability:
+    failover: true
+  routing:
+    strategy: cost_optimized   # later
+  protection:
+    default_max_usd_request: 0.5
+```
+
+## Feelable proof
+
+```text
+$73 protected · 47 auto failovers · 12 agents under hard limits
+```
+
+`/dashboard` · `GET /v1/control` · `tollgate doctor` · `tollgate control`

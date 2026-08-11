@@ -12,10 +12,10 @@ from tollgate.usage_ledger import consumer_usage, provider_usage
 
 def consumer_envelope(consumer: str) -> dict[str, Any]:
     """
-    Resolve day caps for a consumer id.
+    Resolve day + agent-protection caps for a consumer id.
 
     Lookup order: consumer_envelopes.<id> → consumer_envelopes._default → empty.
-    Values of 0 / missing mean unlimited at the consumer layer.
+    Values of 0 / missing mean unlimited at that dimension.
     """
     cfg = load_config()
     envelopes = cfg.get("consumer_envelopes") or {}
@@ -31,17 +31,39 @@ def consumer_envelope(consumer: str) -> dict[str, Any]:
         "max_calls_day": int(block.get("max_calls_day") or 0),
         "max_tokens_day": int(block.get("max_tokens_day") or 0),
         "max_usd_day": float(block.get("max_usd_day") or 0.0),
+        # Agent protection (loop / runaway)
+        "max_usd_request": float(block.get("max_usd_request") or 0.0),
+        "max_usd_hour": float(block.get("max_usd_hour") or 0.0),
+        "max_requests_minute": int(block.get("max_requests_minute") or 0),
+        "max_tokens_request": int(block.get("max_tokens_request") or 0),
+        "max_tool_calls": int(block.get("max_tool_calls") or 0),
         "consumer": cid,
     }
+
+
+def _protection_active(env: dict[str, Any]) -> bool:
+    keys = (
+        "max_calls_day",
+        "max_tokens_day",
+        "max_usd_day",
+        "max_usd_request",
+        "max_usd_hour",
+        "max_requests_minute",
+        "max_tokens_request",
+        "max_tool_calls",
+    )
+    return any(float(env.get(k) or 0) > 0 for k in keys)
 
 
 def check_consumer_limits(
     consumer: str,
     *,
     tokens_est: int = 0,
+    tool_calls_est: int = 0,
+    usd_est: float = 0.0,
 ) -> dict[str, Any]:
     """
-    Per-consumer day envelope (n8n vs gnom vs …).
+    Per-consumer day envelope + agent protection (request/hour/minute).
 
     Independent of provider caps. 0 limits = pass-through (allowed).
     """
@@ -50,7 +72,12 @@ def check_consumer_limits(
     max_calls = int(env.get("max_calls_day") or 0)
     max_tokens = int(env.get("max_tokens_day") or 0)
     max_usd = float(env.get("max_usd_day") or 0.0)
-    if max_calls <= 0 and max_tokens <= 0 and max_usd <= 0:
+    max_usd_req = float(env.get("max_usd_request") or 0.0)
+    max_usd_hour = float(env.get("max_usd_hour") or 0.0)
+    max_rpm = int(env.get("max_requests_minute") or 0)
+    max_tok_req = int(env.get("max_tokens_request") or 0)
+    max_tools = int(env.get("max_tool_calls") or 0)
+    if not _protection_active(env):
         return {
             "allowed": True,
             "reason": None,
@@ -58,6 +85,98 @@ def check_consumer_limits(
             "envelope": None,
             "soft_warn": False,
             "wait_ms": 0,
+        }
+
+    from tollgate.agent_guard import estimate_request_usd, peek_rates
+
+    est = max(0, int(tokens_est or 0))
+    tools = max(0, int(tool_calls_est or 0))
+    req_usd = estimate_request_usd(est, usd_hint=float(usd_est or 0.0))
+
+    # ── per-request hard stops (no ledger needed) ─────────────────────
+    if max_tok_req > 0 and est > max_tok_req:
+        return {
+            "allowed": False,
+            "reason": (
+                f"agent protection: consumer {cid} max_tokens_request "
+                f"{est} > {max_tok_req}"
+            ),
+            "consumer": cid,
+            "protection": "max_tokens_request",
+            "soft_warn": False,
+            "wait_ms": 0,
+            "envelope": env,
+        }
+    if max_usd_req > 0 and req_usd > max_usd_req:
+        return {
+            "allowed": False,
+            "reason": (
+                f"agent protection: consumer {cid} max_usd_request "
+                f"est ${req_usd:.4f} > ${max_usd_req}"
+            ),
+            "consumer": cid,
+            "protection": "max_usd_request",
+            "soft_warn": False,
+            "wait_ms": 0,
+            "envelope": env,
+        }
+    if max_tools > 0 and tools > max_tools:
+        return {
+            "allowed": False,
+            "reason": (
+                f"agent protection: consumer {cid} max_tool_calls "
+                f"{tools} > {max_tools}"
+            ),
+            "consumer": cid,
+            "protection": "max_tool_calls",
+            "soft_warn": False,
+            "wait_ms": 0,
+            "envelope": env,
+        }
+
+    # ── short windows (minute / hour) ─────────────────────────────────
+    rates = peek_rates(cid)
+    if max_rpm > 0 and int(rates["minute"]["requests"]) >= max_rpm:
+        return {
+            "allowed": False,
+            "reason": (
+                f"agent protection: consumer {cid} max_requests_minute "
+                f"reached ({rates['minute']['requests']}/{max_rpm})"
+            ),
+            "consumer": cid,
+            "protection": "max_requests_minute",
+            "soft_warn": False,
+            "wait_ms": 1000,
+            "envelope": env,
+            "rates": rates,
+        }
+    hour_usd = float(rates["hour"]["usd"] or 0.0)
+    if max_usd_hour > 0 and (hour_usd + req_usd) > max_usd_hour:
+        return {
+            "allowed": False,
+            "reason": (
+                f"agent protection: consumer {cid} max_usd_hour would exceed "
+                f"(${hour_usd:.4f}+${req_usd:.4f}/${max_usd_hour})"
+            ),
+            "consumer": cid,
+            "protection": "max_usd_hour",
+            "soft_warn": False,
+            "wait_ms": 0,
+            "envelope": env,
+            "rates": rates,
+        }
+
+    if max_calls <= 0 and max_tokens <= 0 and max_usd <= 0:
+        # only short-window protection configured
+        return {
+            "allowed": True,
+            "reason": None,
+            "consumer": cid,
+            "envelope": env,
+            "soft_warn": False,
+            "wait_ms": 0,
+            "rates": rates,
+            "request_usd_est": req_usd,
         }
 
     try:
@@ -96,7 +215,7 @@ def check_consumer_limits(
     calls = int(usage.get("calls") or 0)
     tokens = int(usage.get("tokens") or 0)
     usd = float(usage.get("usd") or 0.0)
-    est = max(0, int(tokens_est or 0))
+    # est / rates already computed above for protection
 
     if max_calls > 0 and calls >= max_calls:
         return {
@@ -172,6 +291,8 @@ def check_consumer_limits(
         "wait_ms": 0,
         "envelope": env,
         "used": {"calls": calls, "tokens": tokens, "usd": usd},
+        "rates": rates,
+        "request_usd_est": req_usd,
     }
 
 
@@ -182,12 +303,14 @@ def check_limits(
     chars_est: int = 0,
     op: str = "call",
     consumer: str = "",
+    tool_calls_est: int = 0,
+    usd_est: float = 0.0,
 ) -> dict[str, Any]:
     """
     Return {allowed, reason?, remaining_calls, remaining_tokens, wait_ms, remaining_usd}.
 
     Does not record usage — call after success via record_usage.
-    When ``consumer`` is set, also enforces consumer_envelopes.
+    When ``consumer`` is set, also enforces consumer_envelopes + agent protection.
     """
     cfg = load_config()
     if not bool(cfg.get("record_usage", True)):
@@ -227,7 +350,12 @@ def check_limits(
 
     # Per-consumer envelope first (lane isolation before provider spend)
     if (consumer or "").strip():
-        cl = check_consumer_limits(consumer, tokens_est=tokens_est)
+        cl = check_consumer_limits(
+            consumer,
+            tokens_est=tokens_est,
+            tool_calls_est=tool_calls_est,
+            usd_est=usd_est,
+        )
         if not cl.get("allowed"):
             return {
                 "allowed": False,

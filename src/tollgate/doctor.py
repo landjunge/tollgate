@@ -115,6 +115,53 @@ def run_doctor(*, live: bool = False, root: Path | None = None) -> dict[str, Any
             }
         )
 
+    # Agent protection / envelopes
+    envelopes = cfg.get("consumer_envelopes") or {}
+    protected = 0
+    for cid, block in envelopes.items():
+        if str(cid).startswith("_") or not isinstance(block, dict):
+            continue
+        if any(
+            float(block.get(k) or 0) > 0
+            for k in (
+                "max_usd_day",
+                "max_usd_hour",
+                "max_usd_request",
+                "max_requests_minute",
+                "max_tokens_request",
+                "max_tool_calls",
+                "max_calls_day",
+            )
+        ):
+            protected += 1
+    if protected:
+        ok_items.append(f"agent protection: {protected} consumer lane(s) capped")
+    else:
+        issues.append(
+            {
+                "level": "warn",
+                "code": "no_agent_protection",
+                "message": "No consumer has spending/rate protection envelopes",
+                "action": (
+                    "tollgate consumer-budget n8n --max-usd-day 0.5 "
+                    "--max-requests-minute 30 --max-usd-request 0.25"
+                ),
+            }
+        )
+
+    # Failover
+    if bool(cfg.get("auto_failover", True)):
+        ok_items.append("auto_failover enabled")
+    else:
+        issues.append(
+            {
+                "level": "warn",
+                "code": "failover_off",
+                "message": "auto_failover is false — provider outages will fail hard",
+                "action": "Set auto_failover: true in keys_app.json",
+            }
+        )
+
     # Optional live diagnose from service
     service_diag: dict[str, Any] | None = None
     if live:

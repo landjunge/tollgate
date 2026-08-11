@@ -25,6 +25,8 @@ class RequestContext:
     session_id: str = ""
     # Consumer lane (n8n / gnom / …) — used for envelopes + ledger attribution
     consumer: str = ""
+    # Agent loop hint (tool steps this turn) — agent protection max_tool_calls
+    tool_calls_est: int = 0
     request_class: RequestClass = RequestClass.INTERACTIVE
     request_id: str = field(default_factory=lambda: uuid.uuid4().hex[:16])
     allow_paid_fallback: bool = False
@@ -47,6 +49,7 @@ class RequestContext:
             "job_id": self.job_id,
             "session_id": self.session_id,
             "consumer": self.consumer_id(),
+            "tool_calls_est": int(self.tool_calls_est or 0),
             "request_class": self.request_class.value,
             "request_id": self.request_id,
             "allow_paid_fallback": self.allow_paid_fallback,

@@ -118,11 +118,28 @@ Provider caps and `max_usd_day_global` still apply. Additionally, each **consume
 
 `0` / omit = no consumer-level cap. Ledger tracks `keys_usage.json → consumers.<id>`.
 
+### Agent protection (loop / runaway stops)
+
+Same envelope block supports short-window hard stops:
+
+| Field | Stops |
+|-------|--------|
+| `max_usd_request` | Single call est. $ too high |
+| `max_usd_hour` | Hourly spend window |
+| `max_requests_minute` | Request flood / tight loops |
+| `max_tokens_request` | Oversized prompts |
+| `max_tool_calls` | Tool-loop depth (client sends `tool_calls_est`) |
+
 ```bash
 tollgate consumer-budget n8n --max-usd-day 0.5 --max-calls-day 200
+tollgate consumer-budget coding-agent \
+  --max-usd-day 20 --max-usd-hour 5 --max-usd-request 0.5 \
+  --max-requests-minute 30 --max-tokens-request 20000 --max-tool-calls 15
 tollgate consumer-budget --list
 curl -s localhost:8787/v1/budget -H 'X-Consumer-Key: n8n' | jq .consumer_limits
 ```
+
+On breach: admit **fails closed**, audit row + optional webhook (`agent_protection`).
 
 Works in **open mode** (label only) and **auth mode** (id:secret). Admission denies with
 `consumer <id> max_*_day reached` before the provider call.
