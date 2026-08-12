@@ -9,58 +9,62 @@ if [[ ! -f "$META" ]]; then
   echo "missing $META" >&2
   exit 1
 fi
-KEY=$(python3 -c "import json; print(json.load(open('$META'))['key'])")
-KEY_LOC=$(python3 -c "import json; print(json.load(open('$META'))['keyLocation'])")
-HOST="landjunge.github.io"
-BASE="https://landjunge.github.io/tollgate"
 
-URLS=(
-  "$BASE/"
-  "$BASE/de.html"
-  "$BASE/docs.html"
-  "$BASE/ecosystem.html"
-  "$BASE/what-is-tollgate.html"
-  "$BASE/blog/launch.html"
-  "$BASE/blog/launch-de.html"
-  "$BASE/blog/checklist.html"
-  "$BASE/press/"
-  "$BASE/llms.txt"
-  "$BASE/sitemap.xml"
-)
-
-# Build JSON payload
-PAYLOAD=$(python3 - <<PY
-import json
-urls = ${URLS[@]@Q}
-# fix: pass via env
-PY
-)
-
-python3 - <<PY
+python3 - <<'PY'
 import json, urllib.request
-urls = """$(printf '%s\n' "${URLS[@]}")""".strip().splitlines()
+from pathlib import Path
+
+root = Path(__file__).resolve().parent if False else Path.cwd()
+# script lives in scripts/; site is sibling
+site = Path(__file__).resolve().parent.parent / "site" if "__file__" in dir() else Path("site")
+PY
+
+# Use absolute paths from bash
+python3 - "$META" <<'PY'
+import json, sys, urllib.request
+
+meta = json.load(open(sys.argv[1]))
+key = meta["key"]
+key_loc = meta["keyLocation"]
+host = "landjunge.github.io"
+base = "https://landjunge.github.io/tollgate"
+urls = [
+    f"{base}/",
+    f"{base}/de.html",
+    f"{base}/docs.html",
+    f"{base}/ecosystem.html",
+    f"{base}/what-is-tollgate.html",
+    f"{base}/blog/launch.html",
+    f"{base}/blog/launch-de.html",
+    f"{base}/blog/checklist.html",
+    f"{base}/press/",
+    f"{base}/llms.txt",
+    f"{base}/sitemap.xml",
+]
 body = {
-  "host": "$HOST",
-  "key": "$KEY",
-  "keyLocation": "$KEY_LOC",
-  "urlList": urls,
+    "host": host,
+    "key": key,
+    "keyLocation": key_loc,
+    "urlList": urls,
 }
 data = json.dumps(body).encode()
 req = urllib.request.Request(
-  "https://api.indexnow.org/indexnow",
-  data=data,
-  headers={"Content-Type": "application/json; charset=utf-8"},
-  method="POST",
+    "https://api.indexnow.org/indexnow",
+    data=data,
+    headers={"Content-Type": "application/json; charset=utf-8"},
+    method="POST",
 )
 try:
-  with urllib.request.urlopen(req, timeout=30) as r:
-    print("indexnow", r.status, r.read()[:200])
+    with urllib.request.urlopen(req, timeout=30) as r:
+        print("indexnow", r.status, r.read()[:200])
 except Exception as e:
-  # 200/202 ok; 422 sometimes if not yet crawlable
-  print("indexnow response:", e)
-  if hasattr(e, "read"):
-    print(e.read()[:500])
+    print("indexnow response:", e)
+    if hasattr(e, "read"):
+        try:
+            print(e.read()[:500])
+        except Exception:
+            pass
 print("urls:", len(urls))
 for u in urls:
-  print(" ", u)
+    print(" ", u)
 PY
