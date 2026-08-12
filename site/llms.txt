@@ -5,6 +5,7 @@
 > Brand: landjunge · Repo: https://github.com/landjunge/tollgate
 
 - Site: https://landjunge.github.io/tollgate/
+- What is Tollgate?: https://landjunge.github.io/tollgate/what-is-tollgate.html
 - DE: https://landjunge.github.io/tollgate/de.html
 - Docs: https://landjunge.github.io/tollgate/docs.html
 - Ecosystem: https://landjunge.github.io/tollgate/ecosystem.html
@@ -15,6 +16,7 @@
 - Repo: https://github.com/landjunge/tollgate
 - Discussions: https://github.com/landjunge/tollgate/discussions
 - Gist: https://gist.github.com/landjunge/ce4190deb6536cc6134c767f500c4dc9
+- 10-min gist: https://gist.github.com/landjunge/5b36c2afc4e5242e55700aee28407f03
 
 ## What it does
 - Protect: budgets, tool-loop hard deny (max_tool_calls), freeze, scopes
