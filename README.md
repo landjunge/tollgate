@@ -14,7 +14,9 @@
 
 > **Tollgate is the safety layer between your AI agents and the internet.**
 
-**Website:** [landjunge.github.io/tollgate](https://landjunge.github.io/tollgate/) · [DE](https://landjunge.github.io/tollgate/de.html) · [Docs](https://landjunge.github.io/tollgate/docs.html) · [Launch](https://landjunge.github.io/tollgate/blog/launch.html) · [Safety checklist](https://landjunge.github.io/tollgate/blog/checklist.html) · [Press](https://landjunge.github.io/tollgate/press/) · [llms.txt](https://landjunge.github.io/tollgate/llms.txt)
+**Name note:** This is **landjunge/tollgate** (AI agent safety). It is **not** [OpenTollGate](https://github.com/OpenTollGate) (network access payments) and **not** a road/highway toll product.
+
+**Website:** [landjunge.github.io/tollgate](https://landjunge.github.io/tollgate/) · [DE](https://landjunge.github.io/tollgate/de.html) · [Docs](https://landjunge.github.io/tollgate/docs.html) · [Launch](https://landjunge.github.io/tollgate/blog/launch.html) · [Safety checklist](https://landjunge.github.io/tollgate/blog/checklist.html) · [Press](https://landjunge.github.io/tollgate/press/) · [llms.txt](https://landjunge.github.io/tollgate/llms.txt) · [GSC checklist](docs/GSC_CHECKLIST.md)
 
 **Pairs with:** [Gnom-Hub](https://github.com/landjunge/gnom-hub-v1) — local multi-agent desk (brainstorm free, Execute on purpose) · [site](https://landjunge.github.io/gnom-hub-v1/)
 

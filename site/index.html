@@ -4,15 +4,15 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
-  <!-- Primary SEO -->
-  <title>Tollgate — AI Agent Safety Layer | Protect · Route · Prove in Production</title>
-  <meta name="description" content="Tollgate is the safety layer between AI agents and the internet. Stop runaway tool loops, enforce budgets, failover when providers fail, and prove DR with chaos tests. OpenAI drop-in · MCP · n8n."/>
-  <meta name="keywords" content="Tollgate, AI agent safety, agent protection, tool loop protection, LLM budget control, AI failover, chaos test LLM, multi-provider routing, OpenAI compatible gateway, Anthropic proxy, MCP safety, n8n AI agent, circuit breaker LLM, AI reliability certificate, protect AI agents production"/>
+  <!-- Primary SEO (disambiguate from OpenTollGate / road tolls) -->
+  <title>Tollgate AI Agent Safety (landjunge) — Protect · Route · Prove</title>
+  <meta name="description" content="Tollgate by landjunge is an open-source AI agent safety layer (not a network toll protocol). Stop runaway tool loops, enforce budgets, failover when providers fail, prove DR with chaos tests. OpenAI drop-in · MCP · n8n. github.com/landjunge/tollgate"/>
+  <meta name="keywords" content="Tollgate AI agent safety, landjunge tollgate, agent protection, tool loop protection, LLM budget control, AI failover, chaos test LLM, OpenAI drop-in, MCP safety, n8n AI agent, Protect Route Prove, AI reliability certificate"/>
   <meta name="author" content="landjunge"/>
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"/>
   <meta name="googlebot" content="index, follow"/>
   <meta name="theme-color" content="#07080a"/>
-  <meta name="application-name" content="Tollgate"/>
+  <meta name="application-name" content="Tollgate AI Agent Safety"/>
   <link rel="canonical" href="https://landjunge.github.io/tollgate/"/>
   <link rel="alternate" hreflang="en" href="https://landjunge.github.io/tollgate/"/>
   <link rel="alternate" hreflang="de" href="https://landjunge.github.io/tollgate/de.html"/>
@@ -20,21 +20,21 @@
 
   <!-- Open Graph -->
   <meta property="og:type" content="website"/>
-  <meta property="og:site_name" content="Tollgate"/>
+  <meta property="og:site_name" content="Tollgate (landjunge) — AI Agent Safety"/>
   <meta property="og:locale" content="en_US"/>
   <meta property="og:locale:alternate" content="de_DE"/>
   <meta property="og:url" content="https://landjunge.github.io/tollgate/"/>
-  <meta property="og:title" content="Tollgate — Protect your AI agents in production"/>
-  <meta property="og:description" content="Control costs. Survive provider failures. Prove your AI infrastructure works. Protect · Route · Prove."/>
+  <meta property="og:title" content="Tollgate AI Agent Safety (landjunge) — Protect · Route · Prove"/>
+  <meta property="og:description" content="Open-source safety layer for AI agents — not a network toll product. Budgets, tool-loop hard stops, failover, chaos certificate."/>
   <meta property="og:image" content="https://landjunge.github.io/tollgate/assets/og.png"/>
   <meta property="og:image:width" content="1200"/>
   <meta property="og:image:height" content="630"/>
-  <meta property="og:image:alt" content="Tollgate — Protect · Route · Prove admission gate for AI agents"/>
+  <meta property="og:image:alt" content="Tollgate by landjunge — Protect · Route · Prove admission gate for AI agents"/>
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image"/>
-  <meta name="twitter:title" content="Tollgate — AI Agent Safety Layer"/>
-  <meta name="twitter:description" content="Stop runaways. Survive outages. Prove failover. OpenAI drop-in · MCP · n8n."/>
+  <meta name="twitter:title" content="Tollgate AI Agent Safety (landjunge)"/>
+  <meta name="twitter:description" content="Protect · Route · Prove — open-source agent safety layer. Not OpenTollGate / road tolls."/>
   <meta name="twitter:image" content="https://landjunge.github.io/tollgate/assets/og.png"/>
 
   <link rel="icon" href="favicon.svg" type="image/svg+xml"/>
@@ -46,7 +46,8 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Tollgate",
-    "alternateName": ["Tollgate AI", "AI agent safety layer", "toolgate"],
+    "alternateName": ["Tollgate AI Agent Safety", "landjunge/tollgate", "AI agent safety layer", "toolgate"],
+    "disambiguatingDescription": "Open-source AI agent safety control plane by landjunge. Not OpenTollGate (network access payments) and not a highway toll product.",
     "applicationCategory": "DeveloperApplication",
     "applicationSubCategory": "AI agent safety and reliability control plane",
     "operatingSystem": "macOS, Linux, Windows, Docker",
@@ -55,6 +56,11 @@
     "url": "https://landjunge.github.io/tollgate/",
     "downloadUrl": "https://github.com/landjunge/tollgate",
     "codeRepository": "https://github.com/landjunge/tollgate",
+    "sameAs": [
+      "https://github.com/landjunge/tollgate",
+      "https://landjunge.github.io/tollgate/",
+      "https://gist.github.com/landjunge/5b36c2afc4e5242e55700aee28407f03"
+    ],
     "softwareVersion": "1.0.12",
     "license": "https://github.com/landjunge/tollgate/blob/main/LICENSE",
     "author": { "@type": "Person", "name": "landjunge", "url": "https://github.com/landjunge" },
@@ -73,7 +79,7 @@
     ],
     "screenshot": "https://landjunge.github.io/tollgate/assets/og.png",
     "inLanguage": ["en", "de"],
-    "keywords": "AI agent safety, tool loop protection, LLM failover, chaos testing, OpenAI proxy, agent budgets"
+    "keywords": "AI agent safety, tool loop protection, LLM failover, chaos testing, OpenAI proxy, agent budgets, landjunge tollgate"
   }
   </script>
 
@@ -82,10 +88,11 @@
   {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    "name": "Tollgate",
+    "name": "Tollgate AI Agent Safety",
+    "alternateName": "landjunge/tollgate",
     "url": "https://landjunge.github.io/tollgate/",
     "inLanguage": ["en", "de"],
-    "description": "Product site for Tollgate — safety layer for AI agents in production.",
+    "description": "Product site for Tollgate by landjunge — AI agent safety layer (Protect · Route · Prove). Not a network toll protocol.",
     "publisher": {
       "@type": "Person",
       "name": "landjunge",
@@ -102,10 +109,18 @@
     "mainEntity": [
       {
         "@type": "Question",
-        "name": "What is Tollgate?",
+        "name": "What is Tollgate by landjunge?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Tollgate is the safety layer between your AI agents and the internet. It protects against runaway tool loops and cost explosions, routes around provider outages, and proves failover with chaos tests."
+          "text": "Tollgate (github.com/landjunge/tollgate) is an open-source AI agent safety layer: Protect (budgets, tool-loop hard stops, freeze), Route (failover), Prove (chaos tests and reliability certificate). It sits between agents and the internet."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is landjunge Tollgate the same as OpenTollGate?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. OpenTollGate is a network-access payment protocol. landjunge/tollgate is unrelated software for AI agent safety (budgets, loops, failover, chaos proof). It is also not a highway or road toll product."
         }
       },
       {
@@ -527,8 +542,8 @@ tollgate certificate</pre>
         <article class="mode p">
           <div class="pillar">What</div>
           <div>
-            <h3>What is Tollgate?</h3>
-            <p>The safety layer between AI agents and the internet: budgets, tool-loop hard stops, failover, chaos proof — not a model catalog.</p>
+            <h3>What is Tollgate (landjunge)?</h3>
+            <p>Open-source <strong>AI agent safety layer</strong>: budgets, tool-loop hard stops, failover, chaos proof — not a model catalog. Repo: <code>github.com/landjunge/tollgate</code>.</p>
           </div>
           <div class="tags">Protect<br/>Route<br/>Prove</div>
         </article>
@@ -541,6 +556,14 @@ tollgate certificate</pre>
           <div class="tags">hard deny<br/>chaos<br/>certificate</div>
         </article>
         <article class="mode v">
+          <div class="pillar">Name</div>
+          <div>
+            <h3>OpenTollGate or road tolls?</h3>
+            <p><strong>No.</strong> Unrelated to OpenTollGate (network payments) and unrelated to highway tolls. This is agent safety software only.</p>
+          </div>
+          <div class="tags">disambiguation<br/>landjunge<br/>AI agents</div>
+        </article>
+        <article class="mode p">
           <div class="pillar">Keys</div>
           <div>
             <h3>Need API keys for the demo?</h3>

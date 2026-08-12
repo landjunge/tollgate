@@ -1,6 +1,8 @@
-# Tollgate
+# Tollgate (landjunge/tollgate)
 > Safety layer for AI agents — Protect · Route · Prove.
 > Not an LLM catalog / multi-provider marketplace. Pre-admission control plane.
+> Disambiguation: NOT OpenTollGate (network payment protocol) and NOT a highway/road toll product.
+> Brand: landjunge · Repo: https://github.com/landjunge/tollgate
 
 - Site: https://landjunge.github.io/tollgate/
 - DE: https://landjunge.github.io/tollgate/de.html
