@@ -23,6 +23,7 @@ from tollgate.gateway.admit import admit
 from tollgate.gateway.circuit import get_circuits
 from tollgate.gateway.context import RequestClass, RequestContext
 from tollgate.openai_compat import _sse, stream_sse_chunks, to_openai_completion
+from tollgate.protect.package_deny import package_deny, package_deny_from_admit
 from tollgate.redact import redact_secrets
 
 
@@ -238,6 +239,41 @@ def start_chat_stream(
         if not pid:
             continue
 
+        # Prove gate on each hop (pinned candidates skip router prove path)
+        try:
+            from tollgate.prove.availability import check_provider_available
+
+            av = check_provider_available(pid)
+            if not av.available:
+                hop = {
+                    "provider": pid,
+                    "model": mid,
+                    "ok": False,
+                    "error": av.error or "provider unavailable (prove gate)",
+                    "error_class": "PROVIDER_DOWN",
+                }
+                tried.append(hop)
+                last_err = av.as_deny_dict(provider=pid, op="chat")
+                if not is_retriable_failure(last_err):
+                    return annotate_failure(last_err, tried=tried)
+                continue
+        except Exception as e:  # noqa: BLE001
+            hop = {
+                "provider": pid,
+                "model": mid,
+                "ok": False,
+                "error": f"chaos/protection check failed — fail-closed ({e})",
+                "error_class": "PROVIDER_DOWN",
+            }
+            tried.append(hop)
+            last_err = {
+                "ok": False,
+                "error": hop["error"],
+                "error_class": "PROVIDER_DOWN",
+                "protection_error": True,
+            }
+            return annotate_failure(last_err, tried=tried)
+
         decision = admit(
             pid,
             op="chat",
@@ -246,42 +282,28 @@ def start_chat_stream(
             ctx=ctx,
         )
         if not decision.allowed:
-            reason = redact_secrets(decision.reason or "denied")
+            last_err = package_deny_from_admit(
+                decision,
+                provider=pid,
+                op="chat",
+                consumer=cid,
+                tokens_est=est,
+                tool_calls_est=int(getattr(ctx, "tool_calls_est", 0) or 0),
+                extra_audit={"stream": True},
+            )
             hop = {
                 "provider": pid,
                 "model": mid,
                 "ok": False,
-                "error": reason,
-                "error_class": decision.code.value,
+                "error": last_err.get("error"),
+                "error_class": last_err.get("error_class"),
             }
             tried.append(hop)
-            last_err = {
-                "ok": False,
-                "error": reason,
-                "error_class": decision.code.value,
-                "admit": decision.as_dict(),
-                "provider": pid,
-                "op": "chat",
-            }
-            try:
-                from tollgate.audit_log import append_audit
-
-                append_audit(
-                    "admit_deny",
-                    provider=pid,
-                    op="chat",
-                    consumer=cid,
-                    error=reason,
-                    ok=False,
-                    extra={"error_class": decision.code.value, "stream": True},
-                )
-            except Exception:  # noqa: BLE001
-                pass
             if not is_retriable_failure(last_err):
                 return annotate_failure(last_err, tried=tried)
             continue
 
-        # Synthetic path: full completion then fake SSE
+        # Synthetic path: full completion then fake SSE (gateway_call does rates)
         if force_synthetic() or not can_upstream_stream(pid):
             from tollgate.gateway.entry import gateway_call
 
@@ -388,6 +410,65 @@ def start_chat_stream(
 
     pid, mid, decision, up = win_pid, win_mid, win_decision, win_up
     display_model = requested_model or mid or "tollgate"
+
+    # Upstream stream skips full gateway_call — same Protect rates + reserve (Phase 6)
+    try:
+        from tollgate.protect import estimate_request_usd, record_rates
+
+        ra = record_rates(
+            cid,
+            tokens_est=est,
+            usd_est=float(
+                (decision.limits or {}).get("request_usd_est")
+                or estimate_request_usd(est)
+            ),
+        )
+        if isinstance(ra, dict) and ra.get("ok") is False and ra.get("corrupt"):
+            return package_deny(
+                provider=pid,
+                op="chat",
+                reason=str(ra.get("error") or "agent_rates corrupt — fail-closed"),
+                code="BUDGET_HARD",
+                consumer=cid,
+                protection="agent_rates",
+                admit=decision.as_dict(),
+                tokens_est=est,
+                extra_audit={"stream": True},
+            )
+    except Exception:  # noqa: BLE001
+        pass
+
+    # Atomic day-call reserve before first client byte (closes concurrent overshoot)
+    stream_call_reserved = False
+    try:
+        from tollgate.accounting import try_reserve_day_call
+
+        resv = try_reserve_day_call(pid, consumer=cid, op="chat")
+        if not resv.get("ok"):
+            return package_deny(
+                provider=pid,
+                op="chat",
+                reason=str(resv.get("error") or "call budget reserve denied"),
+                code="BUDGET_HARD",
+                consumer=cid,
+                protection=str(resv.get("protection") or "max_calls_day"),
+                admit=decision.as_dict(),
+                tokens_est=est,
+                extra_audit={"stream": True},
+            )
+        stream_call_reserved = bool(resv.get("reserved"))
+    except Exception as e:  # noqa: BLE001
+        return package_deny(
+            provider=pid,
+            op="chat",
+            reason=f"call budget reserve failed — fail-closed ({e})",
+            code="BUDGET_HARD",
+            consumer=cid,
+            protection="max_calls_day",
+            admit=decision.as_dict(),
+            tokens_est=est,
+            extra_audit={"stream": True},
+        )
 
     def gen() -> Iterator[str]:
         from tollgate.httputil import iter_sse_json
@@ -559,6 +640,7 @@ def start_chat_stream(
                 error=bool(upstream_err),
                 consumer=cid,
                 meta={"model": mid, "stream": True},
+                count_call=not stream_call_reserved,
             )
         except Exception:  # noqa: BLE001
             pass

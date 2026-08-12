@@ -117,9 +117,63 @@ def build_block_card(
     if provider:
         lines.append(f"Provider:  {provider}")
     lines.append("")
-    lines.append(str(reason or "")[:200])
+    human = human_block_sentence(
+        prot=str(prot),
+        consumer=str(card["consumer"]),
+        tool_calls_est=tool_calls_est,
+        max_tools=max_tools,
+        reason=str(reason or ""),
+    )
+    lines.append(human)
+    card["human"] = human
     card["message"] = "\n".join(lines)
     return card
+
+
+def human_block_sentence(
+    *,
+    prot: str,
+    consumer: str = "",
+    tool_calls_est: int = 0,
+    max_tools: int = 0,
+    reason: str = "",
+) -> str:
+    """One-line operator English for denials (UI / SDKs / demos)."""
+    who = f"Agent «{consumer}»" if consumer and consumer != "anonymous" else "This agent"
+    p = (prot or "").lower()
+    if p == "freeze" or "frozen" in (reason or "").lower():
+        return f"{who}: admission is frozen (kill switch). Unfreeze when the incident is over."
+    if p == "max_tool_calls" or "tool_call" in (reason or "").lower():
+        if max_tools > 0:
+            return (
+                f"{who} was blocked: tool-loop limit reached "
+                f"({tool_calls_est or '?'} estimated calls, max {max_tools})."
+            )
+        return f"{who} was blocked to stop a runaway tool loop."
+    if p == "max_usd_day" or ("max_usd_day" in (reason or "").lower()):
+        return f"{who} was blocked: daily budget exceeded."
+    if p == "max_usd_request":
+        return f"{who} was blocked: this single request would exceed the per-task budget."
+    if p == "max_usd_hour":
+        return f"{who} was blocked: hourly budget would be exceeded."
+    if p == "max_requests_minute":
+        return f"{who} was blocked: rate limit (requests per minute) exceeded."
+    if p in ("max_tokens_request", "max_tokens_day"):
+        return f"{who} was blocked: token limit exceeded."
+    if p == "max_calls_day":
+        return f"{who} was blocked: daily request count limit exceeded."
+    if p == "scope" or "scope" in (reason or "").lower():
+        return f"{who} was blocked: this provider/intent/op is not allowed for this lane."
+    if p == "circuit" or "circuit" in (reason or "").lower():
+        return (
+            "Provider is in circuit-open (recent failures). "
+            "Tollgate will retry after cool-down or use a fallback if configured."
+        )
+    if p == "ledger":
+        return "Request blocked: usage ledger is unavailable (fail-closed)."
+    # fallback: clean first line of reason
+    r = (reason or "").strip().split("\n")[0][:180]
+    return r or f"{who} was blocked by policy."
 
 
 def _infer_protection(reason: str) -> str | None:

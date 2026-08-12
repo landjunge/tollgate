@@ -10,8 +10,7 @@ from typing import Any
 
 from tollgate.app_config import is_provider_enabled, load_config
 from tollgate.gateway.admit import admit
-from tollgate.gateway.context import RequestClass, RequestContext
-from tollgate.schema import PROVIDER_CAPS
+from tollgate.gateway.context import RequestContext
 
 
 def _base_for(provider_id: str) -> str | None:
@@ -32,7 +31,10 @@ def _health_map() -> dict[str, dict[str, Any]]:
         from tollgate.control_plane import provider_health
 
         return {str(r["provider"]): r for r in provider_health() if r.get("provider")}
-    except Exception:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("provider_health", e, message="ranking without health map")
         return {}
 
 
@@ -166,9 +168,11 @@ def route(
     intents = routing_cfg.get("intents") or {}
     chain = list(intents.get(intent) or intents.get("llm") or [])
     models = routing_cfg.get("models") or {}
-    prefer_free = (
-        bool(cfg.get("prefer_free", True)) if prefer_free is None else bool(prefer_free)
-    )
+    # Free/paid posture — single FreePolicy (M10)
+    from tollgate.protect.free_policy import resolve as resolve_free
+
+    free_pol = resolve_free(intent=intent, prefer_free=prefer_free, config=cfg)
+    prefer_free = free_pol.prefer_free
     auto_failover = bool(cfg.get("auto_failover", True))
     health_aware = bool(routing_cfg.get("health_aware", True))
     strategy = str(routing_cfg.get("strategy") or "balanced").strip().lower()
@@ -179,14 +183,9 @@ def route(
     tried: list[dict[str, Any]] = []
     winners: list[dict[str, Any]] = []
 
-    # optional reorder: free-capable first when prefer_free and intent is llm-ish
-    if prefer_free and intent in ("llm", "free_llm", "paid_llm"):
-        free_first = [p for p in chain if "free_llm" in PROVIDER_CAPS.get(p, ())]
-        rest = [p for p in chain if p not in free_first]
-        if intent == "free_llm":
-            chain = free_first or chain
-        elif intent == "llm":
-            chain = free_first + rest
+    # Product rule (P0): free_llm never silently spills to paid-only providers.
+    chain, free_skips = free_pol.order_chain(chain)
+    tried.extend(free_skips)
 
     for pid in chain:
         card = by_id.get(pid) or {}
@@ -196,22 +195,24 @@ def route(
             entry["skip"] = "disabled in keys_app.json"
             tried.append(entry)
             continue
-        # Chaos / DR inject or gradual recovery divert
+        # Prove availability gate (facade — no alternate router)
         try:
-            from tollgate.chaos import is_provider_in_chaos, is_provider_unavailable
+            from tollgate.prove.availability import check_provider_available
 
-            if is_provider_unavailable(pid):
-                entry["skip"] = (
-                    "chaos inject — provider simulated down"
-                    if is_provider_in_chaos(pid)
-                    else "gradual recovery — traffic ramping back"
-                )
-                entry["chaos"] = is_provider_in_chaos(pid)
-                entry["recovery"] = not entry["chaos"]
+            av = check_provider_available(pid)
+            if not av.available:
+                entry["skip"] = av.error or "provider unavailable (prove gate)"
+                entry["chaos"] = av.chaos
+                entry["recovery"] = av.recovery
+                if av.subsystem_error:
+                    entry["protection_error"] = True
                 tried.append(entry)
                 continue
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as e:  # noqa: BLE001
+            entry["skip"] = f"chaos/protection check failed — fail-closed ({e})"
+            entry["protection_error"] = True
+            tried.append(entry)
+            continue
         if not card.get("ready"):
             entry["skip"] = card.get("error") or "not ready"
             entry["grade"] = card.get("grade")
@@ -222,19 +223,14 @@ def route(
             tried.append(entry)
             continue
 
-        # L4 admission (limits + cost_guard + circuit)
-        rclass = (
-            RequestClass.FREE
-            if (prefer_free and intent in ("llm", "free_llm"))
-            else RequestClass.INTERACTIVE
-        )
+        # L4 admission — request_class from FreePolicy (single free/paid truth)
         decision = admit(
             pid,
             op=intent,
             tokens_est=tokens_est,
             chars_est=chars_est,
             model=str(models.get(pid) or ""),
-            ctx=RequestContext(request_class=rclass),
+            ctx=RequestContext(request_class=free_pol.request_class),
         )
         if not decision.allowed:
             entry["skip"] = decision.reason
@@ -294,12 +290,24 @@ def route(
     primary = winners[0] if winners else None
     fallbacks = winners[1:4] if winners else []
 
+    if primary is None and free_pol.free_only:
+        err = (
+            "no free provider available for free_llm "
+            "(no paid spillover — enable a free-capable provider or use intent=llm)"
+        )
+    elif primary is None:
+        err = f"no provider available for intent={intent}"
+    else:
+        err = None
+
     return {
         "ok": primary is not None,
         "intent": intent,
         "tokens_est": int(tokens_est or 0),
         "chars_est": int(chars_est or 0),
-        "prefer_free": prefer_free,
+        "prefer_free": free_pol.prefer_free,
+        "free_only": free_pol.free_only,
+        "may_spend": free_pol.may_spend,
         "auto_failover": auto_failover,
         "health_aware": health_aware,
         "strategy": strategy if health_aware else "config_order",
@@ -317,7 +325,7 @@ def route(
             for w in winners[:6]
         ],
         "tried": tried,
-        "error": None if primary else f"no provider available for intent={intent}",
+        "error": err,
     }
 
 
@@ -330,11 +338,12 @@ def execute_routed(
     **call_kwargs: Any,
 ) -> dict[str, Any]:
     """
-    Route then invoke a default op for the intent.
+    Execute after Route — two steps, not one mixed brain.
 
-    llm/free_llm → opencode chat or status
-    search → brave search (needs query=)
-    tts → elevenlabs budget check only (synthesis is external)
+    1) ``route()`` → pick provider/model (no provider HTTP for chat path)
+    2) ``service.call`` → KeysService → provider_ops registry
+
+    Prove can call ``route()`` alone without executing.
     """
     r = route(service, intent, tokens_est=tokens_est, chars_est=chars_est)
     if not r.get("ok") or not r.get("route"):

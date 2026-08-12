@@ -95,8 +95,8 @@ Agents ────┘         HTTP + MCP + OpenAI/Anthropic drop-ins
 | Freeze + circuits | global kill switch · circuit reset CLI/API | **done (v0.3.6)** |
 | Desk status | compact status + success response headers | **done (v0.3.7)** |
 | Review harden | freeze fail-closed · circuit mtime reload · ledger E2E | **done (v0.3.8)** |
-| **v1.0.0** | Stable community release tag | **done** |
-| Enterprise | Teams, SSO/RBAC | later |
+| **v1.0.0** | Stable Core release tag | **done** |
+| Organization layer | Teams, SSO/RBAC, fleet ops (not a Core paywall) | later — see PRODUCT_TIERS.md |
 
 ---
 

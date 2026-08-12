@@ -45,11 +45,23 @@ def _load(path: Path) -> dict[str, Any]:
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(raw, dict):
-            return _empty()
+            return {"version": 1, "consumers": {}, "_corrupt": True, "_corrupt_reason": "not_an_object"}
+        if raw.get("_corrupt"):
+            return raw
         raw.setdefault("consumers", {})
         return raw
-    except Exception:  # noqa: BLE001
-        return _empty()
+    except Exception as e:  # noqa: BLE001
+        # Fail-closed: never treat unreadable rates as empty (would reset RPM/hour caps)
+        return {
+            "version": 1,
+            "consumers": {},
+            "_corrupt": True,
+            "_corrupt_reason": f"json_parse: {e}"[:200],
+        }
+
+
+def is_rates_corrupt(data: dict[str, Any] | None) -> bool:
+    return bool(data and data.get("_corrupt"))
 
 
 def _write(path: Path, data: dict[str, Any]) -> None:
@@ -75,6 +87,19 @@ def peek_rates(consumer: str, *, root: Path | None = None) -> dict[str, Any]:
     with _LOCK:
         with FileLock(path):
             data = _load(path)
+            if is_rates_corrupt(data):
+                return {
+                    "consumer": cid,
+                    "corrupt": True,
+                    "corrupt_reason": data.get("_corrupt_reason"),
+                    "minute": {"bucket": _minute_bucket(), "requests": 10**9, "usd": 1e12},
+                    "hour": {
+                        "bucket": _hour_bucket(),
+                        "requests": 10**9,
+                        "usd": 1e12,
+                        "tokens": 10**9,
+                    },
+                }
             row = dict((data.get("consumers") or {}).get(cid) or {})
     mb, hb = _minute_bucket(), _hour_bucket()
     minute = row.get("minute") if isinstance(row.get("minute"), dict) else {}
@@ -114,6 +139,13 @@ def record_attempt(
     with _LOCK:
         with FileLock(path):
             data = _load(path)
+            if is_rates_corrupt(data):
+                return {
+                    "ok": False,
+                    "error": "agent_rates corrupt — fail-closed",
+                    "corrupt": True,
+                    "consumer": cid,
+                }
             consumers = data.setdefault("consumers", {})
             row = consumers.get(cid) if isinstance(consumers.get(cid), dict) else {}
             row = dict(row)

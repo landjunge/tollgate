@@ -178,13 +178,15 @@ from runaway costs and provider failures.
 ✓ Audit trail
 ```
 
-## Business sketch (later)
+## Product tiers (architecture, not a paywall)
 
 | Tier | Scope |
 |------|--------|
-| Community | 1 host, protect/route/prove, freeze, chaos CLI |
-| Pro | analytics history, multi-desk, advanced routing |
-| Enterprise | RBAC, SSO, multi-region, SLA |
+| **Core** | Full Tollgate for one operator: Protect · Route · Prove, Control Room, freeze, chaos, audit, MCP/n8n |
+| **Organization** | Layer *above* Core for companies: teams, RBAC/SSO, global policies, fleet ops, retention |
+
+See **[PRODUCT_TIERS.md](PRODUCT_TIERS.md)**.  
+Core is not “50% of features.” Organization is multi-team *operating model*, not locked Core.
 
 ## What we already ship (story → code)
 
@@ -207,12 +209,14 @@ from runaway costs and provider failures.
 
 1. Strangers pass [TEN_MINUTE.md](TEN_MINUTE.md)  
 2. Real n8n / agent-framework users give friction feedback  
-3. Only then: Pro (history, multi-desk) / Enterprise (SSO)  
+3. Only then: optional Core polish; **Organization** only for real multi-team problems (SSO/RBAC/fleet) — see [PRODUCT_TIERS.md](PRODUCT_TIERS.md)
 
 Long-term Prove extension (not now): **AI Reliability Certificate** as customer-facing evidence pack — today: `tollgate certificate` scorecard.
 
 ## See also
 
+- **[PRODUCT_TIERS.md](PRODUCT_TIERS.md)** — Core vs Organization  
+- **[PRODUCT_NORTH_STAR.md](PRODUCT_NORTH_STAR.md)** — current phase (conversion)  
 - **[TEN_MINUTE.md](TEN_MINUTE.md)** — cold install test  
 - **[DEMO.md](DEMO.md)** — 30-second + live desk script  
 - [GETTING_STARTED.md](GETTING_STARTED.md) · [VISION.md](VISION.md) · [ARCHITECTURE.md](ARCHITECTURE.md)

@@ -31,12 +31,20 @@ Control cost.  Survive provider failures.  Prove it works.
 
 ## 10 minutes (cold start)
 
-**Only path a stranger needs:**
+**Primary path: native Python — no Docker.**
 
 ```bash
 git clone https://github.com/landjunge/tollgate.git && cd tollgate
 python3 -m venv .venv && .venv/bin/pip install -e .
 ./scripts/ten-minute.sh
+```
+
+**USB stick / portable desk** (venv + data on the volume):
+
+```bash
+./scripts/portable-setup.sh
+./scripts/run.sh
+# details: docs/PORTABLE.md
 ```
 
 You should experience:
@@ -47,23 +55,10 @@ You should experience:
 | **Prove** | Chaos / failover simulation → survived or clear next step |
 | **Result** | `tollgate certificate` scorecard + [dashboard](http://127.0.0.1:8787/dashboard) |
 
-```bash
-# Docker variant (compose from repo)
-docker compose up -d --build
-docker compose exec tollgate tollgate demo --skip-chaos
-docker compose exec tollgate tollgate certificate
+**Start here (3 docs):**  
+[Quickstart](docs/QUICKSTART.md) · [Portable / USB](docs/PORTABLE.md) · [How it works](docs/HOW_IT_WORKS.md) · [Production checklist](docs/PRODUCTION_CHECKLIST.md)
 
-# Or pull prebuilt image from GHCR
-docker pull ghcr.io/landjunge/tollgate:latest
-docker run --rm -p 8787:8787 -v "$PWD/data:/data" ghcr.io/landjunge/tollgate:latest
-```
-
-> **Note:** First GHCR publish is private by default. Package settings → *Change visibility* → **Public**  
-> (one-time, irreversible): https://github.com/users/landjunge/packages/container/tollgate/settings
-
-**Stranger test:** [docs/TEN_MINUTE.md](docs/TEN_MINUTE.md)  
-**Full help:** [docs/HILFE.md](docs/HILFE.md) (DE) · [docs/USER_GUIDE.md](docs/USER_GUIDE.md) (EN) · [docs/FAQ.md](docs/FAQ.md)  
-**Demo:** [docs/DEMO.md](docs/DEMO.md) · `tollgate help` · `tollgate help env`
+**More:** [SECURITY.md](docs/SECURITY.md) · [OPENAI.md](docs/OPENAI.md) · [HILFE.md](docs/HILFE.md) (DE) · [FAQ.md](docs/FAQ.md) · `tollgate help` · `tollgate doctor`
 
 If that path is confusing, **stop shipping features** — fix the path.
 

@@ -43,10 +43,19 @@ Or step by step:
 tollgate certificate             # scorecard for the screen share
 ```
 
-Open: http://127.0.0.1:8787/dashboard  
+**Dashboard opens automatically** (macOS/Linux) at http://127.0.0.1:8787/dashboard  
+Set `OPEN_DASHBOARD=0` to skip.
+
+In the Control Room:
+
+1. **Protect my first agent** (or you already did via the script)
+2. **See protection in action** — feel the loop block again
+3. **Prove my setup** — when you have ≥2 providers + keys
 
 **Keys:** not required for Aha #1 (tool-loop block is local admission).  
 Optional free path later: `OPENCODE_API_KEY` in `$TOLLGATE_HOME/User/Key.txt`.
+
+**Security:** default bind is `127.0.0.1`. Do not run open mode on `0.0.0.0`.
 
 ---
 

@@ -65,8 +65,7 @@ def build_certificate(*, root: Any = None, application: str = "") -> dict[str, A
         recovery_status = "FAIL"
 
     audit = snap.get("audit") or {}
-    audit_pass = True  # trail mechanism always present; evidence = denies optional
-    # Prefer evidence of denies after a demo
+    # Prefer evidence of denies after a demo (trail always present)
     if int(audit.get("admit_denies") or 0) > 0:
         audit_evidence = "PASS"
     else:

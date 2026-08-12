@@ -58,14 +58,16 @@ def test_failover_test_report(monkeypatch, tmp_path):
     monkeypatch.setenv("TOLLGATE_HOME", str(tmp_path))
     (tmp_path / "User").mkdir(parents=True)
 
-    # route always succeeds on deepseek while chaos on zen
+    # Production Route facade always succeeds on deepseek while chaos on zen
     mock_ks = MagicMock()
-    mock_ks.route.side_effect = [
-        {"ok": True, "provider": "deepseek", "route": {"provider": "deepseek"}},
-        {"ok": True, "provider": "deepseek", "route": {"provider": "deepseek"}},
-        {"ok": True, "provider": "deepseek", "route": {"provider": "deepseek"}},
-    ]
-    with patch("tollgate.get_keys_service", return_value=mock_ks):
+    route_ok = {"ok": True, "provider": "deepseek", "route": {"provider": "deepseek"}}
+    with (
+        patch("tollgate.get_keys_service", return_value=mock_ks),
+        patch(
+            "tollgate.route.select_route",
+            side_effect=[route_ok, route_ok, route_ok],
+        ),
+    ):
         rep = run_failover_test("opencode_zen", requests=3, duration_s=30)
 
     assert rep["requests_tested"] == 3

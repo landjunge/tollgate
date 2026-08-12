@@ -150,6 +150,93 @@ def consumer_usage(consumer: str, *, root: Path | None = None) -> dict[str, Any]
     return dict(c)
 
 
+def try_reserve_day_call(
+    provider_id: str,
+    *,
+    consumer: str = "",
+    op: str = "call",
+    root: Path | None = None,
+) -> dict[str, Any]:
+    """
+    Atomically re-check hard max_calls_day (provider + consumer) and reserve +1 call.
+
+    Call **before** HTTP under the same lock as the ledger. Prevents concurrent
+    admit races that would otherwise overshoot call budgets.
+
+    On success the call counter is already incremented; use
+    ``record_usage(..., count_call=False)`` for tokens/usd only.
+    """
+    from tollgate.app_config import provider_cfg
+    from tollgate.limits import consumer_envelope
+
+    pid = (provider_id or "").strip().lower() or "unknown"
+    cid = _norm_consumer(consumer)
+    pcfg = provider_cfg(pid) or {}
+    max_p = int(pcfg.get("max_calls_day") or 0)
+    env = consumer_envelope(cid) if (consumer or "").strip() else {}
+    max_c = int((env or {}).get("max_calls_day") or 0)
+    # Nothing to enforce → no reserve (record_usage still counts later)
+    if max_p <= 0 and max_c <= 0:
+        return {"ok": True, "reserved": False, "provider": pid, "consumer": cid}
+
+    path = usage_path(root)
+    with _LOCK:
+        with FileLock(path):
+            data = _load_unlocked(path)
+            if is_ledger_corrupt(data):
+                return {
+                    "ok": False,
+                    "error": "ledger corrupt — fail-closed (fix keys_usage.json)",
+                    "_corrupt": True,
+                }
+            if data.get("day") != _today():
+                data = _empty_day()
+            providers = data.setdefault("providers", {})
+            p = providers.get(pid) or _empty_provider()
+            p_calls = int(p.get("calls") or 0)
+            if max_p > 0 and p_calls >= max_p:
+                return {
+                    "ok": False,
+                    "error": f"max_calls_day reached ({p_calls}/{max_p})",
+                    "provider": pid,
+                    "remaining_calls": 0,
+                    "protection": "max_calls_day",
+                }
+            consumers = data.setdefault("consumers", {})
+            cu = consumers.get(cid) or _empty_consumer()
+            c_calls = int(cu.get("calls") or 0)
+            if max_c > 0 and c_calls >= max_c:
+                return {
+                    "ok": False,
+                    "error": f"consumer {cid} max_calls_day reached ({c_calls}/{max_c})",
+                    "consumer": cid,
+                    "remaining_calls": 0,
+                    "protection": "max_calls_day",
+                }
+            # Reserve: +1 call on provider, consumer, totals, by_op
+            p["calls"] = p_calls + 1
+            p["last_call_ts"] = time.time()
+            by_op = p.setdefault("by_op", {})
+            slot = by_op.get(op) or {"calls": 0, "tokens": 0, "chars": 0, "usd": 0.0}
+            slot["calls"] = int(slot.get("calls") or 0) + 1
+            by_op[op] = slot
+            providers[pid] = p
+            cu["calls"] = c_calls + 1
+            cu["last_call_ts"] = time.time()
+            consumers[cid] = cu
+            tot = data.setdefault("totals", _empty_day()["totals"])
+            tot["calls"] = int(tot.get("calls") or 0) + 1
+            _write_unlocked(path, data)
+            return {
+                "ok": True,
+                "reserved": True,
+                "provider": pid,
+                "consumer": cid,
+                "provider_calls": p["calls"],
+                "consumer_calls": cu["calls"],
+            }
+
+
 def record_usage(
     provider_id: str,
     *,
@@ -163,6 +250,7 @@ def record_usage(
     meta: dict[str, Any] | None = None,
     consumer: str = "",
     latency_ms: float = 0.0,
+    count_call: bool = True,
 ) -> dict[str, Any]:
     """
     Atomic-ish append to today's ledger.
@@ -172,6 +260,9 @@ def record_usage(
 
     When ``consumer`` is set, also increments the per-consumer day envelope counters.
     ``latency_ms`` feeds provider health averages (control plane).
+
+    Set ``count_call=False`` when ``try_reserve_day_call`` already reserved the call
+    (token/usd accounting only — avoids double-counting under concurrent admit).
     """
     from tollgate.ops_boundary import sanitize_meta
 
@@ -182,6 +273,7 @@ def record_usage(
     usd_v = max(0.0, float(usd or 0.0))
     lat = max(0.0, float(latency_ms or 0.0))
     cid = _norm_consumer(consumer)
+    call_delta = 1 if count_call else 0
     if usd_v <= 0.0 and (tin or tout):
         try:
             from tollgate.cost import estimate_usd
@@ -218,7 +310,7 @@ def record_usage(
                 data = _empty_day()
             providers = data.setdefault("providers", {})
             p = providers.get(provider_id) or _empty_provider()
-            p["calls"] = int(p.get("calls") or 0) + 1
+            p["calls"] = int(p.get("calls") or 0) + call_delta
             p["tokens_in"] = int(p.get("tokens_in") or 0) + tin
             p["tokens_out"] = int(p.get("tokens_out") or 0) + tout
             p["tokens"] = int(p.get("tokens") or 0) + tin + tout
@@ -233,7 +325,7 @@ def record_usage(
                 p["latency_ms_last"] = lat
             by_op = p.setdefault("by_op", {})
             slot = by_op.get(op) or {"calls": 0, "tokens": 0, "chars": 0, "usd": 0.0}
-            slot["calls"] = int(slot.get("calls") or 0) + 1
+            slot["calls"] = int(slot.get("calls") or 0) + call_delta
             slot["tokens"] = int(slot.get("tokens") or 0) + tin + tout
             slot["chars"] = int(slot.get("chars") or 0) + ch
             slot["usd"] = float(slot.get("usd") or 0.0) + usd_v
@@ -247,7 +339,7 @@ def record_usage(
             # Per-consumer lane (n8n / gnom / openai:… labels)
             consumers = data.setdefault("consumers", {})
             cu = consumers.get(cid) or _empty_consumer()
-            cu["calls"] = int(cu.get("calls") or 0) + 1
+            cu["calls"] = int(cu.get("calls") or 0) + call_delta
             cu["tokens_in"] = int(cu.get("tokens_in") or 0) + tin
             cu["tokens_out"] = int(cu.get("tokens_out") or 0) + tout
             cu["tokens"] = int(cu.get("tokens") or 0) + tin + tout
@@ -259,7 +351,7 @@ def record_usage(
             consumers[cid] = cu
 
             tot = data.setdefault("totals", _empty_day()["totals"])
-            tot["calls"] = int(tot.get("calls") or 0) + 1
+            tot["calls"] = int(tot.get("calls") or 0) + call_delta
             tot["tokens_in"] = int(tot.get("tokens_in") or 0) + tin
             tot["tokens_out"] = int(tot.get("tokens_out") or 0) + tout
             tot["tokens"] = int(tot.get("tokens") or 0) + tin + tout

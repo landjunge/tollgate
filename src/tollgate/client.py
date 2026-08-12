@@ -110,6 +110,7 @@ class TollgateClient:
         max_tokens: int = 1024,
         temperature: float = 0.7,
         agent_id: str = "",
+        tool_calls_est: int = 0,
     ) -> dict[str, Any]:
         """OpenAI-compatible chat via remote Tollgate (admit + route + meter)."""
         msgs = (
@@ -129,6 +130,8 @@ class TollgateClient:
         }
         if provider:
             body["provider"] = provider
+        if tool_calls_est > 0:
+            body["tool_calls_est"] = int(tool_calls_est)
         out = self._request("POST", "/v1/chat/completions", body)
         # Normalize to invoke-style for in-process callers
         if "choices" in out and out.get("ok") is not False:

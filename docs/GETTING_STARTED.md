@@ -4,16 +4,22 @@
 
 Killer story (full demo): **[DEMO.md](DEMO.md)** — *“My AI agent must never go out of control.”*
 
-## 1. Start
+## 1. Start (native — no Docker)
 
 ```bash
-# A) Docker
-cd tollgate && docker compose up -d
-
-# B) Local desk
+# A) Desk / Gnom shared data
 export TOLLGATE_HOME=$HOME/WS-gnom-hub-v1   # or any data dir
+python3 -m venv .venv && .venv/bin/pip install -e .
 ./scripts/desk-ready.sh
+# or: ./scripts/run.sh
+
+# B) USB stick (portable)
+./scripts/portable-setup.sh
+./scripts/run.sh
+# → see docs/PORTABLE.md
 ```
+
+Docker is optional only; not required for desk or USB.
 
 Open:
 

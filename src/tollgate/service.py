@@ -4,18 +4,9 @@ from __future__ import annotations
 
 import os
 import time
-from typing import Any, Callable
+from typing import Any
 
 from tollgate.secrets import is_usable_api_key
-from tollgate import brave as brave_mod
-from tollgate import deepseek as deepseek_mod
-from tollgate import elevenlabs as el_mod
-from tollgate import minimax as minimax_mod
-from tollgate import google as google_mod
-from tollgate import nvidia as nvidia_mod
-from tollgate import opencode_zen as zen_mod
-from tollgate import openrouter as openrouter_mod
-from tollgate import providers as generic
 from tollgate.base import mask_secret
 from tollgate.catalog import FAMILIES, get_family, list_families
 from tollgate.app_config import (
@@ -28,6 +19,7 @@ from tollgate.app_config import (
 from tollgate import auto_update as auto_update_mod
 from tollgate.limits import check_limits
 from tollgate.policy import preflight, recommend_model_route
+from tollgate.provider_ops import OPS as _OPS, STATUS as _STATUS, get_ops
 from tollgate.research_notes import RESEARCH, RESEARCHED_AT, research_for
 from tollgate.router import execute_routed, route as route_intent
 from tollgate.schema import normalize_card, sort_cards
@@ -37,116 +29,15 @@ from tollgate.usage_ledger import (
     usage_summary,
 )
 
-_STATUS: dict[str, Callable[..., dict[str, Any]]] = {
-    "deepseek": lambda **kw: deepseek_mod.status(worker=False, **kw),
-    "worker": lambda **kw: deepseek_mod.status(worker=True, **kw),
-    "brave": brave_mod.status,
-    "elevenlabs": el_mod.status,
-    "openrouter": openrouter_mod.status,
-    "nvidia": nvidia_mod.status,
-    "minimax": minimax_mod.status,
-    "opencode_zen": zen_mod.status,
-    "telegram": generic.telegram_status,
-    "google": google_mod.status,
-}
-
-_OPS: dict[str, dict[str, Callable[..., Any]]] = {
-    "elevenlabs": {
-        "status": lambda **kw: el_mod.status(**kw),
-        "budget": lambda cost=0, **_kw: el_mod.check_budget(cost=int(cost or 0)),
-        "subscription": lambda force=False, **_kw: el_mod.fetch_subscription(
-            force=bool(force)
-        ),
-        "ensure_budget": lambda cost=0, **_kw: el_mod.ensure_budget(cost=int(cost or 0)),
-        "research": lambda **_kw: research_for("elevenlabs"),
-    },
-    "brave": {
-        "status": lambda **kw: brave_mod.status(**kw),
-        "search": lambda query="", count=5, country="DE", search_lang="de", **_kw: brave_mod.search(
-            str(query),
-            count=int(count or 5),
-            country=str(country or "DE"),
-            search_lang=str(search_lang or "de"),
-        ),
-        "quota": lambda force=False, **_kw: brave_mod.quota(force=bool(force)),
-        "research": lambda **_kw: research_for("brave"),
-    },
-    "deepseek": {
-        "status": lambda **kw: deepseek_mod.status(worker=False, **kw),
-        "models": lambda **_kw: deepseek_mod.list_models(worker=False),
-        "chat": lambda messages="hi", model=None, max_tokens=1024, temperature=0.7, **kw: deepseek_mod.chat(
-            messages,
-            model=model,
-            max_tokens=int(max_tokens or 1024),
-            temperature=float(temperature or 0.7),
-            worker=False,
-            **kw,
-        ),
-        "research": lambda **_kw: research_for("deepseek"),
-    },
-    "worker": {
-        "status": lambda **kw: deepseek_mod.status(worker=True, **kw),
-        "models": lambda **_kw: deepseek_mod.list_models(worker=True),
-        "chat": lambda messages="hi", model=None, max_tokens=1024, temperature=0.7, **kw: deepseek_mod.chat(
-            messages,
-            model=model,
-            max_tokens=int(max_tokens or 1024),
-            temperature=float(temperature or 0.7),
-            worker=True,
-            **kw,
-        ),
-        "research": lambda **_kw: research_for("worker"),
-    },
-    "openrouter": {
-        "status": lambda **kw: openrouter_mod.status(**kw),
-        "credits": lambda **_kw: openrouter_mod.credits(),
-        "models": lambda **_kw: openrouter_mod.models(),
-        "chat": lambda messages="hi", model="openrouter/free", max_tokens=1024, temperature=0.7, **kw: openrouter_mod.chat(
-            messages,
-            model=str(model or "openrouter/free"),
-            max_tokens=int(max_tokens or 1024),
-            temperature=float(temperature or 0.7),
-            **kw,
-        ),
-        "research": lambda **_kw: research_for("openrouter"),
-    },
-    "nvidia": {
-        "status": lambda **kw: nvidia_mod.status(**kw),
-        "models": lambda **_kw: nvidia_mod.list_models(),
-        "research": lambda **_kw: research_for("nvidia"),
-    },
-    "minimax": {
-        "status": lambda **kw: minimax_mod.status(**kw),
-        "probe": lambda **_kw: minimax_mod.probe_key(),
-        "research": lambda **_kw: research_for("minimax"),
-    },
-    "opencode_zen": {
-        "status": lambda **kw: zen_mod.status(**kw),
-        "models": lambda **_kw: zen_mod.list_models(),
-        "chat": lambda message="hi", messages=None, model="deepseek-v4-flash-free", max_tokens=1024, temperature=0.7, **_kw: zen_mod.chat(
-            message if messages is None else messages,
-            model=str(model or "deepseek-v4-flash-free"),
-            max_tokens=int(max_tokens or 1024),
-            messages=messages,
-            temperature=float(temperature or 0.7),
-        ),
-        "research": lambda **_kw: research_for("opencode_zen"),
-    },
-    "telegram": {
-        "status": lambda **kw: generic.telegram_status(**kw),
-        "research": lambda **_kw: research_for("telegram"),
-    },
-    "google": {
-        "status": lambda **kw: google_mod.status(**kw),
-        "research": lambda **_kw: research_for("google"),
-    },
-}
-
 
 class KeysService:
     """
     Tollgate control plane: inventory / dashboard / diagnose / preflight /
     recommend / status / call / research / list_ops / route.
+
+    Provider ops live in ``provider_ops`` registry — this class does not import
+    every provider module. Protect/Route/Prove stay outside call() when using
+    ``gateway_call`` / ``route``.
     """
 
     def __init__(self) -> None:
@@ -317,8 +208,9 @@ class KeysService:
         el = next((c for c in cards if c["id"] == "elevenlabs"), None)
         if el and el.get("ready") and not live:
             try:
-                b = el_mod.check_budget(cost=0)
-                if b.get("ok"):
+                budget_fn = get_ops("elevenlabs").get("budget")
+                b = budget_fn(cost=0) if budget_fn else {}
+                if isinstance(b, dict) and b.get("ok"):
                     el.setdefault("metrics", {})
                     el["metrics"].update(
                         {
@@ -327,8 +219,10 @@ class KeysService:
                             "min_remaining": b.get("min_remaining"),
                         }
                     )
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception as e:  # noqa: BLE001
+                from tollgate.soft_fail import soft_fail
+
+                soft_fail("elevenlabs_budget", e, provider="elevenlabs", op="budget")
 
         route = recommend_model_route(self, prefer_free=True)
         smart = route_intent(self, "llm", live=False)
@@ -578,6 +472,7 @@ class KeysService:
             "probe",
             "subscription",
         }
+        call_reserved = False
         if not skip_limit and oname in cost_ops:
             lim = check_limits(
                 pid,
@@ -587,13 +482,46 @@ class KeysService:
                 consumer=consumer,
             )
             if not lim.get("allowed"):
+                cl = (
+                    lim.get("consumer_limits")
+                    if isinstance(lim.get("consumer_limits"), dict)
+                    else {}
+                )
+                prot = lim.get("protection") or cl.get("protection")
                 return {
                     "ok": False,
                     "error": lim.get("reason") or "limit exceeded",
+                    "error_class": "BUDGET_HARD",
                     "provider": pid,
                     "op": oname,
                     "limits": lim,
                     "consumer": consumer or None,
+                    "protection": prot,
+                }
+
+            # Atomic re-check + reserve hard max_calls_day (closes admit race)
+            try:
+                from tollgate.usage_ledger import try_reserve_day_call
+
+                resv = try_reserve_day_call(pid, consumer=consumer, op=oname)
+                if not resv.get("ok"):
+                    return {
+                        "ok": False,
+                        "error": resv.get("error") or "call budget reserve denied",
+                        "error_class": "BUDGET_HARD",
+                        "provider": pid,
+                        "op": oname,
+                        "consumer": consumer or None,
+                        "protection": resv.get("protection") or "max_calls_day",
+                    }
+                call_reserved = bool(resv.get("reserved"))
+            except Exception as e:  # noqa: BLE001
+                return {
+                    "ok": False,
+                    "error": f"call budget reserve failed — fail-closed ({e})",
+                    "error_class": "BUDGET_HARD",
+                    "provider": pid,
+                    "op": oname,
                 }
 
         # EL min_remaining from config overrides env if set
@@ -604,7 +532,7 @@ class KeysService:
                     "ELEVENLABS_MIN_REMAINING", str(int(pcfg["min_remaining"]))
                 )
 
-        ops = _OPS.get(pid) or {}
+        ops = get_ops(pid)
         fn = ops.get(oname)
         if fn is None:
             return {
@@ -622,7 +550,10 @@ class KeysService:
             else:
                 allowed = set(sig.parameters.keys())
                 call_kw = {k: v for k, v in kwargs.items() if k in allowed}
-        except Exception:  # noqa: BLE001
+        except Exception as e:  # noqa: BLE001
+            from tollgate.soft_fail import soft_fail
+
+            soft_fail("inspect_signature", e, provider=pid, op=oname)
             call_kw = kwargs
         t0 = time.time()
         try:
@@ -668,6 +599,7 @@ class KeysService:
                         meta={"model": out.get("model") or kwargs.get("model")},
                         consumer=consumer,
                         latency_ms=latency_ms,
+                        count_call=not call_reserved,
                     )
                     out["usage_today"] = {
                         "calls": used.get("calls"),

@@ -379,10 +379,15 @@ def run_failover_test(
 
     last_route_error = ""
     last_tried: list[Any] = []
+    # M3b: Prove must use production Route facade — no alternate router
+    from tollgate.route import select_route
+
     try:
         for i in range(n):
             t0 = time.time()
-            r = ks.route(intent, tokens_est=200, prefer_free=True)
+            r = select_route(
+                ks, intent, tokens_est=200, prefer_free=True
+            )
             dt = (time.time() - t0) * 1000.0
             latencies.append(dt)
             chosen = str(r.get("provider") or (r.get("route") or {}).get("provider") or "")
@@ -412,6 +417,7 @@ def run_failover_test(
             )
             if live_chat and r.get("ok") and chosen:
                 try:
+                    # Production chat path (admit + gateway), not a private hop
                     from tollgate.chat_route import routed_chat
 
                     routed_chat(

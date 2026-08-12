@@ -2,6 +2,29 @@
 
 All notable releases of [landjunge/tollgate](https://github.com/landjunge/tollgate).
 
+## Unreleased
+
+### Refactor — modular monolith (Phases 0–7 complete)
+- **Pipeline stages** in `gateway/entry.py` (prove → protect admit → rates → cache → execute → circuit)
+- **`gateway/decision.py`**: unified deny `Decision` + `from_admit_decision`
+- **`protect.package_deny`**: single deny packaging (audit + alert + block card) for **gateway + stream**
+- **`prove/`**: availability facade — entry, router, stream hops
+- **`protect/`**: evaluate_protect · record_rates · freeze/rates re-exports
+- **`route/`**: select_route · circuit feedback facade
+- **`identity/` · `accounting/` · `audit/`**: light axis facades (Phase 7)
+- Stream: prove gate + rates + day-call reserve; deny shape matches non-stream
+- Docs: `TEAM_PLAN_MODULAR_REWORK.md`, `MODULAR_MONOLITH.md`
+- Tests: `test_modular_pipeline.py` (deny parity, import rule) · **181** pytest green
+- Chaos prove path uses `route.select_route` (no alternate router)
+- E2E: `scripts/e2e-gnom-hub.sh all` covers T1–T5 + gnom API + restart · report in docs
+- **Portable/USB first (no Docker):** README/GETTING_STARTED native-first; `portable-setup` requires Python ≥3.10; `portable-smoke.sh`; Gnom co-layout on stick documented
+- Docs: architect assessment — modular enough, no big rewrite; pain-driven boundary slices (`ARCHITECT_ASSESSMENT_2026-08-13.md`)
+- **M10 FreePolicy:** `protect.free_policy.resolve` / `order_chain` / `admit_free_gate` — one free/paid truth for router + admit
+- **M11 soft_fail:** observability failures log + count (entry cache/rates/audit) — no silent `except: pass`
+- **M8:** `route()` vs `execute_routed()` kept separate (Prove can route-only); `RouteDecision` type
+- **M9:** Provider op maps moved to `provider_ops/registry.py`; KeysService looks up ops — no per-provider imports in service
+- **Code revive (team):** fix post-M9 `el_mod` NameError in dashboard; soft_fail on deny packaging/health; dead imports cleaned; `docs/CODE_REVIVE_2026-08-13.md`
+
 ## 1.0.13 — 2026-08-11
 
 ### Website SEO / Google indexing

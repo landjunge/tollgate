@@ -369,6 +369,14 @@ def run_doctor(*, live: bool = False, root: Path | None = None) -> dict[str, Any
 
     errors = sum(1 for i in issues if i.get("level") == "error")
     warns = sum(1 for i in issues if i.get("level") == "warn")
+    readiness = production_readiness(
+        issues=issues,
+        ok_items=ok_items,
+        auth=auth,
+        default_on=default_on,
+        protected_named=protected,
+        root=root,
+    )
     return {
         "ok": errors == 0,
         "summary": {
@@ -382,6 +390,83 @@ def run_doctor(*, live: bool = False, root: Path | None = None) -> dict[str, Any
         "issues": issues,
         "next": _next_steps(issues),
         "service_diagnose": service_diag,
+        "production_readiness": readiness,
+    }
+
+
+def production_readiness(
+    *,
+    issues: list[dict[str, str]] | None = None,
+    ok_items: list[str] | None = None,
+    auth: dict[str, Any] | None = None,
+    default_on: bool = False,
+    protected_named: int = 0,
+    root: Path | None = None,
+) -> dict[str, Any]:
+    """
+    Soft production readiness score (0–100) from existing signals.
+    Not a formal PRODUCTION mode flag — a checklist score for operators.
+    """
+    pin_data_home_env()
+    if issues is None or ok_items is None or auth is None:
+        # standalone call
+        full = run_doctor(live=False, root=root)
+        return full.get("production_readiness") or {"score": 0, "checks": []}
+
+    checks: list[dict[str, Any]] = []
+
+    def add(ok: bool, label: str, detail: str = "") -> None:
+        checks.append({"ok": ok, "label": label, "detail": detail})
+
+    host = (os.environ.get("HOST") or "127.0.0.1").strip()
+    public = host in ("0.0.0.0", "::", "[::]", "*")
+    open_mode = not bool((auth or {}).get("required"))
+    add(
+        not (open_mode and public),
+        "Bind/auth safe for shared use",
+        "open mode on public bind" if (open_mode and public) else f"HOST={host} open={open_mode}",
+    )
+    # Production readiness: open mode is fine for local desk, but never "auth PASS"
+    add(
+        bool(auth and auth.get("required")),
+        "Authentication",
+        (
+            "consumers auth required"
+            if auth and auth.get("required")
+            else "OPEN MODE — enable consumers (tollgate consumer-add) before shared/prod use"
+        ),
+    )
+    add(default_on or protected_named > 0, "Budget/loop policy configured", f"named={protected_named} default_on={default_on}")
+    # keys
+    kp = resolve_key_txt_path(root)
+    add(kp is not None and kp.is_file(), "Secrets file present", str(kp) if kp else "missing Key.txt")
+    # failover prove
+    chaos_ok = False
+    try:
+        from tollgate.chaos import status as chaos_status
+
+        last = (chaos_status() or {}).get("last_report")
+        chaos_ok = bool(isinstance(last, dict) and last.get("survived"))
+    except Exception:  # noqa: BLE001
+        pass
+    add(chaos_ok, "Recovery/failover tested", "run: tollgate chaos test <provider>" if not chaos_ok else "last chaos survived")
+    # freeze not stuck
+    frozen = any(i.get("code") == "admission_frozen" for i in (issues or []))
+    add(not frozen, "Admission not frozen", "tollgate unfreeze" if frozen else "open")
+    # audit / protection defaults
+    add(default_on, "Default agent protection on", "_default envelope")
+    # snapshot/backup known — always "documented"
+    add(True, "Backup path documented", "tollgate snapshot export")
+
+    passed = sum(1 for c in checks if c.get("ok"))
+    total = max(1, len(checks))
+    score = int(round(100.0 * passed / total))
+    return {
+        "score": score,
+        "passed": passed,
+        "total": total,
+        "checks": checks,
+        "label": "PRODUCTION-READY" if score >= 85 and not frozen and not (open_mode and public) else "NEEDS WORK",
     }
 
 
@@ -407,6 +492,16 @@ def format_doctor_text(report: dict[str, Any]) -> str:
     status = "PASS" if report.get("ok") else "FAIL"
     lines.append(f"Status: **{status}** (errors={s.get('errors')} warnings={s.get('warnings')})")
     lines.append("")
+    pr = report.get("production_readiness") or {}
+    if pr:
+        lines.append(
+            f"## Production readiness · {pr.get('score')}% · {pr.get('label')}"
+        )
+        for c in pr.get("checks") or []:
+            mark = "✓" if c.get("ok") else "·"
+            det = f" — {c.get('detail')}" if c.get("detail") else ""
+            lines.append(f"- {mark} {c.get('label')}{det}")
+        lines.append("")
     if report.get("ok_items"):
         lines.append("## OK")
         for x in report["ok_items"]:

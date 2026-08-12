@@ -105,17 +105,17 @@ def admit(
                 context=ctx,
             )
 
-    # FREE class: never go to high-risk paid providers
-    if ctx.request_class == RequestClass.FREE:
-        from tollgate.cost import is_high_risk
+    # Free / high-risk gate — single FreePolicy (not ad-hoc high_risk checks)
+    from tollgate.protect.free_policy import admit_free_gate
 
-        if is_high_risk(pid) and not ctx.allow_paid_fallback:
-            return AdmitDecision(
-                allowed=False,
-                code=ErrorClass.POLICY_DENY,
-                reason=f"request_class=free cannot use high-risk provider {pid}",
-                context=ctx,
-            )
+    free_deny = admit_free_gate(pid, ctx)
+    if free_deny:
+        return AdmitDecision(
+            allowed=False,
+            code=ErrorClass.POLICY_DENY,
+            reason=free_deny,
+            context=ctx,
+        )
 
     lim = check_limits(
         pid,

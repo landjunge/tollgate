@@ -215,6 +215,23 @@ def check_consumer_limits(
     tools = max(0, int(tool_calls_est or 0))
     req_usd = estimate_request_usd(est, usd_hint=float(usd_est or 0.0))
 
+    # ── short windows first for corrupt fail-closed ──────────────────
+    rates = peek_rates(cid)
+    if rates.get("corrupt"):
+        return {
+            "allowed": False,
+            "reason": (
+                "agent_rates corrupt/unreadable — fail-closed "
+                f"({rates.get('corrupt_reason') or 'fix agent_rates.json'})"
+            ),
+            "consumer": cid,
+            "protection": "agent_rates",
+            "rates_corrupt": True,
+            "soft_warn": False,
+            "wait_ms": 0,
+            "envelope": env,
+        }
+
     # ── per-request hard stops (no ledger needed) ─────────────────────
     if max_tok_req > 0 and est > max_tok_req:
         return {
@@ -257,7 +274,6 @@ def check_consumer_limits(
         }
 
     # ── short windows (minute / hour) ─────────────────────────────────
-    rates = peek_rates(cid)
     if max_rpm > 0 and int(rates["minute"]["requests"]) >= max_rpm:
         return {
             "allowed": False,

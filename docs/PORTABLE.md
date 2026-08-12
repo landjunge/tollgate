@@ -2,6 +2,8 @@
 
 Tollgate must run from a **stick or external volume** without any `/Users/…` or host-only paths.
 
+**No Docker.** Primary path is **venv + `scripts/run.sh`** on the volume. Containers are optional and not part of the USB story.
+
 ## Layout (recommended)
 
 ```
@@ -42,8 +44,31 @@ Resolution code: `src/tollgate/paths.py`.
 ```bash
 cd /path/to/tollgate
 ./scripts/portable-setup.sh
-# edit WS-tollgate/User/Key.txt  (or tollgate/User/Key.txt)
+# Gnom-style data dir name (optional):
+#   WS_NAME=WS-gnom-hub-v1 ./scripts/portable-setup.sh
+# edit WS-*/User/Key.txt
 ./scripts/run.sh
+./scripts/portable-smoke.sh   # offline path check, no network
+```
+
+### Stick + Gnom-Hub (same volume, no Docker)
+
+```text
+/Volumes/STICK/
+  tollgate/           # this repo + .venv
+  gnom-hub-v1/        # optional desk UI
+  WS-gnom-hub-v1/     # shared data (Key.txt, ledger, gnom user.db)
+    User/Key.txt
+```
+
+```bash
+export TOLLGATE_HOME=/Volumes/STICK/WS-gnom-hub-v1
+export GNOM_WS=$TOLLGATE_HOME
+export TOLLGATE_URL=http://127.0.0.1:8787
+export GNOM_TOLLGATE_LLM=1
+# Terminal A
+/Volumes/STICK/tollgate/scripts/run.sh
+# Terminal B — start gnom-hub as usual with same env
 ```
 
 ## Snapshot migrate (v0.3.3+)

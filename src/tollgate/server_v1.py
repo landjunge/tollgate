@@ -135,6 +135,37 @@ class InvokeBody(BaseModel):
     allow_paid_fallback: bool = False
 
 
+def _security_surface() -> dict[str, Any]:
+    """Bind + open-mode hints for dashboard / doctor (no secrets)."""
+    import os
+
+    from tollgate.consumers import auth_required
+
+    host = (os.environ.get("HOST") or "127.0.0.1").strip() or "127.0.0.1"
+    port = int(os.environ.get("PORT") or "8787")
+    open_mode = not auth_required()
+    bind_public = host in ("0.0.0.0", "::", "[::]", "*")
+    warning = None
+    if open_mode and bind_public:
+        warning = (
+            "OPEN MODE on a public bind — any client can admit traffic and "
+            "mutate config. Use HOST=127.0.0.1 or enable consumers auth."
+        )
+    elif open_mode:
+        warning = (
+            "Open auth mode (local desk) — fine on localhost only. "
+            "Do not expose this port to the internet."
+        )
+    return {
+        "open_mode": open_mode,
+        "bind_host": host,
+        "bind_port": port,
+        "bind_is_public": bind_public,
+        "dashboard_url": f"http://{host if host not in ('0.0.0.0', '::', '[::]') else '127.0.0.1'}:{port}/dashboard",
+        "warning": warning,
+    }
+
+
 @app.get("/v1/health")
 def health() -> dict[str, Any]:
     from tollgate.freeze import freeze_status
@@ -152,6 +183,7 @@ def health() -> dict[str, Any]:
         "multi_consumer": True,
         "portable": path_snapshot(),
         "auth": auth_status(),
+        "security": _security_surface(),
         "app": ks.app_status(),
         "freeze": fr,
         "circuits": get_circuits().snapshot()[:30],
@@ -252,16 +284,41 @@ def metrics(
 
 
 @app.get("/v1/auth")
-def auth_info() -> dict[str, Any]:
-    """Public: whether auth is required (never returns secrets)."""
+def auth_info(
+    x_consumer_key: str | None = Header(default=None, alias="X-Consumer-Key"),
+    x_consumer_id: str | None = Header(default=None, alias="X-Consumer-Id"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> dict[str, Any]:
+    """
+    Public: only whether auth is required (no consumer enumeration).
+
+    Authenticated (or open mode) callers get consumer list / counts for desk UX.
+    """
     st = auth_status()
-    return {
+    public = {
         "ok": True,
         "required": st["required"],
-        "consumers_n": st["consumers_n"],
-        "consumers": st["consumers"],
         "header": "X-Consumer-Key: <id>:<secret>",
     }
+    if not st["required"]:
+        # Open desk mode — full status is fine (local trust boundary)
+        public["consumers_n"] = st["consumers_n"]
+        public["consumers"] = st["consumers"]
+        public["mode"] = "open"
+        return public
+    # Auth mode: details only when credentials valid
+    try:
+        auth = _require(
+            x_consumer_key, x_consumer_id, need_admin=False, authorization=authorization
+        )
+    except HTTPException:
+        return public
+    public["consumers_n"] = st["consumers_n"]
+    public["consumers"] = st["consumers"]
+    public["mode"] = "auth"
+    public["viewer"] = auth.get("consumer")
+    public["admin"] = bool(auth.get("admin"))
+    return public
 
 
 @app.get("/v1/control")

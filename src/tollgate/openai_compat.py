@@ -188,6 +188,33 @@ def map_tollgate_error(
     ec = str(result.get("error_class") or result.get("admit", {}).get("code") or "")
     low = err.lower()
     meta = _tollgate_error_meta(result)
+    # Prefer human operator English for the public error.message
+    blocked = result.get("blocked") if isinstance(result.get("blocked"), dict) else {}
+    human = str(blocked.get("human") or meta.get("message") or "").strip()
+    if not human and meta.get("protection"):
+        try:
+            from tollgate.block_view import human_block_sentence
+
+            human = human_block_sentence(
+                prot=str(meta.get("protection") or ""),
+                consumer=str(meta.get("consumer") or ""),
+                reason=err,
+            )
+        except Exception:  # noqa: BLE001
+            human = ""
+    if "circuit" in low or ec == "PROVIDER_DOWN":
+        human = human or (
+            "A provider is unavailable (circuit open or down). "
+            "Tollgate will cool down and use a fallback if configured."
+        )
+    if (
+        result.get("failover")
+        or result.get("failover_hops")
+        or (isinstance(result.get("failover"), dict))
+    ):
+        # success path headers elsewhere; on error leave human as-is
+        pass
+    display = human if human else err
     headers: dict[str, str] = {}
     if meta.get("retry_after_s"):
         headers["Retry-After"] = str(int(meta["retry_after_s"]))
@@ -196,10 +223,12 @@ def map_tollgate_error(
         headers["X-Tollgate-Error-Class"] = str(meta["error_class"])[:64]
     if meta.get("protection"):
         headers["X-Tollgate-Protection"] = str(meta["protection"])[:64]
+    if human:
+        headers["X-Tollgate-Human"] = human[:200]
 
     if "auth" in low or (ec in ("AUTH_DEAD", "POLICY_DENY") and "key" in low):
         body, status = openai_error(
-            err,
+            display,
             status=401,
             err_type="invalid_request_error",
             code="invalid_api_key",
@@ -214,7 +243,8 @@ def map_tollgate_error(
         or meta.get("protection") == "max_requests_minute"
     ):
         body, status = openai_error(
-            err,
+            display
+            or "Rate limit exceeded for this agent. Wait a moment or raise max_requests_minute.",
             status=429,
             err_type="rate_limit_error",
             code="rate_limit_exceeded",
@@ -231,7 +261,7 @@ def map_tollgate_error(
         or meta.get("protection")
     ):
         body, status = openai_error(
-            err,
+            display or err,
             status=402,
             err_type="insufficient_quota",
             code="insufficient_quota",
@@ -240,7 +270,8 @@ def map_tollgate_error(
         return body, status, headers
     if "circuit" in low or ec == "PROVIDER_DOWN":
         body, status = openai_error(
-            err,
+            display
+            or "Provider unavailable. Configure a fallback and run Prove when ready.",
             status=503,
             err_type="server_error",
             code="provider_down",
@@ -248,7 +279,7 @@ def map_tollgate_error(
         )
         return body, status, headers
     body, status = openai_error(
-        err,
+        display or err,
         status=502,
         err_type="server_error",
         code=ec or "upstream_error",
@@ -284,8 +315,23 @@ def response_headers(
     fo = result.get("failover")
     if isinstance(fo, dict) and fo.get("hops"):
         headers["X-Tollgate-Failover-Hops"] = str(int(fo.get("hops") or 0))
+        # Human hint: primary failed over
+        from_p = str(fo.get("from") or fo.get("primary") or "").strip()
+        to_p = str(fo.get("to") or fo.get("used") or prov or "").strip()
+        if from_p and to_p and from_p != to_p:
+            headers["X-Tollgate-Human"] = (
+                f"{from_p} was unavailable. Tollgate switched this request to {to_p}."
+            )[:200]
+        elif int(fo.get("hops") or 0) > 1:
+            headers["X-Tollgate-Human"] = (
+                "Primary provider failed; Tollgate completed this request via failover."
+            )
     elif result.get("failover_hops"):
         headers["X-Tollgate-Failover-Hops"] = str(int(result.get("failover_hops") or 0))
+        if int(result.get("failover_hops") or 0) > 1:
+            headers["X-Tollgate-Human"] = (
+                "Primary provider failed; Tollgate completed this request via failover."
+            )
     return headers
 
 

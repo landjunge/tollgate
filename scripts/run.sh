@@ -53,8 +53,15 @@ echo "  PY=$PY"
 echo "  TOLLGATE_HOME=${TOLLGATE_HOME:-"(auto ~/.tollgate or portable)"}"
 echo "  → http://${HOST}:${PORT}/docs"
 
-# Prefer module CLI if installed; else uvicorn via PYTHONPATH
-if "$PY" -c "import tollgate" 2>/dev/null; then
-  exec "$PY" -m uvicorn tollgate.server_v1:app --host "$HOST" --port "$PORT"
+# Native only (no Docker). Ensure package importable.
+if ! "$PY" -c "import tollgate" 2>/dev/null; then
+  echo "tollgate not importable with $PY"
+  echo "  run: ./scripts/portable-setup.sh   # creates .venv + pip install -e ."
+  exit 1
+fi
+# Fail closed on ancient Python (typing / FastAPI stack needs 3.10+)
+if ! "$PY" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)'; then
+  echo "Python ≥ 3.10 required (got $($PY -V 2>&1))"
+  exit 1
 fi
 exec "$PY" -m uvicorn tollgate.server_v1:app --host "$HOST" --port "$PORT"

@@ -1,141 +1,147 @@
 """
-Single entry for billable ops — admission + service.call + circuit feedback.
+Single entry for billable ops — modular pipeline (Protect → Execute → Route feedback).
 
 Tools and agents should use this instead of importing provider modules directly.
+
+Pipeline stages (Phase 1+):
+  prove availability → protect admit → protect rates → cache → execute → circuit → cache store
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from tollgate.gateway.admit import admit
+from tollgate.gateway.admit import AdmitDecision, admit
 from tollgate.gateway.circuit import get_circuits
-from tollgate.gateway.context import RequestContext, RequestClass
+from tollgate.gateway.context import RequestClass, RequestContext
 from tollgate.gateway.errors import ErrorClass, PolicyDeny, classify_result
 from tollgate.redact import redact_secrets
 
 
-def gateway_call(
+# ── Stage helpers (named pipeline — no public API break) ─────────────
+
+
+def _stage_prove_availability(
+    provider: str,
+    *,
+    op: str,
+    ctx: RequestContext,
+) -> dict[str, Any] | None:
+    """
+    Prove gate: chaos inject / gradual recovery.
+    Returns deny dict or None if available.
+    """
+    from tollgate.prove.availability import check_provider_available
+
+    av = check_provider_available(provider)
+    if av.available:
+        return None
+    deny = av.as_deny_dict(provider=provider, op=op)
+    if av.subsystem_error:
+        try:
+            from tollgate.audit_log import append_audit
+
+            append_audit(
+                "protection_error",
+                provider=provider,
+                op=op,
+                consumer=ctx.consumer_id(),
+                error=deny.get("error") or "chaos check failed",
+                ok=False,
+                extra={"subsystem": "chaos", "fail_closed": True},
+            )
+        except Exception as e:  # noqa: BLE001
+            from tollgate.soft_fail import soft_fail
+
+            soft_fail("audit", e, provider=provider, op=op, message="protection_error audit")
+    return deny
+
+
+def _build_deny_response(
+    *,
     provider: str,
     op: str,
-    *,
-    ctx: RequestContext | None = None,
+    ctx: RequestContext,
+    decision: AdmitDecision | None,
+    reason: str,
+    code: ErrorClass,
     tokens_est: int = 0,
-    chars_est: int = 0,
-    model: str = "",
-    **kwargs: Any,
+    protection: str | None = None,
+    admit_dict: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    """Single packaging path for protect denials (delegates to protect.package_deny)."""
+    from tollgate.protect.package_deny import package_deny, package_deny_from_admit
+
+    if decision is not None:
+        return package_deny_from_admit(
+            decision,
+            provider=provider,
+            op=op,
+            consumer=ctx.consumer_id(),
+            tokens_est=tokens_est,
+            tool_calls_est=int(getattr(ctx, "tool_calls_est", 0) or 0),
+        )
+    return package_deny(
+        provider=provider,
+        op=op,
+        reason=reason,
+        code=code,
+        consumer=ctx.consumer_id(),
+        protection=protection,
+        admit=admit_dict,
+        tokens_est=tokens_est,
+        tool_calls_est=int(getattr(ctx, "tool_calls_est", 0) or 0),
+    )
+
+
+def _stage_protect_admit(
+    provider: str,
+    *,
+    op: str,
+    tokens_est: int,
+    chars_est: int,
+    model: str,
+    ctx: RequestContext,
+) -> tuple[AdmitDecision | None, dict[str, Any] | None]:
     """
-    Admit → KeysService.call → circuit update.
-
-    Always returns a dict with ok / error / admit / error_class.
+    Protect: L4 admission.
+    Returns (admit_decision, None) on allow, or (None, deny_dict) on deny.
     """
-    from tollgate import get_keys_service
-
-    ctx = ctx or RequestContext()
-    mid = model or str(kwargs.get("model") or "")
-    # Chaos inject / gradual recovery: fail closed for diverted traffic
-    try:
-        from tollgate.chaos import is_provider_in_chaos, is_provider_unavailable
-
-        if is_provider_unavailable(provider):
-            chaos = is_provider_in_chaos(provider)
-            return {
-                "ok": False,
-                "error": (
-                    f"chaos inject: provider {provider} simulated unavailable"
-                    if chaos
-                    else f"gradual recovery: provider {provider} not yet fully restored"
-                ),
-                "error_class": "PROVIDER_DOWN",
-                "provider": provider,
-                "op": op,
-                "chaos": chaos,
-                "recovery": not chaos,
-            }
-    except Exception:  # noqa: BLE001
-        pass
     decision = admit(
         provider,
         op=op,
         tokens_est=tokens_est,
         chars_est=chars_est,
-        model=mid,
+        model=model,
         ctx=ctx,
     )
-    if not decision.allowed:
-        reason = redact_secrets(decision.reason or "denied")
-        try:
-            from tollgate.audit_log import append_audit
-
-            append_audit(
-                "admit_deny",
-                provider=provider,
-                op=op,
-                consumer=ctx.consumer_id(),
-                error=reason,
-                ok=False,
-                extra={
-                    "error_class": decision.code.value,
-                    "protection": (decision.limits or {}).get("protection"),
-                },
-            )
-        except Exception:  # noqa: BLE001
-            pass
-        try:
-            from tollgate.alerts import maybe_alert
-
-            if (decision.limits or {}).get("protection") or "agent protection" in reason.lower():
-                maybe_alert(
-                    "agent_protection",
-                    provider=provider,
-                    message=reason,
-                    extra={
-                        "consumer": ctx.consumer_id(),
-                        "op": op,
-                        "protection": (decision.limits or {}).get("protection"),
-                    },
-                )
-        except Exception:  # noqa: BLE001
-            pass
-        blocked = None
-        try:
-            from tollgate.block_view import build_block_card
-
-            lim = decision.limits if isinstance(decision.limits, dict) else {}
-            cl = lim.get("consumer_limits") if isinstance(lim.get("consumer_limits"), dict) else {}
-            blocked = build_block_card(
-                reason=reason,
-                consumer=ctx.consumer_id(),
-                provider=provider,
-                op=op,
-                protection=cl.get("protection") or lim.get("protection"),
-                limits=lim,
-                tool_calls_est=int(getattr(ctx, "tool_calls_est", 0) or 0),
-                tokens_est=int(tokens_est or 0),
-            )
-        except Exception:  # noqa: BLE001
-            blocked = None
-        out: dict[str, Any] = {
-            "ok": False,
-            "error": reason,
-            "error_class": decision.code.value,
-            "admit": decision.as_dict(),
-            "provider": provider,
-            "op": op,
-            "protection": (decision.limits or {}).get("protection"),
-        }
-        if blocked:
-            out["blocked"] = blocked
-            out["message"] = blocked.get("message")
-        return out
+    if decision.allowed:
+        return decision, None
+    deny = _build_deny_response(
+        provider=provider,
+        op=op,
+        ctx=ctx,
+        decision=decision,
+        reason=decision.reason or "denied",
+        code=decision.code,
+        tokens_est=tokens_est,
+    )
+    return None, deny
 
 
-    # Count against agent short-window protection after admit allows
+def _stage_protect_rates(
+    provider: str,
+    *,
+    op: str,
+    ctx: RequestContext,
+    decision: AdmitDecision,
+    tokens_est: int,
+) -> dict[str, Any] | None:
+    """Protect: short-window rates after admit. Returns deny dict or None."""
     try:
-        from tollgate.agent_guard import estimate_request_usd, record_attempt
+        from tollgate.protect import estimate_request_usd, package_deny, record_rates
 
-        record_attempt(
+        ra = record_rates(
             ctx.consumer_id(),
             tokens_est=tokens_est,
             usd_est=float(
@@ -143,13 +149,41 @@ def gateway_call(
                 or estimate_request_usd(tokens_est)
             ),
         )
-    except Exception:  # noqa: BLE001
-        pass
+        if isinstance(ra, dict) and ra.get("ok") is False and ra.get("corrupt"):
+            return package_deny(
+                provider=provider,
+                op=op,
+                reason=str(ra.get("error") or "agent_rates corrupt — fail-closed"),
+                code=ErrorClass.BUDGET_HARD,
+                consumer=ctx.consumer_id(),
+                protection="agent_rates",
+                admit=decision.as_dict(),
+                tokens_est=tokens_est,
+                tool_calls_est=int(getattr(ctx, "tool_calls_est", 0) or 0),
+            )
+    except Exception as e:  # noqa: BLE001
+        # rates stage is best-effort except corrupt→fail-closed above
+        from tollgate.soft_fail import soft_fail
 
-    # Operational response cache (not agent memory) — free/batch search & probes only
+        soft_fail("agent_rates", e, provider=provider, op=op)
+    return None
+
+
+def _stage_cache_lookup(
+    provider: str,
+    op: str,
+    ctx: RequestContext,
+    decision: AdmitDecision,
+    kwargs: dict[str, Any],
+) -> tuple[str, dict[str, Any] | None]:
+    """Returns (cache_key, hit_result_or_None)."""
     cache_key = ""
     try:
-        from tollgate.response_cache import cache_eligible, get as cache_get, make_key, put as cache_put
+        from tollgate.response_cache import (
+            cache_eligible,
+            get as cache_get,
+            make_key,
+        )
 
         if cache_eligible(provider, op, ctx=ctx):
             consumer = ctx.consumer_id()
@@ -163,9 +197,34 @@ def gateway_call(
                 if decision.soft_degrade:
                     out["soft_degrade"] = True
                     out["soft_degrade_reason"] = decision.reason
-                return out
-    except Exception:  # noqa: BLE001
+                return cache_key, out
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("response_cache", e, provider=provider, op=op)
         cache_key = ""
+    return cache_key, None
+
+
+def _stage_execute(
+    provider: str,
+    op: str,
+    *,
+    ctx: RequestContext,
+    decision: AdmitDecision,
+    tokens_est: int,
+    chars_est: int,
+    model: str,
+    kwargs: dict[str, Any],
+) -> tuple[dict[str, Any], bool]:
+    """
+    Provider execute via KeysService.
+
+    Returns (result, skip_circuit_feedback).
+    skip_circuit_feedback=True when PolicyDeny (no circuit) or exception
+    already recorded a circuit failure.
+    """
+    from tollgate import get_keys_service
 
     ks = get_keys_service()
     try:
@@ -179,61 +238,154 @@ def gateway_call(
         )
     except PolicyDeny as e:
         err = redact_secrets(str(e))
-        return {
-            "ok": False,
-            "error": err,
-            "error_class": e.code.value,
-            "admit": decision.as_dict(),
-            "provider": provider,
-            "op": op,
-        }
+        return (
+            {
+                "ok": False,
+                "error": err,
+                "error_class": e.code.value,
+                "admit": decision.as_dict(),
+                "provider": provider,
+                "op": op,
+            },
+            True,
+        )
     except Exception as e:  # noqa: BLE001
         err = redact_secrets(str(e))
-        get_circuits().failure(provider, model=mid, message=err)
-        return {
-            "ok": False,
-            "error": err,
-            "error_class": ErrorClass.UNKNOWN.value,
-            "admit": decision.as_dict(),
-            "provider": provider,
-            "op": op,
-        }
+        get_circuits().failure(provider, model=model, message=err)
+        return (
+            {
+                "ok": False,
+                "error": err,
+                "error_class": ErrorClass.UNKNOWN.value,
+                "admit": decision.as_dict(),
+                "provider": provider,
+                "op": op,
+            },
+            True,
+        )
 
     if not isinstance(result, dict):
         result = {"ok": True, "result": result}
-
     result.setdefault("admit", decision.as_dict())
     result.setdefault("request", ctx.as_dict())
     result["cache_hit"] = False
+    return result, False
 
+
+def _stage_route_feedback(
+    provider: str,
+    *,
+    model: str,
+    result: dict[str, Any],
+    cache_key: str = "",
+) -> dict[str, Any]:
+    """Route axis: circuit success/failure + optional cache store."""
     ec = classify_result(result)
     result["error_class"] = ec.value
     circuits = get_circuits()
     if ec == ErrorClass.OK and result.get("ok") is not False:
-        circuits.success(provider, model=mid)
+        circuits.success(provider, model=model)
         if cache_key:
             try:
                 from tollgate.response_cache import put as cache_put
 
-                # store without admit/request to keep cache pure
                 to_store = {
                     k: v
                     for k, v in result.items()
                     if k not in ("admit", "request", "cache_hit")
                 }
                 cache_put(cache_key, to_store)
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception as e:  # noqa: BLE001
+                from tollgate.soft_fail import soft_fail
+
+                soft_fail("response_cache", e, provider=provider, op="cache_put")
     elif ec == ErrorClass.AUTH_DEAD:
         circuits.failure(
-            provider, model=mid, message=redact_secrets(str(result.get("error"))), hard=True
+            provider,
+            model=model,
+            message=redact_secrets(str(result.get("error"))),
+            hard=True,
         )
     elif ec in (ErrorClass.RATE_LIMIT, ErrorClass.PROVIDER_DOWN):
         circuits.failure(
-            provider, model=mid, message=redact_secrets(str(result.get("error"))), hard=False
+            provider,
+            model=model,
+            message=redact_secrets(str(result.get("error"))),
+            hard=False,
         )
     elif ec == ErrorClass.EDGE_BLOCK:
-        circuits.failure(provider, model=mid, message="EDGE_BLOCK", hard=False)
+        circuits.failure(provider, model=model, message="EDGE_BLOCK", hard=False)
+    return result
+
+
+# ── Public API ───────────────────────────────────────────────────────
+
+
+def gateway_call(
+    provider: str,
+    op: str,
+    *,
+    ctx: RequestContext | None = None,
+    tokens_est: int = 0,
+    chars_est: int = 0,
+    model: str = "",
+    **kwargs: Any,
+) -> dict[str, Any]:
+    """
+    Pipeline: Prove availability → Protect → Execute → Route feedback.
+
+    Always returns a dict with ok / error / admit / error_class.
+    """
+    ctx = ctx or RequestContext()
+    mid = model or str(kwargs.get("model") or "")
+
+    # 1) Prove
+    diverted = _stage_prove_availability(provider, op=op, ctx=ctx)
+    if diverted is not None:
+        return diverted
+
+    # 2) Protect admit
+    decision, deny = _stage_protect_admit(
+        provider,
+        op=op,
+        tokens_est=tokens_est,
+        chars_est=chars_est,
+        model=mid,
+        ctx=ctx,
+    )
+    if deny is not None:
+        return deny
+    assert decision is not None
+
+    # 3) Protect rates
+    rates_deny = _stage_protect_rates(
+        provider, op=op, ctx=ctx, decision=decision, tokens_est=tokens_est
+    )
+    if rates_deny is not None:
+        return rates_deny
+
+    # 4) Cache lookup
+    cache_key, hit = _stage_cache_lookup(provider, op, ctx, decision, kwargs)
+    if hit is not None:
+        return hit
+
+    # 5) Execute
+    result, skip_circuit = _stage_execute(
+        provider,
+        op,
+        ctx=ctx,
+        decision=decision,
+        tokens_est=tokens_est,
+        chars_est=chars_est,
+        model=mid,
+        kwargs=kwargs,
+    )
+
+    # 6) Route feedback (circuit + cache store) — unless execute already handled it
+    if not skip_circuit:
+        result = _stage_route_feedback(
+            provider, model=mid, result=result, cache_key=cache_key
+        )
 
     if decision.soft_degrade:
         result["soft_degrade"] = True

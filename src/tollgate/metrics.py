@@ -8,8 +8,6 @@ Route gate: ``GET /metrics`` in ``server_v1._metrics_authorized`` /
 
 from __future__ import annotations
 
-from typing import Any
-
 
 def _esc_label(v: str) -> str:
     return (

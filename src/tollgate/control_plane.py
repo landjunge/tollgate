@@ -7,7 +7,6 @@ Not agent memory — operational scores only.
 
 from __future__ import annotations
 
-import json
 import time
 from datetime import datetime, timezone
 from typing import Any
@@ -141,6 +140,7 @@ def consumer_burn(*, root: Any = None) -> list[dict[str, Any]]:
         calls = int((cu or {}).get("calls") or 0)
         tokens = int((cu or {}).get("tokens") or 0)
         env = consumer_envelope(cid)
+        named = isinstance(envelopes.get(cid), dict) and not str(cid).startswith("_")
         max_usd = float(env.get("max_usd_day") or 0.0)
         max_calls = int(env.get("max_calls_day") or 0)
         lim = check_consumer_limits(cid)
@@ -155,6 +155,9 @@ def consumer_burn(*, root: Any = None) -> list[dict[str, Any]]:
                 status = "warn"
         elif not lim.get("allowed"):
             status = "blocked"
+
+        # Named lane policy vs only _default inheritance (auto-discovered traffic)
+        uses_default_only = not named and calls > 0
 
         rows.append(
             {
@@ -177,6 +180,8 @@ def consumer_burn(*, root: Any = None) -> list[dict[str, Any]]:
                 "projected_usd_eod": round(projected, 4),
                 "status": status,
                 "allowed": bool(lim.get("allowed", True)),
+                "named_policy": named,
+                "uses_default_only": uses_default_only,
                 "protected": bool(
                     max_usd
                     or max_calls
@@ -572,8 +577,35 @@ def control_snapshot(*, root: Any = None) -> dict[str, Any]:
             "admit_denies": denies,
             "resilience_score": res_score,
             "frozen": bool(freeze_blob.get("frozen")),
+            "failovers_hint": int(audit.get("failovers_hint") or 0),
+        },
+        # Product UX: "what Tollgate prevented" — first-success story
+        "protection_summary": {
+            "loop_stops": blocks,
+            "requests_blocked": denies,
+            "failovers_seen": int(audit.get("failovers_hint") or 0),
+            "agents_protected": protected,
+            "usd_spent_today": round(day_usd, 6),
+            "tagline": "Connect your agent. Tollgate protects it automatically.",
         },
         "attention": attention[:12],
+        "discovered_agents": [
+            {
+                "consumer": c.get("consumer"),
+                "calls": c.get("calls"),
+                "usd": c.get("usd"),
+                "uses_default_only": True,
+                "hint": "New traffic on default protection — name a policy if you want tighter limits",
+            }
+            for c in consumers
+            if c.get("uses_default_only")
+        ][:12],
+        "activity": _activity_feed(
+            recent_deny_rows=recent_deny_rows,
+            chaos_blob=chaos_blob,
+            consumers=consumers,
+            open_circuits=open_circuits,
+        ),
         "providers": providers,
         "consumers": consumers,
         "chaos": chaos_blob,
@@ -590,3 +622,61 @@ def control_snapshot(*, root: Any = None) -> dict[str, Any]:
         "day_fraction": round(_day_fraction(), 4),
         "ts": time.time(),
     }
+
+
+def _activity_feed(
+    *,
+    recent_deny_rows: list[dict[str, Any]],
+    chaos_blob: dict[str, Any],
+    consumers: list[dict[str, Any]],
+    open_circuits: int,
+) -> list[dict[str, str]]:
+    """Short TODAY timeline for Overview (ops story, not analytics)."""
+    items: list[dict[str, str]] = []
+    for row in (recent_deny_rows or [])[:8]:
+        if not isinstance(row, dict):
+            continue
+        who = str(row.get("consumer") or "agent")[:48]
+        err = str(row.get("error") or row.get("reason") or "blocked")[:100]
+        items.append(
+            {
+                "kind": "block",
+                "icon": "🛑",
+                "ts": str(row.get("ts") or ""),
+                "text": f"{who}: {err}",
+            }
+        )
+    last = chaos_blob.get("last_report") if isinstance(chaos_blob.get("last_report"), dict) else None
+    if last:
+        ok = bool(last.get("survived"))
+        items.append(
+            {
+                "kind": "prove",
+                "icon": "✓" if ok else "✗",
+                "ts": str(last.get("finished_at") or last.get("ts") or ""),
+                "text": (
+                    f"Resilience test {'passed' if ok else 'failed'} "
+                    f"({last.get('chaos_provider') or 'provider'})"
+                ),
+            }
+        )
+    for c in consumers:
+        if c.get("status") == "warn":
+            items.append(
+                {
+                    "kind": "budget",
+                    "icon": "⚠",
+                    "ts": "",
+                    "text": f"«{c.get('consumer')}» near daily budget ({c.get('status')})",
+                }
+            )
+    if open_circuits:
+        items.append(
+            {
+                "kind": "circuit",
+                "icon": "🔄",
+                "ts": "",
+                "text": f"{open_circuits} circuit(s) open — failover / cool-down active",
+            }
+        )
+    return items[:14]

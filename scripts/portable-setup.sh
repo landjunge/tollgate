@@ -1,10 +1,30 @@
 #!/usr/bin/env bash
 # One-shot portable / USB layout next to this repo.
+# No Docker. Code + optional .venv on stick; data in sibling WS-* folder.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PARENT="$(cd "${ROOT}/.." && pwd)"
-WS="${PARENT}/WS-tollgate"
+# Override: WS_NAME=WS-gnom-hub-v1 ./scripts/portable-setup.sh
+WS_NAME="${WS_NAME:-WS-tollgate}"
+WS="${PARENT}/${WS_NAME}"
+
+pick_python() {
+  local c
+  for c in python3.13 python3.12 python3.11 python3.10 python3; do
+    if command -v "$c" >/dev/null 2>&1; then
+      if "$c" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' 2>/dev/null; then
+        echo "$c"
+        return 0
+      fi
+    fi
+  done
+  return 1
+}
+
+echo "Portable setup (no Docker)"
+echo "  code: ${ROOT}"
+echo "  data: ${WS}"
 
 mkdir -p "${WS}/User"
 
@@ -26,25 +46,44 @@ else
 fi
 
 if [[ ! -d "${ROOT}/.venv" ]]; then
-  if command -v python3 >/dev/null 2>&1; then
-    echo "creating ${ROOT}/.venv …"
-    python3 -m venv "${ROOT}/.venv"
+  if PY="$(pick_python)"; then
+    echo "creating ${ROOT}/.venv with $($PY --version 2>&1) …"
+    "$PY" -m venv "${ROOT}/.venv"
     "${ROOT}/.venv/bin/pip" install -U pip -q
     "${ROOT}/.venv/bin/pip" install -e "${ROOT}" -q
   else
-    echo "python3 not found — skip venv"
+    echo "ERROR: need Python ≥ 3.10 on PATH (python3.10+)."
+    echo "Install via python.org / brew / pyenv — then re-run this script."
+    exit 1
   fi
+else
+  echo "keep ${ROOT}/.venv"
 fi
 
+# pin env helper for this shell session instructions
 cat <<EOF
 
-Portable ready:
+Portable ready (native, USB-friendly):
   code:  ${ROOT}
   data:  ${WS}
   keys:  ${WS}/User/Key.txt
+  venv:  ${ROOT}/.venv
 
-Run:
+Run (same stick, no Docker):
   export TOLLGATE_HOME="${WS}"
-  # or on USB mounts: auto-detect without export
+  # on /Volumes|/media|/mnt auto-detect works without export
   ${ROOT}/scripts/run.sh
+
+With Gnom-Hub on the same volume:
+  export GNOM_WS="${WS}"
+  export TOLLGATE_HOME="${WS}"
+  export TOLLGATE_URL=http://127.0.0.1:8787
+  export GNOM_TOLLGATE_LLM=1
+  # start Tollgate:  ${ROOT}/scripts/run.sh
+  # start Gnom:      (your gnom-hub run; shares Key.txt + ledger)
+
+Smoke paths only:
+  ${ROOT}/scripts/portable-smoke.sh
+
+Docs: docs/PORTABLE.md
 EOF
