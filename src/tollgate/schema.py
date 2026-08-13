@@ -56,7 +56,6 @@ def grade_provider(
 
     # Headroom signals
     spend = d.get("allowed_spend")
-    remaining = d.get("remaining")
     lim_rem = d.get("limit_remaining")
     period_rem = d.get("period_remaining")
     chat_probe = d.get("chat_probe") or {}

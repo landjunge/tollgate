@@ -65,9 +65,13 @@ def _load_raw() -> dict[str, Any]:
         try:
             raw = json.loads(path.read_text(encoding="utf-8"))
             if not isinstance(raw, dict):
-                raw = {"version": 1, "consumers": []}
-        except Exception:  # noqa: BLE001
-            raw = {"version": 1, "consumers": []}
+                raise ValueError("consumers.json is not an object")
+        except Exception as e:  # noqa: BLE001
+            from tollgate.soft_fail import soft_fail
+
+            # File exists but is unreadable — never treat as open/no-auth.
+            soft_fail("consumers_parse", e)
+            raw = {"version": 1, "consumers": [], "_corrupt": True}
         _CACHE = raw
         _CACHE_MTIME = mtime
         return dict(raw)
@@ -102,6 +106,11 @@ def list_consumers() -> list[Consumer]:
     return out
 
 
+def consumers_corrupt() -> bool:
+    """True when consumers.json exists but could not be parsed."""
+    return bool(_load_raw().get("_corrupt"))
+
+
 def auth_required() -> bool:
     if (os.environ.get("TOLLGATE_REQUIRE_AUTH") or "").strip().lower() in (
         "1",
@@ -109,6 +118,8 @@ def auth_required() -> bool:
         "yes",
         "on",
     ):
+        return True
+    if consumers_corrupt():
         return True
     return any(c.enabled for c in list_consumers())
 
@@ -138,6 +149,14 @@ def verify_consumer(
     need_admin: bool = False,
 ) -> dict[str, Any]:
     cid, secret = parse_consumer_header(x_consumer_key, x_consumer_id)
+    if consumers_corrupt():
+        return {
+            "ok": False,
+            "consumer": cid,
+            "admin": False,
+            "mode": "auth",
+            "error": "consumers.json corrupt — fail-closed (fix JSON or consumer-add)",
+        }
     if not auth_required():
         return {
             "ok": True,
@@ -232,6 +251,7 @@ def add_consumer(
 
 def auth_status() -> dict[str, Any]:
     cs = list_consumers()
+    corrupt = consumers_corrupt()
     return {
         "required": auth_required(),
         "consumers_n": len(cs),
@@ -240,4 +260,5 @@ def auth_status() -> dict[str, Any]:
             for c in cs
         ],
         "path": str(consumers_path()),
+        "corrupt": corrupt,
     }

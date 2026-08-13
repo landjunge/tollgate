@@ -68,6 +68,18 @@ def run_doctor(*, live: bool = False, root: Path | None = None) -> dict[str, Any
     # Config
     cpath = config_path(root)
     cfg = load_config(force=True, root=root)
+    if cfg.get("_corrupt"):
+        issues.append(
+            {
+                "level": "error",
+                "code": "keys_app_corrupt",
+                "message": (
+                    "keys_app.json unreadable — admission fail-closed "
+                    f"({cfg.get('_corrupt_reason') or 'parse error'})"
+                ),
+                "action": f"Fix {cpath} or: tollgate unfreeze  # rewrites defaults",
+            }
+        )
     _, cfg_errs = validate_config_dict(cfg)
     if cfg_errs:
         for e in cfg_errs:
@@ -103,7 +115,16 @@ def run_doctor(*, live: bool = False, root: Path | None = None) -> dict[str, Any
 
     # Auth mode
     auth = auth_status()
-    if auth.get("required"):
+    if auth.get("corrupt"):
+        issues.append(
+            {
+                "level": "error",
+                "code": "consumers_corrupt",
+                "message": "consumers.json unreadable — auth fail-closed",
+                "action": "Fix User/consumers.json or: tollgate consumer-add desk --admin",
+            }
+        )
+    elif auth.get("required"):
         ok_items.append(f"auth required ({auth.get('consumers_n')} consumers)")
     else:
         issues.append(
@@ -120,7 +141,7 @@ def run_doctor(*, live: bool = False, root: Path | None = None) -> dict[str, Any
         from tollgate.freeze import freeze_status
 
         fr = freeze_status()
-        if fr.get("frozen"):
+        if fr.get("frozen") and fr.get("source") != "config_corrupt":
             issues.append(
                 {
                     "level": "error",
@@ -129,10 +150,29 @@ def run_doctor(*, live: bool = False, root: Path | None = None) -> dict[str, Any
                     "action": "tollgate freeze off   # or: tollgate unfreeze",
                 }
             )
-        else:
+        elif not fr.get("frozen"):
             ok_items.append("admission open (not frozen)")
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("doctor_freeze", e)
+
+    try:
+        from tollgate.route import circuits_corrupt
+
+        if circuits_corrupt():
+            issues.append(
+                {
+                    "level": "error",
+                    "code": "circuits_corrupt",
+                    "message": "circuits.json unreadable — all hops fail-closed",
+                    "action": "Fix User/circuits.json or: tollgate circuits reset --all",
+                }
+            )
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("doctor_circuits", e)
 
     # Agent protection / envelopes (count named lanes + _default)
     envelopes = cfg.get("consumer_envelopes") or {}
@@ -238,9 +278,9 @@ def run_doctor(*, live: bool = False, root: Path | None = None) -> dict[str, Any
                     from tollgate.service import get_keys_service
 
                     inv = get_keys_service().inventory(live=False, use_cache=True)
-                    cards_raw = inv.get("providers") if isinstance(inv, dict) else inv
+                    cards_raw = inv.get("providers") if isinstance(inv, dict) else []
                     if not isinstance(cards_raw, list):
-                        cards_raw = inv.get("cards") if isinstance(inv, dict) else []
+                        cards_raw = []
                     cards = {
                         str(c.get("id") or c.get("provider") or ""): c
                         for c in (cards_raw or [])
@@ -274,8 +314,10 @@ def run_doctor(*, live: bool = False, root: Path | None = None) -> dict[str, Any
                         ok_items.append(
                             f"free_llm: {len(usable)} providers look keyed for failover"
                         )
-                except Exception:  # noqa: BLE001
-                    pass
+                except Exception as e:  # noqa: BLE001
+                    from tollgate.soft_fail import soft_fail
+
+                    soft_fail("doctor_inventory", e)
 
         ch = chaos_status()
         last = ch.get("last_report") if isinstance(ch.get("last_report"), dict) else None
@@ -351,9 +393,19 @@ def run_doctor(*, live: bool = False, root: Path | None = None) -> dict[str, Any
                 if isinstance(issue, dict):
                     issues.append(
                         {
-                            "level": str(issue.get("level") or "warn"),
-                            "code": str(issue.get("code") or "service"),
-                            "message": str(issue.get("message") or issue),
+                            "level": str(
+                                issue.get("level")
+                                or issue.get("severity")
+                                or "warn"
+                            ),
+                            "code": str(
+                                issue.get("code")
+                                or issue.get("provider")
+                                or "service"
+                            ),
+                            "message": str(
+                                issue.get("message") or issue.get("issue") or issue
+                            ),
                             "action": str(issue.get("action") or "see dashboard"),
                         }
                     )
@@ -427,15 +479,18 @@ def production_readiness(
         "open mode on public bind" if (open_mode and public) else f"HOST={host} open={open_mode}",
     )
     # Production readiness: open mode is fine for local desk, but never "auth PASS"
-    add(
-        bool(auth and auth.get("required")),
-        "Authentication",
-        (
-            "consumers auth required"
-            if auth and auth.get("required")
-            else "OPEN MODE — enable consumers (tollgate consumer-add) before shared/prod use"
-        ),
-    )
+    if auth and auth.get("corrupt"):
+        add(False, "Authentication", "consumers.json corrupt — fail-closed")
+    else:
+        add(
+            bool(auth and auth.get("required")),
+            "Authentication",
+            (
+                "consumers auth required"
+                if auth and auth.get("required")
+                else "OPEN MODE — enable consumers (tollgate consumer-add) before shared/prod use"
+            ),
+        )
     add(default_on or protected_named > 0, "Budget/loop policy configured", f"named={protected_named} default_on={default_on}")
     # keys
     kp = resolve_key_txt_path(root)
@@ -447,12 +502,34 @@ def production_readiness(
 
         last = (chaos_status() or {}).get("last_report")
         chaos_ok = bool(isinstance(last, dict) and last.get("survived"))
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("doctor_chaos", e)
     add(chaos_ok, "Recovery/failover tested", "run: tollgate chaos test <provider>" if not chaos_ok else "last chaos survived")
-    # freeze not stuck
+    # freeze not stuck / config not corrupt
     frozen = any(i.get("code") == "admission_frozen" for i in (issues or []))
-    add(not frozen, "Admission not frozen", "tollgate unfreeze" if frozen else "open")
+    cfg_corrupt = any(i.get("code") == "keys_app_corrupt" for i in (issues or []))
+    add(
+        not frozen and not cfg_corrupt,
+        "Admission not frozen",
+        (
+            "keys_app.json corrupt — fail-closed"
+            if cfg_corrupt
+            else ("tollgate unfreeze" if frozen else "open")
+        ),
+    )
+    try:
+        from tollgate.route import circuits_corrupt
+
+        circ_bad = circuits_corrupt()
+    except Exception:  # noqa: BLE001
+        circ_bad = False
+    add(
+        not circ_bad,
+        "Circuit state readable",
+        "circuits.json corrupt — fail-closed" if circ_bad else "ok",
+    )
     # audit / protection defaults
     add(default_on, "Default agent protection on", "_default envelope")
     # snapshot/backup known — always "documented"
@@ -477,8 +554,12 @@ def _next_steps(issues: list[dict[str, str]]) -> list[str]:
         steps.append("Create User/Key.txt from Key.txt.example")
     if any(str(c).startswith("missing_") for c in codes):
         steps.append("Fill at least one free_llm key (OPENCODE_*) or DEEPSEEK_API_KEY")
-    if "high_risk_no_cap" in codes or "config_invalid" in codes:
+    if "high_risk_no_cap" in codes or "config_invalid" in codes or "keys_app_corrupt" in codes:
         steps.append("Fix keys_app.json (doctor lists fields)")
+    if "consumers_corrupt" in codes:
+        steps.append("Fix User/consumers.json or: tollgate consumer-add desk --admin")
+    if "circuits_corrupt" in codes:
+        steps.append("Fix User/circuits.json or: tollgate circuits reset --all")
     if "auth_open" in codes:
         steps.append("Optional: tollgate consumer-add desk --admin")
     steps.append("tollgate serve   # or ./scripts/run.sh / docker compose up")

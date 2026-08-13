@@ -236,8 +236,10 @@ def import_snapshot(
             app_config._CACHE_MTIME = None
             consumers.clear_cache()
             reset_circuits_for_tests()
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as e:  # noqa: BLE001
+            from tollgate.soft_fail import soft_fail
+
+            soft_fail("snapshot_cache_clear", e)
 
     return {
         "ok": True,

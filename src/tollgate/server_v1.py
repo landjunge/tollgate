@@ -28,7 +28,7 @@ from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from tollgate import get_keys_service, routed_chat
+from tollgate import __version__, get_keys_service, routed_chat
 from tollgate.consumers import auth_status, verify_consumer
 from tollgate.gateway.context import RequestClass, RequestContext
 from tollgate.gateway.entry import gateway_call
@@ -71,15 +71,17 @@ def _bootstrap_env() -> None:
         assert_config_or_raise(cfg, strict=strict)
     except ValueError:
         raise
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("bootstrap", e, op="serve", audit=False)
 
 
 _bootstrap_env()
 
 app = FastAPI(
     title="Tollgate",
-    version="1.0.12",
+    version=__version__,
     description=(
         "Tollgate — AI reliability & control plane. "
         "Protect · Route · Prove (chaos failover tests). "
@@ -178,7 +180,7 @@ def health() -> dict[str, Any]:
         "ok": not fr.get("frozen"),
         "service": "tollgate",
         "product": "Tollgate",
-        "version": "1.0.12",
+        "version": __version__,
         "extractable": True,
         "multi_consumer": True,
         "portable": path_snapshot(),
@@ -629,8 +631,10 @@ def providers(
         from tollgate.control_plane import provider_health
 
         out["health"] = provider_health()
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("provider_health", e, op="providers")
     return out
 
 
@@ -1159,7 +1163,7 @@ def root() -> dict[str, Any]:
         "chaos": "/v1/chaos",
         "dashboard": "/dashboard",
         "vision": "docs/VISION.md",
-        "product": "docs/PRODUCT.md",
+        "product_doc": "docs/PRODUCT.md",
         "architecture": "docs/ARCHITECTURE.md",
         "mcp": "docs/MCP.md",
         "portable": "docs/PORTABLE.md",

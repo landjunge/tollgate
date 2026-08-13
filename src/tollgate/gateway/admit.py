@@ -143,8 +143,10 @@ def admit(
                         "consumer": ctx.consumer_id(),
                     },
                 )
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception as e:  # noqa: BLE001
+                from tollgate.soft_fail import soft_fail
+
+                soft_fail("alerts", e, provider=pid, op="high_risk_block")
         else:
             try:
                 from tollgate.alerts import maybe_alert
@@ -161,8 +163,10 @@ def admit(
                         "limits": lim,
                     },
                 )
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception as e:  # noqa: BLE001
+                from tollgate.soft_fail import soft_fail
+
+                soft_fail("alerts", e, provider=pid, op="hard_deny")
         return AdmitDecision(
             allowed=False,
             code=code,
@@ -179,8 +183,10 @@ def admit(
                 from tollgate.alerts import maybe_alert
 
                 maybe_alert("circuit_open", provider=pid, message=reason)
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception as e:  # noqa: BLE001
+                from tollgate.soft_fail import soft_fail
+
+                soft_fail("alerts", e, provider=pid, op="circuit_open")
             return AdmitDecision(
                 allowed=False,
                 code=ErrorClass.PROVIDER_DOWN,
@@ -216,8 +222,10 @@ def admit(
                     "budget_ratio": lim.get("budget_ratio"),
                 },
             )
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as e:  # noqa: BLE001
+            from tollgate.soft_fail import soft_fail
+
+            soft_fail("alerts", e, provider=pid, op="soft_budget")
 
     return AdmitDecision(
         allowed=True,

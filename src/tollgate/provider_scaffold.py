@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 from datetime import date
-from pathlib import Path
 from typing import Any
 
 from tollgate.distill.loader import distill_dir
@@ -116,9 +115,9 @@ def scaffold_provider(
             "keys_app_hint": {pid: cfg_hint},
             "next": [
                 f"Add {env}=… to User/Key.txt",
-                f"Merge keys_app_hint into User/keys_app.json providers",
+                "Merge keys_app_hint into User/keys_app.json providers",
                 "Implement thin handler in src/tollgate/<id>.py if needed",
-                "Register ops on KeysService._OPS",
+                "Register ops in provider_ops/registry.py",
             ],
         }
     return {"ok": True, "distill": data}

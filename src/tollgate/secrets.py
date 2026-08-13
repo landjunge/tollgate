@@ -6,7 +6,7 @@ import os
 import re
 from pathlib import Path
 
-from tollgate.paths import data_home, project_root, user_dir
+from tollgate.paths import data_home, user_dir
 
 _ALIASES: dict[str, str] = {
     "deepseek": "DEEPSEEK_API_KEY",
@@ -129,8 +129,10 @@ def ensure_env_from_key_txt(
         lines.append("")
         if force or not env_path.is_file():
             env_path.write_text("\n".join(lines), encoding="utf-8")
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("secrets_env_write", e)
     return env_path
 
 

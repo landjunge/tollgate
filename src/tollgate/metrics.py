@@ -137,8 +137,10 @@ def render_prometheus() -> str:
                     labels,
                 )
             )
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("metrics_circuits", e, audit=False)
 
     # auth / portable / cache
     try:
@@ -151,8 +153,10 @@ def render_prometheus() -> str:
             "# TYPE tollgate_consumers gauge",
             _line("tollgate_consumers", int(auth.get("consumers_n") or 0)),
         ]
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("metrics_auth", e, audit=False)
 
     try:
         ps = path_snapshot()
@@ -164,8 +168,10 @@ def render_prometheus() -> str:
             "# TYPE tollgate_usb gauge",
             _line("tollgate_usb", 1 if ps.get("usb") else 0),
         ]
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("metrics_paths", e, audit=False)
 
     try:
         cs = cache_stats()
@@ -177,8 +183,10 @@ def render_prometheus() -> str:
             "# TYPE tollgate_cache_enabled gauge",
             _line("tollgate_cache_enabled", 1 if cs.get("enabled") else 0),
         ]
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("metrics_cache", e, audit=False)
 
     try:
         lines += [
@@ -189,8 +197,10 @@ def render_prometheus() -> str:
             "# TYPE tollgate_usd_used_global gauge",
             _line("tollgate_usd_used_global", float(usd_used_today(None))),
         ]
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("metrics_cost", e, audit=False)
 
     lines.append("")  # trailing newline
     return "\n".join(lines)

@@ -299,8 +299,10 @@ def record_usage(
                         ok=False,
                         root=root,
                     )
-                except Exception:  # noqa: BLE001
-                    pass
+                except Exception as e:  # noqa: BLE001
+                    from tollgate.soft_fail import soft_fail
+
+                    soft_fail("audit", e, provider=provider_id, op="ledger_corrupt", audit=False)
                 return {
                     "ok": False,
                     "error": "ledger corrupt — fail-closed (fix keys_usage.json)",
@@ -374,8 +376,10 @@ def record_usage(
                     error="error" if error else "",
                     root=root,
                 )
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception as e:  # noqa: BLE001
+                from tollgate.soft_fail import soft_fail
+
+                soft_fail("audit", e, provider=provider_id, op=op, audit=False)
             out = dict(p)
             out["consumer"] = cid
             out["consumer_usage"] = dict(cu)

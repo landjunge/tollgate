@@ -8,7 +8,7 @@ from typing import Any
 
 from tollgate.app_config import is_provider_enabled, load_config
 from tollgate.chaos import status as chaos_status
-from tollgate.control_plane import consumer_burn, provider_health
+from tollgate.control_plane import provider_health
 
 
 def resilience_score(*, root: Any = None) -> dict[str, Any]:
@@ -20,7 +20,6 @@ def resilience_score(*, root: Any = None) -> dict[str, Any]:
     """
     cfg = load_config()
     health = provider_health(root=root)
-    consumers = consumer_burn(root=root)
     routing = cfg.get("routing") or {}
     intents = routing.get("intents") or {}
     free_chain = list(intents.get("free_llm") or intents.get("llm") or [])
@@ -39,9 +38,7 @@ def resilience_score(*, root: Any = None) -> dict[str, Any]:
     req_fb = int(pol.get("required_fallbacks") or 2)
 
     enabled = [p for p in health if p.get("enabled")]
-    healthy = [p for p in enabled if p.get("status") in ("healthy", "idle")]
     open_c = [p for p in enabled if p.get("circuit") == "open"]
-    degraded = [p for p in enabled if p.get("status") == "degraded"]
 
     # Reliability 0–100
     if not enabled:
@@ -51,8 +48,6 @@ def resilience_score(*, root: Any = None) -> dict[str, Any]:
         reliability = avg_score
         if open_c:
             reliability = min(reliability, 40.0)
-        if degraded:
-            reliability = min(reliability, reliability)  # already in score
 
     # Failover: auto_failover + multi-provider chains + last chaos test + SLA
     auto_fo = bool(cfg.get("auto_failover", True))

@@ -35,8 +35,10 @@ def high_risk_ids() -> set[str]:
             d = load_distill(pid)
             if d.get("high_risk"):
                 out.add(pid)
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("high_risk_distill", e)
     return out
 
 

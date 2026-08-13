@@ -317,20 +317,26 @@ class KeysService:
                 if pid == "brave":
                     actions.append("Brave monthly quota low — throttle web_search")
 
-        # Special: OpenRouter chain tried
+        # Special: OpenRouter chain tried (registry — never import provider modules here)
         if live:
-            cr = openrouter_mod.credits()
-            if cr.get("tried"):
-                dead = [t for t in cr["tried"] if not t.get("ok")]
-                if dead:
-                    issues.append(
-                        {
-                            "severity": "info",
-                            "provider": "openrouter",
-                            "issue": f"{len(dead)} dead key alias(es) in chain",
-                            "tried": dead,
-                        }
-                    )
+            try:
+                credits_fn = get_ops("openrouter").get("credits")
+                cr = credits_fn() if credits_fn else {}
+                if isinstance(cr, dict) and cr.get("tried"):
+                    dead = [t for t in cr["tried"] if not t.get("ok")]
+                    if dead:
+                        issues.append(
+                            {
+                                "severity": "info",
+                                "provider": "openrouter",
+                                "issue": f"{len(dead)} dead key alias(es) in chain",
+                                "tried": dead,
+                            }
+                        )
+            except Exception as e:  # noqa: BLE001
+                from tollgate.soft_fail import soft_fail
+
+                soft_fail("openrouter_credits", e, provider="openrouter", op="credits")
 
         route = recommend_model_route(self, prefer_free=True)
         return {
@@ -626,8 +632,10 @@ class KeysService:
                             "tokens": lim2["consumer_limits"].get("remaining_tokens"),
                             "usd": lim2["consumer_limits"].get("remaining_usd"),
                         }
-                except Exception:  # noqa: BLE001
-                    pass
+                except Exception as e:  # noqa: BLE001
+                    from tollgate.soft_fail import soft_fail
+
+                    soft_fail("usage_ledger", e, provider=pid, op=oname)
             return out
         return {"ok": True, "provider": pid, "op": oname, "result": result}
 

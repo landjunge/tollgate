@@ -32,5 +32,8 @@ def list_consumers() -> list[Any]:
         from tollgate.consumers import list_consumers as _list
 
         return list(_list() or [])
-    except Exception:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("identity_list", e)
         return []

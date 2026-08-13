@@ -83,19 +83,28 @@ def test_axis_facade_packages():
 
 
 def test_no_protect_imports_route():
-    """Architect rule: Protect must not import Route."""
+    """Architect rule: Protect must not import Route (or router/failover)."""
     import ast
     from pathlib import Path
 
+    banned = ("tollgate.route", "tollgate.router", "tollgate.failover")
     root = Path(__file__).resolve().parents[1] / "src" / "tollgate" / "protect"
     for path in root.rglob("*.py"):
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and node.module:
-                assert not node.module.startswith("tollgate.route"), path
+                assert not any(node.module.startswith(b) for b in banned), path
             if isinstance(node, ast.Import):
                 for alias in node.names:
-                    assert not alias.name.startswith("tollgate.route"), path
+                    assert not any(alias.name.startswith(b) for b in banned), path
+
+
+def test_route_facade_exposes_circuits_corrupt():
+    from tollgate.route import circuits_corrupt, get_circuits, reset_circuits
+
+    assert callable(circuits_corrupt)
+    assert callable(get_circuits)
+    assert callable(reset_circuits)
 
 
 def test_decision_from_admit(monkeypatch, tmp_path):
@@ -155,6 +164,23 @@ def test_route_facade_imports():
     assert callable(build_candidates)
     assert callable(get_circuits)
     assert callable(select_route)
+
+
+def test_stream_uses_entry_protect_stages():
+    """M6b: stream must not keep a private prove/admit/rates copy."""
+    import inspect
+
+    from tollgate import chat_stream
+    from tollgate.gateway import entry
+
+    src = inspect.getsource(chat_stream.start_chat_stream)
+    assert "_stage_prove_availability" in src
+    assert "_stage_protect_admit" in src
+    assert "_stage_protect_rates" in src
+    assert "check_provider_available" not in src
+    assert callable(entry._stage_prove_availability)
+    assert callable(entry._stage_protect_admit)
+    assert callable(entry._stage_protect_rates)
 
 
 def test_gateway_call_still_public():

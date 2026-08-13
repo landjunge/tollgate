@@ -25,12 +25,16 @@ def soft_fail(
     provider: str = "",
     op: str = "",
     extra: dict[str, Any] | None = None,
+    audit: bool = True,
 ) -> None:
     """
     Record a non-fatal subsystem error. Never raises.
 
     Use for: audit append, alerts, cache, agent_rates peek, optional metrics.
     Do **not** use for admit/limits/ledger reserve (those stay fail-closed).
+
+    ``audit=False`` for hot paths (``/metrics`` scrape, bootstrap, audit write
+    itself) — still counts + logs, does not write audit.jsonl.
     """
     name = (subsystem or "unknown").strip()[:64] or "unknown"
     _COUNTS[name] = int(_COUNTS.get(name) or 0) + 1
@@ -46,6 +50,8 @@ def soft_fail(
         )
     except Exception:  # noqa: BLE001
         pass
+    if not audit:
+        return
     # Best-effort audit breadcrumb (nested soft — must not recurse loudly)
     try:
         from tollgate.audit_log import append_audit

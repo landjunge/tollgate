@@ -165,8 +165,10 @@ def main() -> None:
                 for k, v in parse_key_file(kp.read_text(encoding="utf-8")).items():
                     os.environ.setdefault(k, v)
                 break
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("mcp_bootstrap", e, op="mcp", audit=False)
 
     sys.stderr.write(f"[{SERVER_NAME}] MCP stdio server ready\n")
     sys.stderr.flush()

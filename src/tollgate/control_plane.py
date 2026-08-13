@@ -43,7 +43,10 @@ def _circuit_map() -> dict[str, dict[str, Any]]:
             ):
                 by[pid] = row
         return by
-    except Exception:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("circuits", e)
         return {}
 
 
@@ -328,8 +331,10 @@ def _audit_protection_stats(*, root: Any = None, max_lines: int = 5000) -> dict[
             if int(extra.get("failover_hops") or 0) > 1:
                 hops += 1
         out["failovers_hint"] = hops
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("control_audit_summary", e)
     return out
 
 def _protected_lane_count() -> int:
@@ -385,7 +390,10 @@ def control_snapshot(*, root: Any = None) -> dict[str, Any]:
 
         recent_deny_rows = recent_denies(limit=12, root=root)
         audit_top = audit_summary(max_scan=3000, root=root)
-    except Exception:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("control_recent_denies", e)
         recent_deny_rows = []
         audit_top = {}
 
@@ -504,15 +512,20 @@ def control_snapshot(*, root: Any = None) -> dict[str, Any]:
                     "fix": "#prove",
                 }
             )
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("control_chaos_attention", e)
 
     res_blob: dict[str, Any] | None = None
     try:
         from tollgate.resilience import resilience_score
 
         res_blob = resilience_score(root=root)
-    except Exception:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("control_resilience", e)
         res_blob = None
 
     res_score = (res_blob or {}).get("score")
@@ -540,8 +553,10 @@ def control_snapshot(*, root: Any = None) -> dict[str, Any]:
                     ),
                 },
             )
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("control_freeze", e)
 
     if res_score is not None:
         headline = f"Resilience {res_score}/100 · " + headline

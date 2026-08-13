@@ -291,13 +291,22 @@ def load_config(*, force: bool = False, root: Path | None = None) -> dict[str, A
             return deepcopy(_CACHE)
 
         if path.is_file():
+            parse_err = ""
             try:
                 raw = json.loads(path.read_text(encoding="utf-8"))
                 if not isinstance(raw, dict):
-                    raw = {}
-            except Exception:  # noqa: BLE001
+                    raise ValueError("keys_app.json is not an object")
+            except Exception as e:  # noqa: BLE001
+                from tollgate.soft_fail import soft_fail
+
+                parse_err = str(e)[:200]
+                soft_fail("config_parse", e)
                 raw = {}
             cfg = _deep_merge(DEFAULT_CONFIG, raw)
+            if parse_err:
+                # Do not lift freeze / custom envelopes by treating junk as empty.
+                cfg["_corrupt"] = True
+                cfg["_corrupt_reason"] = f"json_parse: {parse_err}"
         else:
             cfg = deepcopy(DEFAULT_CONFIG)
             try:
@@ -306,8 +315,10 @@ def load_config(*, force: bool = False, root: Path | None = None) -> dict[str, A
                     json.dumps(cfg, indent=2, ensure_ascii=False) + "\n",
                     encoding="utf-8",
                 )
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception as e:  # noqa: BLE001
+                from tollgate.soft_fail import soft_fail
+
+                soft_fail("config_write_default", e)
 
         # Soft validate (warnings only unless TOLLGATE_STRICT_CONFIG=1)
         try:
@@ -321,12 +332,19 @@ def load_config(*, force: bool = False, root: Path | None = None) -> dict[str, A
             assert_config_or_raise(cfg, strict=strict)
         except ValueError:
             raise
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as e:  # noqa: BLE001
+            from tollgate.soft_fail import soft_fail
+
+            soft_fail("config_validate", e)
 
         _CACHE = cfg
         _CACHE_MTIME = path.stat().st_mtime if path.is_file() else None
         return deepcopy(cfg)
+
+
+def config_corrupt(*, root: Path | None = None) -> bool:
+    """True when keys_app.json exists but could not be parsed."""
+    return bool(load_config(root=root).get("_corrupt"))
 
 
 def save_config(
@@ -343,7 +361,13 @@ def save_config(
     """
     global _CACHE, _CACHE_MTIME
     path = config_path(root)
-    merged = _deep_merge(DEFAULT_CONFIG, cfg if isinstance(cfg, dict) else {})
+    incoming = cfg if isinstance(cfg, dict) else {}
+    incoming = {
+        k: v
+        for k, v in incoming.items()
+        if k not in ("_corrupt", "_corrupt_reason")
+    }
+    merged = _deep_merge(DEFAULT_CONFIG, incoming)
     if validate:
         from tollgate.config_validate import validate_config_dict
 

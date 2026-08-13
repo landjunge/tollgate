@@ -23,7 +23,8 @@ All notable releases of [landjunge/tollgate](https://github.com/landjunge/tollga
 - **M11 soft_fail:** observability failures log + count (entry cache/rates/audit) — no silent `except: pass`
 - **M8:** `route()` vs `execute_routed()` kept separate (Prove can route-only); `RouteDecision` type
 - **M9:** Provider op maps moved to `provider_ops/registry.py`; KeysService looks up ops — no per-provider imports in service
-- **Code revive (team):** fix post-M9 `el_mod` NameError in dashboard; soft_fail on deny packaging/health; dead imports cleaned; `docs/CODE_REVIVE_2026-08-13.md`
+- **Code revive R1 (team):** post-M9 NameErrors; `GET /` product key; doctor live map; audit facade; scope/stream fail-closed; corrupt `consumers.json` / `keys_app.json` / `circuits.json` fail-closed; doctor readiness honest on corrupt auth; `circuits_corrupt` on Route facade; `soft_fail`; `docs/CODE_REVIVE_2026-08-13.md` · `TEAM_PLAN` R1 closed
+- **M6b:** `chat_stream` uses `entry` prove/admit/rates stages (same Protect path as `gateway_call`)
 
 ## 1.0.13 — 2026-08-11
 

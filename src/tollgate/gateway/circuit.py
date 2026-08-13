@@ -49,7 +49,10 @@ def _circuit_defaults() -> dict[str, Any]:
         c = cfg.get("circuits") or {}
         if not isinstance(c, dict):
             c = {}
-    except Exception:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("circuit_defaults", e, audit=False)
         c = {}
 
     jmin = float(c.get("jitter_min", _DEFAULT_JITTER_MIN))
@@ -222,6 +225,8 @@ class CircuitRegistry:
         self._persist = persist
         # Disk mtime for multi-worker live re-read (same idea as app_config cache)
         self._mtime: float | None = None
+        self._corrupt = False
+        self._corrupt_reason = ""
         if persist:
             with self._lock:
                 self._load_unlocked()
@@ -246,17 +251,31 @@ class CircuitRegistry:
         path = self._path()
         if not path.is_file():
             self._mtime = None
+            self._corrupt = False
+            self._corrupt_reason = ""
             return
         try:
             with FileLock(path):
                 raw = json.loads(path.read_text(encoding="utf-8"))
                 mtime = path.stat().st_mtime
-        except Exception:  # noqa: BLE001
+        except Exception as e:  # noqa: BLE001
+            from tollgate.soft_fail import soft_fail
+
+            soft_fail("circuit_load", e, audit=False)
+            self._corrupt = True
+            self._corrupt_reason = f"json_parse: {e}"[:200]
+            self._mtime = self._file_mtime()
             return
         if not isinstance(raw, dict):
+            self._corrupt = True
+            self._corrupt_reason = "not_an_object"
+            self._mtime = mtime
             return
         items = raw.get("circuits") or []
         if not isinstance(items, list):
+            self._corrupt = True
+            self._corrupt_reason = "circuits_not_a_list"
+            self._mtime = mtime
             return
         loaded: dict[str, Circuit] = {}
         for row in items:
@@ -266,6 +285,8 @@ class CircuitRegistry:
             loaded[c.key] = c
         self._circuits = loaded
         self._mtime = mtime
+        self._corrupt = False
+        self._corrupt_reason = ""
 
     def _reload_if_stale_unlocked(self) -> None:
         """Re-read disk when another worker updated circuits.json (mtime)."""
@@ -280,6 +301,8 @@ class CircuitRegistry:
 
     def _save_unlocked(self) -> None:
         if not self._persist:
+            return
+        if self._corrupt:
             return
         path = self._path()
         payload = {
@@ -300,8 +323,10 @@ class CircuitRegistry:
                     self._mtime = path.stat().st_mtime
                 except OSError:
                     self._mtime = time.time()
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as e:  # noqa: BLE001
+            from tollgate.soft_fail import soft_fail
+
+            soft_fail("circuit_save", e, audit=False)
 
     def _get_unlocked(
         self,
@@ -338,8 +363,16 @@ class CircuitRegistry:
         with self._lock:
             return self._get_unlocked(provider, model=model, key_ref=key_ref)
 
+    def is_corrupt(self) -> bool:
+        with self._lock:
+            self._reload_if_stale_unlocked()
+            return bool(self._corrupt)
+
     def allow(self, provider: str, *, model: str = "", key_ref: str = "") -> bool:
         with self._lock:
+            self._reload_if_stale_unlocked()
+            if self._corrupt:
+                return False
             c = self._get_unlocked(provider, model=model, key_ref=key_ref)
             before = c.state
             ok = c.allow()
@@ -388,6 +421,8 @@ class CircuitRegistry:
         removed: list[str] = []
         with self._lock:
             self._reload_if_stale_unlocked()
+            self._corrupt = False
+            self._corrupt_reason = ""
             if all_circuits or not pid:
                 removed = list(self._circuits.keys())
                 self._circuits.clear()
@@ -424,6 +459,11 @@ def reset_circuits(
 ) -> dict[str, Any]:
     """Public helper: reset circuit breaker state on disk."""
     return get_circuits().reset(provider, all_circuits=all_circuits)
+
+
+def circuits_corrupt() -> bool:
+    """True when circuits.json exists but could not be parsed — allow() fail-closed."""
+    return get_circuits().is_corrupt()
 
 
 def reset_circuits_for_tests() -> None:

@@ -15,7 +15,12 @@ from tollgate.failover import (
     build_candidates,
     is_retriable_failure,
 )
-from tollgate.gateway.circuit import CircuitRegistry, get_circuits, reset_circuits
+from tollgate.gateway.circuit import (
+    CircuitRegistry,
+    circuits_corrupt,
+    get_circuits,
+    reset_circuits,
+)
 from tollgate.route.decision import RouteDecision
 from tollgate.router import execute_routed, route
 
@@ -26,6 +31,7 @@ __all__ = [
     "annotate_success",
     "auto_failover_enabled",
     "build_candidates",
+    "circuits_corrupt",
     "execute_routed",
     "get_circuits",
     "is_retriable_failure",

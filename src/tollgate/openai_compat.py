@@ -200,7 +200,10 @@ def map_tollgate_error(
                 consumer=str(meta.get("consumer") or ""),
                 reason=err,
             )
-        except Exception:  # noqa: BLE001
+        except Exception as e:  # noqa: BLE001
+            from tollgate.soft_fail import soft_fail
+
+            soft_fail("block_view", e)
             human = ""
     if "circuit" in low or ec == "PROVIDER_DOWN":
         human = human or (
@@ -503,7 +506,9 @@ def list_models_openai() -> dict[str, Any]:
             for mid in (detail.get("free_models") or detail.get("models") or [])[:20]:
                 if isinstance(mid, str):
                     add(mid, owned=pid or "tollgate")
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("openai_models_inventory", e)
 
     return {"object": "list", "data": data}

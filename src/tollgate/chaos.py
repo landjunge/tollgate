@@ -255,8 +255,10 @@ def start_chaos(
             message=f"chaos inject {pid} for {dur:.0f}s ({reason})",
             extra={"duration_s": dur, "reason": reason},
         )
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("alerts", e, provider=pid, op="chaos_started")
     return {"ok": True, "inject": row, "path": str(path)}
 
 
@@ -307,8 +309,10 @@ def stop_chaos(
                     message=f"chaos inject stopped on {pid}",
                     extra={"gradual_recovery": start_gradual_recovery},
                 )
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("alerts", e, op="chaos_stopped")
     return {
         "ok": True,
         "stopped": len(stopped_providers),
@@ -343,8 +347,10 @@ def run_failover_test(
 
         ensure_env_from_key_txt(root)
         load_keys(root)
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("chaos_keys", e, op="failover_test")
     pid = (provider or "").strip().lower()
     if not pid:
         return {"ok": False, "error": "provider required"}
@@ -368,8 +374,10 @@ def run_failover_test(
     # Fresh inventory after keys load (avoid stale "key missing" cards)
     try:
         ks.inventory(live=False, use_cache=False)
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("chaos_inventory", e, op="failover_test")
     ok_n = 0
     fail_n = 0
     failover_n = 0
@@ -429,8 +437,10 @@ def run_failover_test(
                         consumer="chaos-test",
                         agent_id="chaos-test",
                     )
-                except Exception:  # noqa: BLE001
-                    pass
+                except Exception as e:  # noqa: BLE001
+                    from tollgate.soft_fail import soft_fail
+
+                    soft_fail("chaos_live_chat", e, provider=chosen, op="chat")
     finally:
         # recovery ramp starts automatically when inject ends
         stop_chaos(pid, start_gradual_recovery=True, root=root)
@@ -442,8 +452,10 @@ def run_failover_test(
         from tollgate.usage_ledger import consumer_usage
 
         usd_after = float(consumer_usage("chaos-test", root=root).get("usd") or 0.0)
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("chaos_usage", e, op="failover_test")
     extra_cost = max(0.0, usd_after - usd_before)
     max_fo_ms = float(pol["max_failover_time_s"]) * 1000.0
     within_sla = recovery_ms <= max_fo_ms if latencies else False
@@ -564,8 +576,10 @@ def run_failover_test(
             },
             root=root,
         )
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("audit", e, provider=pid, op="failover_test")
 
     try:
         from tollgate.alerts import maybe_alert
@@ -582,7 +596,9 @@ def run_failover_test(
             },
             force=True,
         )
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("alerts", e, provider=pid, op="chaos_dr")
 
     return report

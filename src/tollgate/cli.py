@@ -677,8 +677,10 @@ def main(argv: list[str] | None = None) -> None:
                     f"[tollgate] auth mode · http://{host}:{port}/dashboard",
                     file=sys.stderr,
                 )
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as e:  # noqa: BLE001
+            from tollgate.soft_fail import soft_fail
+
+            soft_fail("serve_banner", e, op="serve")
         uvicorn.run("tollgate.server_v1:app", host=host, port=port, reload=False)
         return
 
@@ -739,9 +741,8 @@ def main(argv: list[str] | None = None) -> None:
             consumer=args.consumer,
             provider=args.provider,
         )
-        if args.json or True:
-            # always JSON for machine + human-friendly structure
-            print(json.dumps(out, indent=2, default=str))
+        # always JSON for machine + human-friendly structure
+        print(json.dumps(out, indent=2, default=str))
         return
 
     if args.cmd == "report":

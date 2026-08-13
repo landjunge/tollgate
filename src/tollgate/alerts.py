@@ -108,7 +108,7 @@ def _version() -> str:
 
         return str(__version__)
     except Exception:  # noqa: BLE001
-        return "0.3.4"
+        return "1.0.12"
 
 
 def _clean_extra(extra: dict[str, Any] | None) -> dict[str, Any]:

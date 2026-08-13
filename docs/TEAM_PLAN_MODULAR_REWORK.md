@@ -391,6 +391,21 @@ Suggested later tickets (Owner go/no-go):
 | M9 | KeysService → `provider_ops` registry | P2 | **DONE** (maps out of service; adapter Protocol stub) |
 | M10 | FreePolicy single “may spend $?” | P1 | **DONE** (`protect.free_policy`) |
 | M11 | soft_fail observability helper (no bare pass) | P2 | **DONE** (`soft_fail` in entry stages) |
+| R1 | Code revive (team) — extraction leftovers + fail-closed disk | P1 | **DONE** 2026-08-13 · see `CODE_REVIVE_2026-08-13.md` |
+| M6b | Stream uses entry prove/admit/rates stages (no second protect brain) | P1 | **DONE** |
+
+### R1 Architect check (team close)
+
+| Check | Result |
+|-------|--------|
+| Protect ↛ Route / router / failover | pass (`test_no_protect_imports_route`) |
+| Public API (`gateway_call`, admit, `/v1`) | unchanged; additive fields only (`product_doc`, `corrupt`) |
+| Admit **decisions** | untouched (alert wrappers only) |
+| Fail-closed product rule | consumers / keys_app / circuits / ledger / rates |
+| Prove still uses production route | unchanged (`select_route`) |
+| No adapter zoo / no entry.py split | held |
+
+**Next:** pain-driven only. No R2 unless a real desk break. Owner go/no-go per slice.
 
 ---
 

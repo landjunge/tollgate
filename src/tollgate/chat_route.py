@@ -59,8 +59,14 @@ def routed_chat(
                     "protection": "scope",
                     "consumer": cid_hint,
                 }
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as e:  # noqa: BLE001
+            return {
+                "ok": False,
+                "error": f"scope check failed — fail-closed ({e})",
+                "error_class": "POLICY_DENY",
+                "protection": "scope",
+                "consumer": cid_hint,
+            }
 
     est = tokens_est
     if not est:

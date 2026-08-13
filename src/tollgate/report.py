@@ -132,7 +132,7 @@ def format_report_markdown(report: dict[str, Any] | None = None, *, root: Any = 
         "",
         "## Protect",
         "",
-        f"- **Admission freeze:** "
+        "- **Admission freeze:** "
         + (
             f"ON — {protect.get('freeze_reason') or 'kill switch'}"
             if protect.get("frozen")
@@ -252,4 +252,4 @@ def _version() -> str:
 
         return str(__version__)
     except Exception:  # noqa: BLE001
-        return "0.3.7"
+        return "1.0.12"

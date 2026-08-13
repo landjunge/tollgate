@@ -66,8 +66,10 @@ def append_audit(
             path.parent.mkdir(parents=True, exist_ok=True)
             with open(path, "a", encoding="utf-8") as f:
                 f.write(line)
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("audit_write", e, provider=provider, op=op, audit=False)
 
 
 def _read_tail_lines(path: Path, *, max_lines: int = 5000) -> list[str]:

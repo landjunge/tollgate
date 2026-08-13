@@ -39,7 +39,12 @@ def is_frozen() -> bool:
     env = _env_frozen()
     if env is not None:
         return env
-    adm = admission_block()
+    from tollgate.app_config import load_config
+
+    cfg = load_config()
+    if cfg.get("_corrupt"):
+        return True
+    adm = cfg.get("admission") if isinstance(cfg.get("admission"), dict) else {}
     return bool(adm.get("frozen"))
 
 
@@ -49,18 +54,32 @@ def allow_system_when_frozen() -> bool:
 
 
 def freeze_status() -> dict[str, Any]:
-    adm = admission_block()
+    from tollgate.app_config import load_config
+
+    cfg = load_config()
+    adm = cfg.get("admission") if isinstance(cfg.get("admission"), dict) else {}
     env = _env_frozen()
     frozen = is_frozen()
+    corrupt = bool(cfg.get("_corrupt"))
+    if env is not None:
+        source = "env"
+        reason = "TOLLGATE_FROZEN env"
+    elif corrupt:
+        source = "config_corrupt"
+        reason = str(cfg.get("_corrupt_reason") or "keys_app.json corrupt — fail-closed")
+    else:
+        source = "config"
+        reason = str(adm.get("frozen_reason") or "")
     return {
         "ok": True,
         "frozen": frozen,
-        "source": "env" if env is not None else "config",
+        "source": source,
         "env_override": env,
-        "reason": str(adm.get("frozen_reason") or "") if env is None else "TOLLGATE_FROZEN env",
+        "reason": reason,
         "frozen_at": adm.get("frozen_at"),
         "frozen_by": str(adm.get("frozen_by") or ""),
         "allow_system_when_frozen": allow_system_when_frozen(),
+        "config_corrupt": corrupt,
         "message": (
             "ADMISSION FROZEN — all billable traffic denied"
             if frozen
@@ -105,8 +124,10 @@ def set_frozen(
             extra={"by": by, "frozen": frozen},
             force=True,
         )
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("alerts", e, op="freeze")
 
     try:
         from tollgate.audit_log import append_audit
@@ -119,8 +140,10 @@ def set_frozen(
             extra={"frozen": frozen, "by": by},
             root=root,
         )
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        from tollgate.soft_fail import soft_fail
+
+        soft_fail("audit", e, op="freeze")
 
     st = freeze_status()
     st["applied"] = True
