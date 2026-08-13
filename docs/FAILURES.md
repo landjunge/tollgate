@@ -8,7 +8,18 @@
 **Data:** `TOLLGATE_HOME=/Users/landjunge/WS-gnom-hub-v1`  
 **Auth mode on desk:** **open** (`required=false`, `consumers_n=0`)
 
-Harness: `./scripts/e2e-gnom-hub.sh all` → **13 pass / 0 fail**.
+### Counts (do not mix these)
+
+| Layer | Result |
+|-------|--------|
+| **Harness** `./scripts/e2e-gnom-hub.sh all` | **13 / 13 PASS** (T1–T5 + control + gnom API + restart) |
+| **Adversarial matrix** (this file, F-001–F-019) | **19 scenarios evaluated** |
+| | **16 PASS** (live and/or unit) |
+| | **2 PASS isolated only** (F-011, F-012 — not run on live desk) |
+| | **1 INCOMPLETE** (F-007 hop timeout / first-byte) |
+| | **0 confirmed product failures** |
+
+Harness 13 ≠ matrix 19. The 13 are the scripted smoke. The 19 are the full adversarial set (includes the 13 plus extras).
 
 This file is the input for a human triage: **bug vs design vs wrong test expectation**.
 
@@ -67,7 +78,13 @@ Only items that are not a clean PASS, or that need a human call.
 5. **Severity:** **medium** as production hang risk; **low** as a regression vs current docs (hop timeout is 120s).
 6. **Suspected root cause:** There is **no first-byte / request deadline** shorter than 120s. The 2s expectation is **not** a documented Tollgate contract. Chaos covers *injected down*, not *slow TTFB*.
 
-**Triage hint:** likely **wrong test expectation** unless product now wants a shorter hop SLA. Do not “fix” by shrinking the test timeout and calling it green.
+**Open product question (no code until real hang data):**
+
+> When is a provider *down*? `connection refused` vs `connected but no first byte`.
+
+Keep 120s hop timeout. Later decide `connect` / `first-byte` / `total` from TTFB P50/P95/P99 + failover time — not from `curl --max-time 2`.
+
+**Triage: wrong test expectation vs current contract. Not a confirmed bug.**
 
 ---
 
@@ -84,7 +101,7 @@ Only items that are not a clean PASS, or that need a human call.
 5. **Severity:** **info** on this desk; **high** if this process is ever bound off localhost without consumers.
 6. **Suspected root cause:** Documented desk default (`docs/SECURITY.md`, doctor `auth_open`). Isolated TestClient with `consumer-add desk` → **401** missing secret, **401** bad secret, **200** good secret.
 
-**Triage hint:** **design**, not a Protect regression. Isolated auth path matches the documented contract.
+**Triage: design for localhost.** Public bind + open mode is now **refused** at serve (`open_public_bind_error`) unless `TOLLGATE_ALLOW_OPEN_PUBLIC=1`. Isolated auth path (consumers required) matches 401/401/200.
 
 ---
 
@@ -127,29 +144,12 @@ Only items that are not a clean PASS, or that need a human call.
 
 ---
 
-## Proposed fixes (not applied)
+## Follow-ups
 
-Decide per item before any code.
+| ID | Decision | Code now? |
+|----|----------|-----------|
+| F-007 | Open product question. Measure TTFB before any hop-SLA. | **no** |
+| F-013 | Localhost open mode stays. Public bind + open → refuse. | **yes** (`open_public_bind_error`) |
+| F-018 | Gnom JSON control characters. | **no** (Gnom) |
 
-1. **F-007 (only if you want a hang SLA)**  
-   Add an **explicit** hop/first-byte deadline (config, default still generous) and map it to `PROVIDER_DOWN` / human message.  
-   **Do not** change this just because `curl --max-time 2` failed. That test is stricter than the 120s hop timeout.
-
-2. **F-013 (only if this desk is treated as shared)**  
-   `tollgate consumer-add` + bind stay `127.0.0.1`. No semantic change to open mode.
-
-3. **F-018**  
-   Fix in **gnom-hub-v1** (strict JSON / sanitize notes), or keep the harness sanitizer. Not a Tollgate patch.
-
-4. **Corrupt-file tests on live desk**  
-   Stay isolated. Running them on `WS-gnom-hub-v1` would freeze/lock the real desk on purpose.
-
----
-
-## Decision log (empty — owner)
-
-| ID | Bug | Design | Wrong expectation | Fix now? |
-|----|-----|--------|-------------------|----------|
-| F-007 | | ? | ? | no |
-| F-013 | | ? | ? | no |
-| F-018 | | ? | ? | no (Gnom) |
+Corrupt-file cases stay isolated — do not run against live `WS-gnom-hub-v1`.

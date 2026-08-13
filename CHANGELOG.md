@@ -25,6 +25,8 @@ All notable releases of [landjunge/tollgate](https://github.com/landjunge/tollga
 - **M9:** Provider op maps moved to `provider_ops/registry.py`; KeysService looks up ops — no per-provider imports in service
 - **Code revive R1 (team):** post-M9 NameErrors; `GET /` product key; doctor live map; audit facade; scope/stream fail-closed; corrupt `consumers.json` / `keys_app.json` / `circuits.json` fail-closed; doctor readiness honest on corrupt auth; `circuits_corrupt` on Route facade; `soft_fail`; `docs/CODE_REVIVE_2026-08-13.md` · `TEAM_PLAN` R1 closed
 - **M6b:** `chat_stream` uses `entry` prove/admit/rates stages (same Protect path as `gateway_call`)
+- **P1 bind:** refuse open mode on `0.0.0.0`/`::` unless `TOLLGATE_ALLOW_OPEN_PUBLIC=1` (localhost open mode unchanged)
+- **Docs:** adversarial counts split (harness 13 vs matrix 19); E2E-015 kept as product question (no hop-timeout change)
 
 ## 1.0.13 — 2026-08-11
 

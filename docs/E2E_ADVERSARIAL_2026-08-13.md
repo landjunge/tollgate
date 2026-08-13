@@ -12,7 +12,14 @@ export GNOM_URL=http://127.0.0.1:8080
 ./scripts/e2e-gnom-hub.sh all
 ```
 
-Harness: **13 / 13 PASS** (same as prior T1–T5 + gnom API + restart).
+### Counts (do not mix)
+
+| Layer | Result |
+|-------|--------|
+| **Harness** `e2e-gnom-hub.sh all` | **13 / 13 PASS** (T1–T5 + control + gnom API + restart) |
+| **Adversarial matrix** E2E-001–017 | **17 scenarios evaluated** · **14 PASS** · **2 PASS isolated-only** (009/010) · **1 INCOMPLETE** (015) · **0 confirmed failures** |
+
+Harness 13 is the scripted smoke. 17 is the wider matrix (includes extras not in the shell script).
 
 ---
 

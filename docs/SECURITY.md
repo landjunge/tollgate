@@ -11,6 +11,7 @@
 |-------|------------|
 | Local desk | Open mode + `HOST=127.0.0.1` — attacker is on the machine |
 | Shared host | Must use consumers auth; never open mode on `0.0.0.0` |
+| Public bind | `HOST=0.0.0.0` + open mode is **refused** at serve unless `TOLLGATE_ALLOW_OPEN_PUBLIC=1` |
 | Agents | Untrusted input; Tollgate admits/denies *before* spend |
 
 ---
@@ -18,7 +19,8 @@
 ## Checklist (operator)
 
 - [ ] **Bind:** default `HOST=127.0.0.1`. Public bind only behind proxy + auth.
-- [ ] **Open mode:** no `consumers.json` → any label is a lane. Fine locally only.
+- [ ] **Open mode:** no `consumers.json` → any label is a lane. Fine on localhost only.
+- [ ] **Public + open:** process **exits** (`open_public_bind`). Override: `TOLLGATE_ALLOW_OPEN_PUBLIC=1`.
 - [ ] **Auth mode:** `User/consumers.json` or `TOLLGATE_REQUIRE_AUTH=1`; admin for freeze/config.
 - [ ] **Secrets:** `User/Key.txt` / env only — never in audit UI payloads as raw keys.
 - [ ] **Metrics:** not public unless `TOLLGATE_METRICS_PUBLIC=1` (explicit).

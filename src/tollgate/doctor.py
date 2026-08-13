@@ -12,7 +12,7 @@ from typing import Any
 
 from tollgate.app_config import config_path, load_config
 from tollgate.config_validate import validate_config_dict
-from tollgate.consumers import auth_status
+from tollgate.consumers import auth_status, open_public_bind_error
 from tollgate.paths import data_home, path_snapshot, pin_data_home_env, user_dir
 from tollgate.secrets import is_usable_api_key, load_keys, resolve_key_txt_path
 
@@ -133,6 +133,16 @@ def run_doctor(*, live: bool = False, root: Path | None = None) -> dict[str, Any
                 "code": "auth_open",
                 "message": "Open auth mode (no consumers.json) — fine for local desk only",
                 "action": "For n8n/multi-host: tollgate consumer-add n8n",
+            }
+        )
+    pub = open_public_bind_error()
+    if pub:
+        issues.append(
+            {
+                "level": "error",
+                "code": "open_public_bind",
+                "message": pub,
+                "action": "HOST=127.0.0.1  or  tollgate consumer-add desk --admin",
             }
         )
 
@@ -560,6 +570,8 @@ def _next_steps(issues: list[dict[str, str]]) -> list[str]:
         steps.append("Fix User/consumers.json or: tollgate consumer-add desk --admin")
     if "circuits_corrupt" in codes:
         steps.append("Fix User/circuits.json or: tollgate circuits reset --all")
+    if "open_public_bind" in codes:
+        steps.append("Do not bind 0.0.0.0 in open mode — HOST=127.0.0.1 or consumer-add")
     if "auth_open" in codes:
         steps.append("Optional: tollgate consumer-add desk --admin")
     steps.append("tollgate serve   # or ./scripts/run.sh / docker compose up")

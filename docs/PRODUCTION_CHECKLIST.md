@@ -10,7 +10,8 @@ Tollgate has **no** formal `PRODUCTION` mode flag yet. This checklist is the pra
 
 - [ ] Bind is **localhost** or behind a reverse proxy with auth  
   - Default: `HOST=127.0.0.1`  
-  - Never: open mode on `0.0.0.0` without consumers auth  
+  - `HOST=0.0.0.0` + open mode is **refused** unless `TOLLGATE_ALLOW_OPEN_PUBLIC=1`  
+  - Shared/public: `tollgate consumer-add` (auth mode)  
 - [ ] Prefer **auth mode** (`consumers.json` or `TOLLGATE_REQUIRE_AUTH=1`) for shared hosts  
 - [ ] Provider secrets only in `User/Key.txt` / env — never in agent prompts  
 - [ ] Metrics not public (`TOLLGATE_METRICS_PUBLIC` off unless intentional)  

@@ -22,6 +22,7 @@ Anthropic-compatible drop-in:
 from __future__ import annotations
 
 import os
+from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException, Query
@@ -79,9 +80,19 @@ def _bootstrap_env() -> None:
 
 _bootstrap_env()
 
+
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    from tollgate.consumers import refuse_open_public_bind
+
+    refuse_open_public_bind()
+    yield
+
+
 app = FastAPI(
     title="Tollgate",
     version=__version__,
+    lifespan=_lifespan,
     description=(
         "Tollgate — AI reliability & control plane. "
         "Protect · Route · Prove (chaos failover tests). "

@@ -658,15 +658,13 @@ def main(argv: list[str] | None = None) -> None:
         host = (os.environ.get("HOST") or "127.0.0.1").strip() or "127.0.0.1"
         port = int(os.environ.get("PORT", "8787"))
         try:
-            from tollgate.consumers import auth_required
+            from tollgate.consumers import auth_required, open_public_bind_error
 
-            if not auth_required() and host in ("0.0.0.0", "::", "[::]", "*"):
-                print(
-                    "[tollgate] WARNING: open auth mode on public bind "
-                    f"{host}:{port} — use HOST=127.0.0.1 or configure consumers.",
-                    file=sys.stderr,
-                )
-            elif not auth_required():
+            blocked = open_public_bind_error(host=host)
+            if blocked:
+                print(f"[tollgate] ERROR: {blocked}", file=sys.stderr)
+                raise SystemExit(2)
+            if not auth_required():
                 print(
                     f"[tollgate] open mode (local desk) · dashboard "
                     f"http://{host}:{port}/dashboard",

@@ -84,3 +84,34 @@ def test_http_auth_gate(monkeypatch, tmp_path):
 
     r4 = client.get("/v1/config", headers={"X-Consumer-Key": "n8n:tok"})
     assert r4.status_code == 401  # not admin
+
+
+def test_open_public_bind_refused_localhost_ok(monkeypatch, tmp_path):
+    monkeypatch.setenv("TOLLGATE_HOME", str(tmp_path))
+    monkeypatch.delenv("TOLLGATE_REQUIRE_AUTH", raising=False)
+    monkeypatch.delenv("TOLLGATE_ALLOW_OPEN_PUBLIC", raising=False)
+    (tmp_path / "User").mkdir(parents=True)
+    from tollgate import consumers as c
+
+    c.clear_cache()
+    monkeypatch.setenv("HOST", "127.0.0.1")
+    assert c.open_public_bind_error() is None
+    monkeypatch.setenv("HOST", "0.0.0.0")
+    msg = c.open_public_bind_error()
+    assert msg and "refusing open mode on public bind" in msg
+    monkeypatch.setenv("TOLLGATE_ALLOW_OPEN_PUBLIC", "1")
+    assert c.open_public_bind_error() is None
+
+
+def test_open_public_bind_ok_when_auth_required(monkeypatch, tmp_path):
+    monkeypatch.setenv("TOLLGATE_HOME", str(tmp_path))
+    monkeypatch.setenv("HOST", "0.0.0.0")
+    monkeypatch.delenv("TOLLGATE_ALLOW_OPEN_PUBLIC", raising=False)
+    (tmp_path / "User").mkdir(parents=True)
+    from tollgate import consumers as c
+
+    c.clear_cache()
+    c.add_consumer("desk", secret="s3cret-desk", admin=True)
+    c.clear_cache()
+    assert c.auth_required() is True
+    assert c.open_public_bind_error() is None

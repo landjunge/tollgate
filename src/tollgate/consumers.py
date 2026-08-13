@@ -111,6 +111,49 @@ def consumers_corrupt() -> bool:
     return bool(_load_raw().get("_corrupt"))
 
 
+_PUBLIC_BIND_HOSTS = frozenset({"0.0.0.0", "::", "[::]", "*"})
+
+
+def is_public_bind(host: str | None = None) -> bool:
+    """True when HOST would listen on all interfaces (docker -p / 0.0.0.0)."""
+    h = (host if host is not None else os.environ.get("HOST") or "127.0.0.1").strip()
+    return h in _PUBLIC_BIND_HOSTS
+
+
+def allow_open_public() -> bool:
+    return (os.environ.get("TOLLGATE_ALLOW_OPEN_PUBLIC") or "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+
+
+def open_public_bind_error(*, host: str | None = None) -> str | None:
+    """
+    Product rule: localhost + open mode is OK.
+    Public bind + open mode is refused unless TOLLGATE_ALLOW_OPEN_PUBLIC=1.
+    """
+    if auth_required():
+        return None
+    if not is_public_bind(host):
+        return None
+    if allow_open_public():
+        return None
+    h = (host if host is not None else os.environ.get("HOST") or "127.0.0.1").strip()
+    return (
+        f"refusing open mode on public bind {h} — "
+        "use HOST=127.0.0.1, or: tollgate consumer-add desk --admin, "
+        "or set TOLLGATE_ALLOW_OPEN_PUBLIC=1"
+    )
+
+
+def refuse_open_public_bind(*, host: str | None = None) -> None:
+    msg = open_public_bind_error(host=host)
+    if msg:
+        raise RuntimeError(msg)
+
+
 def auth_required() -> bool:
     if (os.environ.get("TOLLGATE_REQUIRE_AUTH") or "").strip().lower() in (
         "1",
