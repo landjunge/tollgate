@@ -2,23 +2,24 @@
 @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap");
 
 :root {
-  --ink: #07080a;
-  --ink2: #0d0f12;
-  --panel: #111418;
-  --panel2: #171b21;
-  --line: #2a3038;
-  --line2: #3d4654;
-  --paper: #e6e2d6;
-  --muted: #8a9185;
-  --dim: #5c635a;
-  --amber: #e8a317;
-  --amber-dim: #9a6b0a;
-  --crt: #5dff9a;
-  --crt-dim: #1a5c35;
-  --alarm: #ff3b4a;
-  --sky: #7eb0c8;
-  --font: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  /* Gnom-Hub-V1 desk chrome (shared). Amber/CRT mapped onto warn/ok. */
+  --ink: #121316;
+  --ink2: #1a1b1f;
+  --panel: #1e1f24;
+  --panel2: #24262d;
+  --line: #2e3138;
+  --line2: #3a3e46;
+  --paper: #e2e4e9;
+  --muted: #8b909a;
+  --dim: #6b7280;
+  --amber: #c9a227;
+  --amber-dim: #8a7018;
+  --crt: #3d9b6a;
+  --crt-dim: #1e4e35;
+  --alarm: #c45c5c;
+  --sky: #a1a8b3;
+  --font: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
   --max: 1120px;
   --rail: 220px;
 }
@@ -34,28 +35,7 @@ body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
 }
-/* paper grain + scan */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.45;
-  background:
-    radial-gradient(ellipse 90% 50% at 15% -10%, rgba(232, 163, 23, 0.07), transparent 50%),
-    radial-gradient(ellipse 60% 40% at 100% 80%, rgba(94, 255, 154, 0.03), transparent 45%),
-    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.12) 3px);
-}
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 9999;
-  opacity: 0.03;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
+/* Desk surface — no CRT scan / grain (Gnom-Hub-V1 chrome). */
 
 a { color: var(--amber); text-decoration: underline; text-underline-offset: 0.2em; text-decoration-thickness: 1px; }
 a:hover { color: #ffc14d; }
