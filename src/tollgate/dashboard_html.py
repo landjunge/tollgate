@@ -13,28 +13,29 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 <title>Tollgate · Control Room</title>
 <style>
   :root {
-    --bg: #090b10;
-    --bg2: #0e1118;
-    --panel: #131722;
-    --panel2: #181d2a;
-    --line: #252b3a;
-    --line2: #323a4e;
-    --fg: #eef0f6;
-    --muted: #8b93a8;
-    --muted2: #6b7389;
-    --ok: #34d399;
-    --ok-dim: rgba(52,211,153,.12);
-    --warn: #fbbf24;
-    --warn-dim: rgba(251,191,36,.12);
-    --bad: #f43f5e;
-    --bad-dim: rgba(244,63,94,.12);
-    --acc: #7c9cff;
-    --acc2: #5b7cfa;
-    --acc-dim: rgba(124,156,255,.12);
-    --radius: 14px;
-    --radius-sm: 10px;
-    --shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 12px 40px rgba(0,0,0,.35);
-    --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    /* Gnom-Hub-V1 desk chrome (shared). */
+    --bg: #121316;
+    --bg2: #1a1b1f;
+    --panel: #1e1f24;
+    --panel2: #24262d;
+    --line: #2e3138;
+    --line2: #3a3e46;
+    --fg: #e2e4e9;
+    --muted: #8b909a;
+    --muted2: #6b7280;
+    --ok: #3d9b6a;
+    --ok-dim: rgba(61,155,106,.12);
+    --warn: #c9a227;
+    --warn-dim: rgba(201,162,39,.12);
+    --bad: #c45c5c;
+    --bad-dim: rgba(196,92,92,.12);
+    --acc: #a1a8b3;
+    --acc2: #6b7280;
+    --acc-dim: rgba(161,168,179,.12);
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow: 0 4px 18px rgba(0, 0, 0, 0.28);
+    --font: system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   }
   * { box-sizing: border-box; }
@@ -43,10 +44,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
     margin: 0;
     min-height: 100vh;
     font-family: var(--font);
-    background:
-      radial-gradient(1200px 600px at 10% -10%, rgba(124,156,255,.09), transparent 55%),
-      radial-gradient(900px 500px at 100% 0%, rgba(52,211,153,.05), transparent 50%),
-      var(--bg);
+    background: var(--bg);
     color: var(--fg);
     line-height: 1.45;
     -webkit-font-smoothing: antialiased;
