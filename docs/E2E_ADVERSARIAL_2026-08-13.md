@@ -8,7 +8,7 @@
 
 ```bash
 export TOLLGATE_HOME=/Users/landjunge/WS-gnom-hub-v1
-export GNOM_URL=http://127.0.0.1:8080
+export GNOM_URL="${GNOM_URL:-http://127.0.0.1:${GNOM_DESK_PORT:-}}"  # Gnom-Hub-V1 desk, not Tollgate :8787
 ./scripts/e2e-gnom-hub.sh all
 ```
 
