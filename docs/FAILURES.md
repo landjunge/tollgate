@@ -109,7 +109,7 @@ Keep 120s hop timeout. Later decide `connect` / `first-byte` / `total` from TTFB
 
 1. **Reproduction**
    ```bash
-   curl -sS http://127.0.0.1:8080/api/jobs/<id> | python3 -c "import sys,json; json.load(sys.stdin)"
+   curl -sS "$GNOM_URL/api/jobs/<id>" | python3 -c "import sys,json; json.load(sys.stdin)"
    ```
 2. **Expected** parseable JSON status (`done` / `error`).
 3. **Actual** `json.decoder.JSONDecodeError: Invalid control character`. Job **did** finish (`"status":"done"` visible in the raw body). The e2e harness already strips `ord(c)<32`.

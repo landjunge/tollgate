@@ -14,29 +14,51 @@
 
 > **Tollgate is the safety layer between your AI agents and the internet.**
 
-**Name note:** This is **landjunge/tollgate** (AI agent safety). It is **not** [OpenTollGate](https://github.com/OpenTollGate) (network access payments) and **not** a road/highway toll product.
+**Protect · Route · Prove** — stop runaway tool loops, enforce budgets, control outbound access, survive provider failures, produce evidence.
 
-**Website:** [landjunge.github.io/tollgate](https://landjunge.github.io/tollgate/) · [DE](https://landjunge.github.io/tollgate/de.html) · [Docs](https://landjunge.github.io/tollgate/docs.html) · [Launch](https://landjunge.github.io/tollgate/blog/launch.html) · [Safety checklist](https://landjunge.github.io/tollgate/blog/checklist.html) · [Press](https://landjunge.github.io/tollgate/press/) · [llms.txt](https://landjunge.github.io/tollgate/llms.txt) · [GSC checklist](docs/GSC_CHECKLIST.md)
+| | |
+|--|--|
+| **What** | Hard admission gate in front of tools / LLMs. Not a model catalog. |
+| **Who** | People running n8n, LangGraph, CrewAI, or any OpenAI-compatible agent in production. |
+| **Problem** | Agents loop, spend, and keep calling after the provider dies. |
+| **Try** | 10 minutes, no Docker, no API key for the Protect demo. |
 
-**Pairs with:** [Gnom-Hub](https://github.com/landjunge/gnom-hub-v1) — local multi-agent desk (brainstorm free, Execute on purpose) · [site](https://landjunge.github.io/gnom-hub-v1/)
+**Name note:** **landjunge/tollgate** (AI agent safety). Not [OpenTollGate](https://github.com/OpenTollGate) (network payments). Not a road toll. Not [4AllPass](https://github.com/landjunge/4AllPass) (credentials / “May I access?”). Tollgate answers **“May I act?”** — separate product.
 
-**Protects AI agents in production** — not an API gateway, not a model catalog.
+**Website:** [landjunge.github.io/tollgate](https://landjunge.github.io/tollgate/) · [DE](https://landjunge.github.io/tollgate/de.html) · [Docs](https://landjunge.github.io/tollgate/docs.html) · [Launch](https://landjunge.github.io/tollgate/blog/launch.html) · [Safety checklist](https://landjunge.github.io/tollgate/blog/checklist.html)
+
+**Sibling (execution desk):** [Gnom-Hub-V1](https://github.com/landjunge/gnom-hub-v1) — brainstorm freely, Execute on purpose. Not a Tollgate dependency.
 
 ```text
-Control cost.  Survive provider failures.  Prove it works.
-        Protect  ·  Route  ·  Prove
+AI Agent
+   │
+   ├── tool call #1
+   ├── tool call #2
+   ├── tool call #3
+   ├── tool call #4
+   └── tool call #5
+
+Tollgate
+
+🛑 TOOL LOOP LIMIT EXCEEDED
+
+Agent blocked.
+Budget remaining: $1.72
+Evidence recorded.
 ```
 
 ---
 
 ## 10 minutes (cold start)
 
-**Primary path: native Python — no Docker.**
+**Primary path: native Python — no Docker.** Protect demo needs no provider keys.
 
 ```bash
 git clone https://github.com/landjunge/tollgate.git && cd tollgate
 python3 -m venv .venv && .venv/bin/pip install -e .
 ./scripts/ten-minute.sh
+# 60-second Protect story (optional, server on :8787):
+./scripts/demo-agent-safety.sh
 ```
 
 **USB stick / portable desk** (venv + data on the volume):
