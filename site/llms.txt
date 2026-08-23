@@ -39,3 +39,5 @@ python3 -m venv .venv && .venv/bin/pip install -e .
 ## Positioning (honest)
 LiteLLM-style gateways connect models. Tollgate keeps agents in line:
 hard denies before the call, freeze, audit, and Prove with chaos + certificate.
+Impressum: https://netzwerkpunkt.de/impressum
+Datenschutz: https://netzwerkpunkt.de/datenschutz
