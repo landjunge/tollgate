@@ -1,33 +1,61 @@
 # Tollgate
 
-[![Website](https://img.shields.io/badge/website-live-3dd68c?style=flat-square)](https://landjunge.github.io/tollgate/)
-[![GitHub release](https://img.shields.io/github/v/release/landjunge/tollgate?style=flat-square)](https://github.com/landjunge/tollgate/releases)
-[![GHCR](https://img.shields.io/badge/ghcr.io-landjunge%2Ftollgate-blue?style=flat-square&logo=docker&logoColor=white)](https://github.com/landjunge/tollgate/pkgs/container/tollgate)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
-[![Discussions](https://img.shields.io/badge/discussions-open-6c8cff?style=flat-square)](https://github.com/landjunge/tollgate/discussions)
-[![Launch](https://img.shields.io/badge/launch_post-2026--08-e8a317?style=flat-square)](https://landjunge.github.io/tollgate/blog/launch.html)
-[![Checklist](https://img.shields.io/badge/safety_checklist-read-5dff9a?style=flat-square)](https://landjunge.github.io/tollgate/blog/checklist.html)
+<p align="center"><strong>Eine Sicherheitsschranke für KI-Agenten.</strong></p>
 
-**v1.0.12** · *Pay the toll — or don't call.*
+Tollgate prüft eine Handlung, bevor ein Agent sie ausführt. Es kann Schleifen stoppen, Budgets begrenzen und Ausfälle sichtbar machen.
 
-# “My AI agent must never go out of control.”
+### 👤 [Für Nutzer – Tollgate ausprobieren](#für-nutzer)
 
-> **Tollgate is the safety layer between your AI agents and the internet.**
+### 🛠️ [Für Entwickler – Code und technische Dokumentation](#für-entwickler)
 
-**Protect · Route · Prove** — stop runaway tool loops, enforce budgets, control outbound access, survive provider failures, produce evidence.
+---
 
-| | |
-|--|--|
-| **What** | Hard admission gate in front of tools / LLMs. Not a model catalog. |
-| **Who** | People running n8n, LangGraph, CrewAI, or any OpenAI-compatible agent in production. |
-| **Problem** | Agents loop, spend, and keep calling after the provider dies. |
-| **Try** | 10 minutes, no Docker, no API key for the Protect demo. |
+## Für Nutzer
 
-**Name note:** **landjunge/tollgate** (AI agent safety). Not [OpenTollGate](https://github.com/OpenTollGate) (network payments). Not a road toll. Not [4AllPass](https://github.com/landjunge/4AllPass) (credentials / “May I access?”). Tollgate answers **“May I act?”** — separate product.
+### Einfach erklärt
 
-**Website:** [landjunge.github.io/tollgate](https://landjunge.github.io/tollgate/) · [DE](https://landjunge.github.io/tollgate/de.html) · [Docs](https://landjunge.github.io/tollgate/docs.html) · [Launch](https://landjunge.github.io/tollgate/blog/launch.html) · [Safety checklist](https://landjunge.github.io/tollgate/blog/checklist.html)
+Ein KI-Agent kann Werkzeuge benutzen, Internetdienste aufrufen und dabei Kosten verursachen. Wenn etwas schiefläuft, kann er denselben Aufruf immer wieder ausführen.
 
-**Sibling (execution desk):** [Gnom-Hub-V1](https://github.com/landjunge/gnom-hub-v1) — brainstorm freely, Execute on purpose. Not a Tollgate dependency.
+Tollgate sitzt davor. Es beantwortet eine Frage:
+
+> **Darf ich handeln?**
+
+### Was du davon hast
+
+- Endlosschleifen werden gestoppt.
+- Kosten können begrenzt werden.
+- Zugriffe erhalten klare Regeln.
+- Bei einem ausgefallenen Anbieter kann kontrolliert gewechselt werden.
+- Entscheidungen werden für eine spätere Prüfung festgehalten.
+
+### In drei Schritten
+
+1. **Installieren** – Tollgate lokal einrichten.
+2. **Testen** – eine ungefährliche Agentenschleife ausführen.
+3. **Prüfen** – sehen, warum Tollgate den Aufruf erlaubt oder blockiert hat.
+
+### Was Tollgate nicht ist
+
+Tollgate ist kein KI-Modell, kein Agent und kein Passwort-Tresor. Es ersetzt auch nicht die Entscheidung des Menschen. Es ist eine eigene Kontrollschicht vor einer Handlung.
+
+### Heutiger Stand – ehrlich
+
+| Bereich | Aktueller Stand |
+|---|---|
+| Protect | Budgets, Schleifenstopps, Scopes und Freeze |
+| Route | Zustandsabhängige Weiterleitung und Failover |
+| Prove | Chaos- und Wiederanlauf-Tests mit Nachweisen |
+| Schnittstellen | OpenAI-kompatibel, MCP und n8n |
+| Technik | Python und FastAPI |
+| Reife | In Entwicklung; vor Produktion selbst prüfen |
+
+[Produktseite](https://tollgate.netzwerkpunkt.de/) · [Schnellstart](docs/QUICKSTART.md)
+
+---
+
+## Für Entwickler
+
+Tollgate ist ein vorgeschaltetes Admission Gate für Tool- und Modellaufrufe. Es entscheidet vor dem Request und hält den Grund der Entscheidung fest.
 
 ## How this is built / Wie dieses Projekt entsteht
 
