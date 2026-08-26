@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">TollGate Bildmarke</title>
+  <desc id="desc">Eine Sicherheitsschranke mit grünem Statuslicht kontrolliert den Weg.</desc>
+  <defs>
+    <linearGradient id="gate" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#ffc069"/>
+      <stop offset="1" stop-color="#e77745"/>
+    </linearGradient>
+  </defs>
+  <rect x="36" y="36" width="440" height="440" rx="104" fill="#111311"/>
+  <rect x="96" y="296" width="64" height="118" rx="22" fill="#e7e8e2"/>
+  <circle cx="128" cy="270" r="42" fill="#252925" stroke="#e7e8e2" stroke-width="12"/>
+  <circle cx="128" cy="270" r="18" fill="#5dff9a"/>
+  <path d="M154 282 404 164" stroke="url(#gate)" stroke-width="48" stroke-linecap="round"/>
+  <path d="m197 262 38 34m57-88 38 34" stroke="#111311" stroke-width="20"/>
+  <path d="M92 414h328" stroke="#3a3e3a" stroke-width="18" stroke-linecap="round"/>
+  <path d="M350 270h70v144h-70z" fill="#e7e8e2"/>
+  <path d="M365 304h40" stroke="#111311" stroke-width="14" stroke-linecap="round"/>
+</svg>
