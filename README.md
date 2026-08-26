@@ -1,10 +1,11 @@
-# Tollgate
+<p align="center"><img src="brand/mark.svg" width="180" alt="TollGate Bildmarke"></p>
+<p align="center"><img src="brand/wordmark.svg" width="520" alt="TollGate"></p>
 
 <p align="center"><strong>Eine Sicherheitsschranke für KI-Agenten.</strong></p>
 
-Tollgate prüft eine Handlung, bevor ein Agent sie ausführt. Es kann Schleifen stoppen, Budgets begrenzen und Ausfälle sichtbar machen.
+TollGate prüft eine Handlung, bevor ein Agent sie ausführt. Es kann Schleifen stoppen, Budgets begrenzen und Ausfälle sichtbar machen.
 
-### 👤 [Für Nutzer – Tollgate ausprobieren](#für-nutzer)
+### 👤 [Für Nutzer – TollGate ausprobieren](#für-nutzer)
 
 ### 🛠️ [Für Entwickler – Code und technische Dokumentation](#für-entwickler)
 
@@ -16,7 +17,7 @@ Tollgate prüft eine Handlung, bevor ein Agent sie ausführt. Es kann Schleifen 
 
 Ein KI-Agent kann Werkzeuge benutzen, Internetdienste aufrufen und dabei Kosten verursachen. Wenn etwas schiefläuft, kann er denselben Aufruf immer wieder ausführen.
 
-Tollgate sitzt davor. Es beantwortet eine Frage:
+TollGate sitzt davor. Es beantwortet eine Frage:
 
 > **Darf ich handeln?**
 
@@ -30,13 +31,13 @@ Tollgate sitzt davor. Es beantwortet eine Frage:
 
 ### In drei Schritten
 
-1. **Installieren** – Tollgate lokal einrichten.
+1. **Installieren** – TollGate lokal einrichten.
 2. **Testen** – eine ungefährliche Agentenschleife ausführen.
-3. **Prüfen** – sehen, warum Tollgate den Aufruf erlaubt oder blockiert hat.
+3. **Prüfen** – sehen, warum TollGate den Aufruf erlaubt oder blockiert hat.
 
-### Was Tollgate nicht ist
+### Was TollGate nicht ist
 
-Tollgate ist kein KI-Modell, kein Agent und kein Passwort-Tresor. Es ersetzt auch nicht die Entscheidung des Menschen. Es ist eine eigene Kontrollschicht vor einer Handlung.
+TollGate ist kein KI-Modell, kein Agent und kein Passwort-Tresor. Es ersetzt auch nicht die Entscheidung des Menschen. Es ist eine eigene Kontrollschicht vor einer Handlung.
 
 ### Heutiger Stand – ehrlich
 
@@ -55,7 +56,7 @@ Tollgate ist kein KI-Modell, kein Agent und kein Passwort-Tresor. Es ersetzt auc
 
 ## Für Entwickler
 
-Tollgate ist ein vorgeschaltetes Admission Gate für Tool- und Modellaufrufe. Es entscheidet vor dem Request und hält den Grund der Entscheidung fest.
+TollGate ist ein vorgeschaltetes Admission Gate für Tool- und Modellaufrufe. Es entscheidet vor dem Request und hält den Grund der Entscheidung fest.
 
 ## How this is built / Wie dieses Projekt entsteht
 
@@ -72,7 +73,7 @@ Was überprüfbar sein muss: der Code, die Specs, die Tests. Reviews sind willko
 
 Open Source und öffentlich entwickelt. Kritik, Tests und Beiträge sind willkommen.
 
-Tollgate beantwortet **„Darf ich handeln?“** — ein eigenes Produkt, kein Plugin der anderen.
+TollGate beantwortet **„Darf ich handeln?“** — ein eigenes Produkt, kein Plugin der anderen.
 
 ```text
 AI Agent
@@ -83,7 +84,7 @@ AI Agent
    ├── tool call #4
    └── tool call #5
 
-Tollgate
+TollGate
 
 🛑 TOOL LOOP LIMIT EXCEEDED
 
@@ -139,7 +140,7 @@ If that path is confusing, **stop shipping features** — fix the path.
 | Agent frameworks (LangGraph, CrewAI, …) | sit in front of tools + LLMs |
 | n8n / automation | stop workflow agent-loops at the gate |
 
-**Wedge:** LiteLLM connects models. Helicone shows traffic. **Tollgate keeps agents in line.**
+**Wedge:** LiteLLM connects models. Helicone shows traffic. **TollGate keeps agents in line.**
 
 ---
 
@@ -177,7 +178,7 @@ export OPENAI_API_KEY=support-agent   # open mode label, or id:secret
 
 ## vs gateways (optional reading)
 
-| | **Tollgate** | LiteLLM | Helicone |
+| | **TollGate** | LiteLLM | Helicone |
 |--|--------------|---------|----------|
 | Core job | **Agent safety + DR proof** | Multi-provider proxy | Observability |
 | Pre-admission hard deny | ✅ | optional | mostly post-hoc |
