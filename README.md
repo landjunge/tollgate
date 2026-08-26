@@ -35,10 +35,14 @@
 
 Ich arbeite anders: Ich entwickle Systeme und Produkte mit KI als technischem Partner.
 
-Produktvision, Prioritäten und Architekturentscheidungen kommen von mir. Implementierung, Tests und Dokumentation entstehen mit KI als technischem Partner. Ich bin kein klassischer Softwareentwickler. Stärke: Probleme erkennen, in eigenständige Werkzeuge zerlegen, Schnittstellen und Grenzen klar halten.
+Meine Stärke liegt darin, Probleme zu erkennen, Systeme in eigenständige Werkzeuge zu zerlegen und klare Grenzen und Schnittstellen zu definieren. Produktvision, Prioritäten und Architekturentscheidungen kommen von mir. KI ist der technische Partner für Implementierung, Tests und Dokumentation.
+
+Ich bin kein klassischer Softwareentwickler und kein Security-Spezialist. Die technische Umsetzung entsteht gemeinsam mit KI und muss – besonders bei sicherheitskritischen Projekten – überprüfbar sein.
 
 Was ich einbringe: Idee, Systemdenken, Anforderungen, gewünschtes Verhalten, klare Grenzen.  
 Was überprüfbar sein muss: der Code, die Specs, die Tests. Reviews sind willkommen.
+
+Open Source und öffentlich entwickelt. Kritik, Tests und Beiträge sind willkommen.
 
 Tollgate beantwortet **„Darf ich handeln?“** — ein eigenes Produkt, kein Plugin der anderen.
 
