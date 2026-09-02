@@ -19,6 +19,7 @@ import time
 from typing import Any
 
 from tollgate.app_config import load_config
+from tollgate.consumers import normalize_consumer_id
 from tollgate.cost import is_high_risk
 from tollgate.gateway.context import RequestClass, RequestContext
 
@@ -97,7 +98,7 @@ def make_key(
         _stable_args(kwargs),
     ]
     if bool(cfg.get("include_consumer_in_key", True)):
-        parts.append((consumer or "").strip()[:64])
+        parts.append(normalize_consumer_id(consumer) if consumer else "")
     blob = "|".join(parts)
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 

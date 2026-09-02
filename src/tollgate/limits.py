@@ -8,6 +8,7 @@ from typing import Any
 from tollgate.app_config import is_provider_enabled, load_config, provider_cfg
 from tollgate.cost import check_cost_guard
 from tollgate.usage_ledger import consumer_usage, provider_usage
+from tollgate.consumers import normalize_consumer_id
 
 
 def _as_str_list(val: Any) -> list[str]:
@@ -39,7 +40,7 @@ def consumer_envelope(consumer: str) -> dict[str, Any]:
     envelopes = cfg.get("consumer_envelopes") or {}
     if not isinstance(envelopes, dict):
         return {}
-    cid = (consumer or "").strip()[:64] or "anonymous"
+    cid = normalize_consumer_id(consumer)
     block = envelopes.get(cid)
     if not isinstance(block, dict):
         block = envelopes.get("_default")
@@ -105,7 +106,7 @@ def check_consumer_scope(
     Rules (per axis): blocked_* always denies; if allowed_* non-empty, must match.
     Empty lists on an axis = no restriction for that axis.
     """
-    cid = (consumer or "").strip()[:64] or "anonymous"
+    cid = normalize_consumer_id(consumer)
     env = consumer_envelope(cid)
     pid = (provider or "").strip().lower()
     op_n = (op or "").strip().lower()
@@ -189,7 +190,7 @@ def check_consumer_limits(
 
     Independent of provider caps. 0 limits = pass-through (allowed).
     """
-    cid = (consumer or "").strip()[:64] or "anonymous"
+    cid = normalize_consumer_id(consumer)
     env = consumer_envelope(cid)
     max_calls = int(env.get("max_calls_day") or 0)
     max_tokens = int(env.get("max_tokens_day") or 0)
