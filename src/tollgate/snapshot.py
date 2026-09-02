@@ -138,7 +138,7 @@ def _read_tar_members(archive: Path) -> tuple[dict[str, Any], dict[str, bytes]]:
         for m in tar.getmembers():
             if not m.isfile():
                 continue
-            name = m.name.lstrip("./")
+            name = m.name.replace("\\", "/").lstrip("./")
             f = tar.extractfile(m)
             if f is None:
                 continue
@@ -149,8 +149,18 @@ def _read_tar_members(archive: Path) -> tuple[dict[str, Any], dict[str, bytes]]:
                 except Exception:  # noqa: BLE001
                     meta = {}
                 continue
-            # User/foo or just foo
-            base = name.split("/")[-1]
+            # Only `User/<file>` or a bare filename. Flattening `evil/Key.txt`
+            # or `User/../../Key.txt` onto Key.txt is how a fresh desk would
+            # accept a foreign secret file.
+            parts = [p for p in name.split("/") if p not in ("", ".")]
+            if any(p == ".." for p in parts):
+                continue
+            if len(parts) == 2 and parts[0] == "User":
+                base = parts[1]
+            elif len(parts) == 1:
+                base = parts[0]
+            else:
+                continue
             if not _safe_name(base):
                 continue
             if base == META_NAME:
@@ -164,6 +174,7 @@ def import_snapshot(
     *,
     dry_run: bool = False,
     replace: bool = False,
+    merge_config: bool = False,
     root: Path | None = None,
 ) -> dict[str, Any]:
     """
@@ -190,7 +201,14 @@ def import_snapshot(
         action = "write"
         if dest.is_file() and not replace:
             if name == "keys_app.json":
-                action = "merge"
+                # A snapshot is untrusted input: it may come from another desk,
+                # a USB stick, or a colleague. keys_app.json carries routing and
+                # provider entries, and a provider's base_url decides where real
+                # requests — and the keys attached to them — are sent. Merging it
+                # silently would let a prepared archive redirect traffic without
+                # the operator ever agreeing to a config change, so the merge now
+                # requires an explicit opt-in.
+                action = "merge" if merge_config else "skip_exists_config"
             elif name == "Key.txt":
                 action = "skip_exists_secret"
             else:
@@ -199,7 +217,7 @@ def import_snapshot(
 
         if dry_run:
             continue
-        if action == "skip_exists" or action == "skip_exists_secret":
+        if action in ("skip_exists", "skip_exists_secret", "skip_exists_config"):
             continue
 
         ud.mkdir(parents=True, exist_ok=True)
