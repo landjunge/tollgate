@@ -550,7 +550,16 @@ def main(argv: list[str] | None = None) -> None:
     snap.add_argument(
         "--replace",
         action="store_true",
-        help="import: overwrite existing files (default merges keys_app only)",
+        help="import: overwrite existing files, including keys_app.json",
+    )
+    snap.add_argument(
+        "--merge-config",
+        action="store_true",
+        help=(
+            "import: deep-merge keys_app.json from the archive onto the local one. "
+            "Only for snapshots you produced yourself — a foreign archive can "
+            "redirect a provider base_url and with it your API keys."
+        ),
     )
     snap.add_argument(
         "--dry-run",
@@ -921,6 +930,7 @@ def main(argv: list[str] | None = None) -> None:
             path,
             dry_run=bool(args.dry_run),
             replace=bool(args.replace),
+            merge_config=bool(getattr(args, "merge_config", False)),
         )
         print(json.dumps(result, indent=2, default=str))
         raise SystemExit(0 if result.get("ok") else 1)
@@ -1077,8 +1087,10 @@ def main(argv: list[str] | None = None) -> None:
                 )
             print(json.dumps({"ok": True, "envelopes": rows, "raw": envs}, indent=2, default=str))
             return
-        cid = (args.id or "").strip()[:64]
-        if not cid or cid == "anonymous":
+        from tollgate.consumers import ANONYMOUS, consumer_id_is_valid
+
+        cid = (args.id or "").strip()
+        if not cid or cid == ANONYMOUS or not consumer_id_is_valid(cid):
             print(json.dumps({"ok": False, "error": "invalid consumer id"}))
             raise SystemExit(1)
         cfg = load_config(force=True)

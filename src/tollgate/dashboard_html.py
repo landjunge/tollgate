@@ -507,6 +507,21 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 
 <script>
 const $ = (id) => document.getElementById(id);
+
+// Everything below builds DOM with innerHTML. Any value that originated outside
+// this process — consumer labels from X-Consumer-Key, provider ids from config,
+// chaos labels — must pass through esc() first. The dashboard shares an origin
+// with /v1/config, and in open mode every caller is admin, so markup rendered
+// here runs with full control-plane authority.
+function esc(v) {
+  if (v == null) return '';
+  return String(v)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 function key() { return ($('apiKey').value || 'desk').trim(); }
 function headers() {
   const k = key();
@@ -621,8 +636,8 @@ function renderOverview(ctrl, cert) {
     $('costSplit').innerHTML = consumers.slice(0, 12).map(c => {
       const day = c.max_usd_day ? money(c.max_usd_day) + '/day' : 'no day cap';
       const hour = c.max_usd_hour ? ' · ' + money(c.max_usd_hour) + '/hour' : '';
-      return `<div class="mini-agent" data-goto-agent="${c.consumer}">
-        <div class="n">${c.consumer}</div>
+      return `<div class="mini-agent" data-goto-agent="${esc(c.consumer)}">
+        <div class="n">${esc(c.consumer)}</div>
         <div class="s">${money4(c.usd)}</div>
         <div class="l">${day}${hour} · ${c.calls || 0} req</div>
       </div>`;
@@ -656,7 +671,7 @@ function renderOverview(ctrl, cert) {
       att.map(a => {
         const c = a.level === 'ok' ? 'ok' : (a.level === 'error' ? 'bad' : 'warn');
         const mark = a.level === 'ok' ? '✓' : (a.level === 'error' ? '⛔' : '⚠');
-        return `<div class="row"><span class="${c}">${mark} ${a.message || ''}</span><span class="muted">${a.code || ''}</span></div>`;
+        return `<div class="row"><span class="${c}">${mark} ${esc(a.message || '')}</span><span class="muted">${esc(a.code || '')}</span></div>`;
       }).join('');
   }
 
@@ -665,12 +680,12 @@ function renderOverview(ctrl, cert) {
     recos.push({ level: 'bad', text: 'Admission is frozen — no billable traffic.', href: null });
   }
   consumers.filter(c => !c.protected && c.consumer).forEach(c => {
-    recos.push({ level: 'warn', text: `«${c.consumer}» has weak limits — set day/hour budgets under Agents.`, href: '#agents' });
+    recos.push({ level: 'warn', text: `«${esc(c.consumer)}» has weak limits — set day/hour budgets under Agents.`, href: '#agents' });
   });
   consumers.filter(c => ['warn', 'likely_over', 'over_budget'].includes(c.status)).forEach(c => {
     recos.push({
       level: c.status === 'over_budget' ? 'bad' : 'warn',
-      text: `«${c.consumer}» ${money4(c.usd)}` + (c.max_usd_day ? ` / ${money(c.max_usd_day)} day` : '') + ` (${c.status})`,
+      text: `«${esc(c.consumer)}» ${money4(c.usd)}` + (c.max_usd_day ? ` / ${money(c.max_usd_day)} day` : '') + ` (${esc(c.status)})`,
       href: '#agents',
     });
   });
@@ -678,11 +693,11 @@ function renderOverview(ctrl, cert) {
   if (!last) {
     recos.push({ level: 'warn', text: 'Prove pending: no failover test yet. Needs ≥2 providers + keys.', href: '#prove' });
   } else if (last.survived === false) {
-    recos.push({ level: 'bad', text: `Last DR test failed for ${last.chaos_provider}.`, href: '#prove' });
+    recos.push({ level: 'bad', text: `Last DR test failed for ${esc(last.chaos_provider)}.`, href: '#prove' });
   }
   if (!recos.length) recos.push({ level: 'ok', text: 'Desk looks protected. Keep using real traffic.', href: null });
   $('reco').innerHTML = recos.map(r =>
-    `<div class="reco ${r.level}">${r.text}${r.href ? ` <a href="${r.href}">Open →</a>` : ''}</div>`
+    `<div class="reco ${r.level}">${esc(r.text)}${r.href ? ` <a href="${esc(r.href)}">Open →</a>` : ''}</div>`
   ).join('');
 
   const provs = (ctrl.providers || []).filter(p => p.enabled !== false).slice(0, 6);
@@ -691,7 +706,7 @@ function renderOverview(ctrl, cert) {
   } else {
     $('provGlance').innerHTML = provs.map(p =>
       `<div class="row">
-        <span><b>${p.provider}</b> <span class="pill ${cls(p.status)}">${p.status}</span></span>
+        <span><b>${esc(p.provider)}</b> <span class="pill ${cls(p.status)}">${esc(p.status)}</span></span>
         <span class="muted">${pct(p.success_rate)} · ${p.latency_ms_avg != null ? Math.round(p.latency_ms_avg) + 'ms' : '—'} · ${money4(p.usd)}</span>
       </div>`
     ).join('');
@@ -719,11 +734,11 @@ function renderAgents(ctrl) {
       : (c.status === 'warn' || c.status === 'likely_over') ? 'warn' : '';
     const st = c.protected ? (c.status === 'ok' ? 'Protected' : c.status) : 'Unprotected';
     const stc = c.protected && c.status === 'ok' ? 'ok' : cls(c.status);
-    return `<div class="agent-card ${cardTone(c)}" data-name="${c.consumer}" id="agent-card-${i}">
+    return `<div class="agent-card ${cardTone(c)}" data-name="${esc(c.consumer)}" id="agent-card-${i}">
       <div class="agent-top">
         <div>
-          <div class="agent-name">${c.consumer}</div>
-          <div class="agent-meta ${stc}">● ${st}${c.uses_default_only ? ' · default policy' : ''}</div>
+          <div class="agent-name">${esc(c.consumer)}</div>
+          <div class="agent-meta ${stc}">● ${esc(st)}${c.uses_default_only ? ' · default policy' : ''}</div>
         </div>
         <div class="agent-spend">
           <div class="big">${money4(used)}</div>
@@ -736,11 +751,11 @@ function renderAgents(ctrl) {
         <span class="muted">${c.calls || 0} requests · ${c.tokens || 0} tokens · EOD ~ ${money4(c.projected_usd_eod)}</span>
         <div style="display:flex;gap:.4rem">
           <button type="button" class="ghost sm" data-edit="${i}">Edit limits</button>
-          <button type="button" class="ghost sm" data-loop="${c.consumer}">Test loop</button>
+          <button type="button" class="ghost sm" data-loop="${esc(c.consumer)}">Test loop</button>
         </div>
       </div>
       <div class="editor" id="agent-d-${i}">
-        <h3>Limits for «${c.consumer}»</h3>
+        <h3>Limits for «${esc(c.consumer)}»</h3>
         <div class="fields">
           <div class="field">
             <label>Day budget ($)</label>
@@ -769,7 +784,7 @@ function renderAgents(ctrl) {
           </div>
         </div>
         <div class="actions">
-          <button type="button" data-save="${i}" data-name="${c.consumer}">Save limits</button>
+          <button type="button" data-save="${i}" data-name="${esc(c.consumer)}">Save limits</button>
           <button type="button" class="ghost" data-edit-close="${i}">Cancel</button>
           <span id="ed-msg-${i}" class="muted" style="font-size:.85rem"></span>
         </div>
@@ -814,8 +829,8 @@ function renderProviders(ctrl) {
   }
   $('provTable').innerHTML = rows.map((p, i) =>
     `<tr class="click" data-prov="${i}">
-      <td><b>${p.provider}</b>${p.enabled === false ? ' <span class="muted">(off)</span>' : ''}</td>
-      <td class="${cls(p.status)}">${p.status}</td>
+      <td><b>${esc(p.provider)}</b>${p.enabled === false ? ' <span class="muted">(off)</span>' : ''}</td>
+      <td class="${cls(p.status)}">${esc(p.status)}</td>
       <td>${pct(p.success_rate)}</td>
       <td>${p.latency_ms_avg != null ? Math.round(p.latency_ms_avg) + ' ms' : '—'}</td>
       <td>${money4(p.usd)}</td>
@@ -826,10 +841,10 @@ function renderProviders(ctrl) {
     tr.onclick = () => {
       const p = rows[Number(tr.dataset.prov)];
       $('provDetail').innerHTML = `<div class="card">
-        <b style="font-size:1.1rem">${p.provider}</b>
+        <b style="font-size:1.1rem">${esc(p.provider)}</b>
         <div class="kv" style="margin-top:.75rem">
           <div><b>Health score</b>${p.score ?? '—'}</div>
-          <div><b>Status</b><span class="${cls(p.status)}">${p.status}</span></div>
+          <div><b>Status</b><span class="${cls(p.status)}">${esc(p.status)}</span></div>
           <div><b>Requests today</b>${p.calls ?? 0}</div>
           <div><b>Errors</b>${p.errors ?? 0}</div>
           <div><b>Success</b>${pct(p.success_rate)}</div>
@@ -852,7 +867,7 @@ function renderProve(ctrl, cert) {
       <div class="stat"><b>${res.policy_compliant === true ? 'OK' : (res.policy_compliant === false ? '⚠' : '—')}</b><span>Policy</span></div>
       <div class="stat"><b>${(ctrl.chaos && ctrl.chaos.history || []).length}</b><span>DR history</span></div>
     </div>
-    <p class="muted" style="margin:.75rem 0 0">${res.summary || ctrl.promise || ''}</p>`;
+    <p class="muted" style="margin:.75rem 0 0">${esc(res.summary || ctrl.promise || '')}</p>`;
   if (!last) {
     $('proveLast').innerHTML = `
       <div style="margin-bottom:.5rem">Last test: <span class="warn">Never run</span></div>
@@ -862,16 +877,16 @@ function renderProve(ctrl, cert) {
   } else {
     const ok = last.survived;
     $('proveLast').innerHTML = `Last test: <span class="${ok ? 'ok' : 'bad'}">${ok ? '✓ PASSED' : '✗ FAILED'}</span>
-      · ${last.chaos_provider} · ${last.successful || 0}/${last.requests_tested || 0} · recovery ${last.recovery_time_ms_best ?? '—'} ms
-      <div style="margin-top:.35rem">${last.message || ''}</div>`;
+      · ${esc(last.chaos_provider)} · ${last.successful || 0}/${last.requests_tested || 0} · recovery ${last.recovery_time_ms_best ?? '—'} ms
+      <div style="margin-top:.35rem">${esc(last.message || '')}</div>`;
   }
   if (cert) {
     const checks = (cert.checks || []).map(ch =>
-      `<div class="row"><span>${ch.label}</span><span class="${cls(ch.status)}">${ch.status}</span></div>
-       ${ch.detail ? `<div class="muted" style="font-size:.8rem;margin:-.2rem 0 .45rem">${ch.detail}</div>` : ''}`
+      `<div class="row"><span>${esc(ch.label)}</span><span class="${cls(ch.status)}">${esc(ch.status)}</span></div>
+       ${ch.detail ? `<div class="muted" style="font-size:.8rem;margin:-.2rem 0 .45rem">${esc(ch.detail)}</div>` : ''}`
     ).join('');
     $('certCard').innerHTML = `<h2 class="sec" style="margin-top:0">AI Reliability Report</h2>
-      <div class="muted">${cert.application || ''} · overall <b class="${cls(cert.overall)}">${cert.overall}</b></div>
+      <div class="muted">${esc(cert.application || '')} · overall <b class="${cls(cert.overall)}">${esc(cert.overall)}</b></div>
       ${checks}
       <div style="margin-top:.75rem">Resilience <b>${cert.resilience_score ?? '—'}</b>/100</div>`;
   }
@@ -888,10 +903,10 @@ function renderAudit(events) {
     const short = String(detail).slice(0, 90);
     return `<tr>
       <td class="muted">${when(e.ts)}</td>
-      <td>${e.consumer || '—'}</td>
-      <td class="${ev === 'admit_deny' ? 'bad' : ''}">${ev}</td>
-      <td>${e.provider || '—'}</td>
-      <td class="muted" title="${String(detail).replace(/"/g, '&quot;')}">${short}</td>
+      <td>${esc(e.consumer || '—')}</td>
+      <td class="${ev === 'admit_deny' ? 'bad' : ''}">${esc(ev)}</td>
+      <td>${esc(e.provider || '—')}</td>
+      <td class="muted" title="${esc(short)}">${esc(short)}</td>
     </tr>`;
   }).join('');
 }
@@ -916,7 +931,7 @@ async function loadAudit(deniesOnly) {
     const d = await api('/v1/audit' + q);
     renderAudit(d.events || []);
   } catch (e) {
-    $('auditTable').innerHTML = `<tr><td colspan="5" class="bad">${e.message}</td></tr>`;
+    $('auditTable').innerHTML = `<tr><td colspan="5" class="bad">${esc(e.message)}</td></tr>`;
   }
 }
 
@@ -1130,7 +1145,7 @@ function renderObSteps() {
       <p class="sub">Application / agent lane name (consumer id).</p>
       <div class="field">
         <label>Application name</label>
-        <input id="obName" value="${OB.name}" placeholder="support-agent"/>
+        <input id="obName" value="${esc(OB.name)}" placeholder="support-agent"/>
       </div>`;
   } else if (OB.step === 2) {
     body.innerHTML = `
@@ -1151,7 +1166,7 @@ function renderObSteps() {
   } else {
     body.innerHTML = `
       <h1>You're protected</h1>
-      <p class="sub">Lane <b>${OB.name}</b> will get hard limits.</p>
+      <p class="sub">Lane <b>${esc(OB.name)}</b> will get hard limits.</p>
       <div class="ob-check ok">✓ Budget configured</div>
       <div class="ob-check ok">✓ Tool-loop limit enabled</div>
       <div class="ob-check ok">✓ Rate limit enabled</div>`;

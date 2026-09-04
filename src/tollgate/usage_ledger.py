@@ -79,10 +79,15 @@ def _empty_consumer() -> dict[str, Any]:
 
 
 def _norm_consumer(consumer: str | None) -> str:
-    cid = (consumer or "").strip()[:64]
-    if not cid or cid in ("anonymous", "*"):
-        return "anonymous"
-    return cid
+    """Ledger key for a consumer lane.
+
+    Delegates to the single edge normalizer so an id that the ledger stores can
+    never differ from the id that admission checked — and can never carry markup
+    into GET /v1/control and the dashboard DOM.
+    """
+    from tollgate.consumers import normalize_consumer_id
+
+    return normalize_consumer_id(consumer)
 
 
 def load_usage(*, root: Path | None = None) -> dict[str, Any]:

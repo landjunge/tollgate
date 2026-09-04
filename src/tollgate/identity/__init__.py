@@ -17,8 +17,9 @@ __all__ = [
 
 def normalize_consumer(consumer: str | None, agent_id: str | None = None) -> str:
     """Canonical consumer id for admit / ledger / audit."""
-    c = (consumer or agent_id or "").strip()[:64]
-    return c or "anonymous"
+    from tollgate.consumers import normalize_consumer_id
+
+    return normalize_consumer_id(consumer or agent_id)
 
 
 def consumer_envelope(consumer: str) -> dict[str, Any]:
