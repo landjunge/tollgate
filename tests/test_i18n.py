@@ -13,9 +13,12 @@ from pathlib import Path
 
 import pytest
 
-from tollgate import cli, help_text, i18n
+from tollgate import cli, dashboard_html, help_text, i18n
 
 CLI_SOURCE = Path(cli.__file__)
+DASHBOARD_SOURCE = Path(dashboard_html.__file__)
+# {{schluessel}} ist die Marke im Dashboard-Template.
+MARKER = re.compile(r"\{\{([\w.]+)\}\}")
 
 # Eigennamen, Fachbegriffe und Zeichen, die in beiden Sprachen gleich stehen.
 SAME_IN_BOTH = {
@@ -31,9 +34,12 @@ SAME_IN_BOTH = {
     # Die Themennamen tippt der Nutzer ein (tollgate help troubleshoot) und
     # duerfen deshalb in keiner Sprache uebersetzt werden.
     "ui", "api", "ops", "env", "faq", "troubleshoot", "commands",
+    # Produktbegriffe und Woerter, die im Deutschen genauso stehen.
+    "control", "room", "github", "help", "report", "detail",
+    "requests", "req", "tools", "tokens",
 }
 # Satzzeichen, Symbole und reine Platzhalter tragen keine Sprache.
-SYMBOLS = re.compile(r"^[\s·—–\-−→←+×÷/|,.:;!?()\[\]{}<>#*&%@0-9…\"'`~^=°$§]*$")
+SYMBOLS = re.compile(r"^[\s·—–\-−→←+×÷/|,.:;!?()\[\]{}<>«»#*&%@0-9…\"'`~^=°$§]*$")
 PLACEHOLDER = re.compile(r"\{[^{}]*\}")
 # Befehle, Flags, Pfade, URLs und Variablennamen sind sprachneutral.
 NEUTRAL = re.compile(
@@ -56,9 +62,20 @@ CLI_ALLOWED = {
 }
 
 
+# Ganze Wortgruppen, die Produktnamen sind und deshalb in beiden Sprachen
+# gleich stehen. Bewusst die Wortgruppe, nicht das einzelne Wort: "Reliability"
+# allein wird sehr wohl uebersetzt (ui.reliability -> Verlässlichkeit).
+PRODUCT_NAMES = {
+    "AI Reliability Report",
+    "Control Room",
+}
+
+
 def _unexpected(texts: list[str]) -> list[str]:
     out = []
     for text in texts:
+        if text in PRODUCT_NAMES:
+            continue
         bare = PLACEHOLDER.sub(" ", text)
         words = [w for w in re.split(r"[\s·—–/|,.:;!?()\[\]]+", bare) if w]
         if all(w.lower().strip("-_") in SAME_IN_BOTH or SYMBOLS.match(w)
@@ -225,10 +242,22 @@ def test_cli_keys_exist() -> None:
     assert not missing, f"fehlende Schlüssel: {missing}"
 
 
+def _dashboard_markers() -> set[str]:
+    """Marken {{schluessel}} und Schluessel, die der Renderer direkt nachschlägt."""
+    source = DASHBOARD_SOURCE.read_text(encoding="utf-8")
+    keys = set(MARKER.findall(source))
+    keys |= set(re.findall(r'"(ui\.[\w.]+)"', source))
+    return keys
+
+
 def test_every_catalog_key_is_used() -> None:
     """Kein toter Schlüssel — sonst wächst der Katalog ins Nichts."""
     used = {text for _, text in _cli_string_literals()
             if text.startswith(("cmd.", "cli.", "out."))}
+    used |= _dashboard_markers()
+    # Diese vier setzt dashboard_html() selbst zusammen, sie stehen nicht im
+    # Katalog: die Sprachkennung und die beiden Klassen des Umschalters.
+    used |= {"ui.html_lang", "ui.lang_label", "ui.lang_de_class", "ui.lang_en_class"}
     declared = set(i18n.CATALOG)
     assert not (declared - used), f"unbenutzte Schlüssel: {sorted(declared - used)}"
 
@@ -309,3 +338,147 @@ def test_cli_speaks_both_languages(capsys) -> None:
     assert english != german
     assert "FAQ (short)" in english
     assert "Häufige Fragen" in german
+
+
+# ------------------------------------------------------------- Dashboard
+
+# Textknoten, die Javascript erzeugt, und Zeichen ohne Sprache.
+JS_FRAGMENT = re.compile(r"[=;(){}\[\]`$]|=>|\.\w|\|\|")
+DASHBOARD_WORD = re.compile(r"[A-Za-zÄÖÜäöüß]{2,}")
+# Ein Element mit eigenem lang= sagt ausdruecklich, in welcher Sprache sein
+# Text steht — die Knoepfe des Umschalters heissen in jeder Sprache DE und EN.
+LANG_MARKED = re.compile(r'<[^<>]*\blang="[a-z]{2}"[^<>]*>[^<>]*<')
+# Beispielwerte in einem Feld sind das, was man eintippt, keine Prosa.
+IDENTIFIER = re.compile(r"^[a-z][a-z0-9_-]*$")
+
+
+def test_no_hardcoded_text_in_dashboard() -> None:
+    """Kein sichtbarer Text darf am Katalog vorbei ins Control Room."""
+    source = DASHBOARD_SOURCE.read_text(encoding="utf-8")
+    body = source[source.index("<body") :]
+    lang_marked = {m.start() for m in LANG_MARKED.finditer(body)}
+    offenders = []
+    for match in re.finditer(r">([^<>{}`$]{2,90})<", body):
+        text = " ".join(match.group(1).split())
+        if not DASHBOARD_WORD.search(text) or JS_FRAGMENT.search(text):
+            continue
+        if any(start <= match.start() < start + 200 for start in lang_marked):
+            continue
+        line = source[: source.index("<body") + match.start()].count("\n") + 1
+        offenders.append(f"{DASHBOARD_SOURCE.name}:{line}: {text!r}")
+    for match in re.finditer(r'(?:title|placeholder|aria-label|alt)="([^"{}]{3,})"', body):
+        text = match.group(1)
+        if not DASHBOARD_WORD.search(text) or JS_FRAGMENT.search(text):
+            continue
+        if IDENTIFIER.match(text):
+            continue
+        line = source[: source.index("<body") + match.start()].count("\n") + 1
+        offenders.append(f"{DASHBOARD_SOURCE.name}:{line}: {text!r}")
+    assert not offenders, (
+        "Text ohne Übersetzung im Dashboard. Statt des Textes gehört dort "
+        "eine Marke {{schluessel}} hin:\n" + "\n".join(offenders))
+
+
+# Javascript baut Text auch aus Zeichenketten, nicht nur aus Knoten:
+#   ['Spent today', money(s.usd)]
+# Ohne diese Regel bleibt genau das unentdeckt — so war es vor dem Umbau bei
+# 43 Texten, darunter alle Kennzahlen-Beschriftungen.
+JS_STRING = re.compile(r"'([^'\\\n]{2,90})'|\"([^\"\\\n]{2,90})\"")
+# Bezeichner, Selektoren, URLs und Ereignisnamen sind kein Text.
+NOT_PROSE = re.compile(r"^[\w.#\-/?=&:]*$|^(?:#|\.|/|https?:|\?)")
+# CSS-Klassen und technische Attributwerte werden vor der Suche geschwaerzt.
+# Sie am Aussehen zu erkennen geht schief: "pill acc" und "Spent today" sehen
+# gleich aus, nur eins davon ist Text fuer Menschen.
+TECHNICAL_ATTR = re.compile(
+    r'\b(?:class|className|id|style|data-[\w-]+|type|role|autocomplete|href|src)='
+    r'"[^"]*"')
+CLASSLIST = re.compile(r"classList\.\w+\([^)]*\)")
+# CSS-Selektoren und Nutzlasten, die an eine Schnittstelle gehen.
+SELECTOR = re.compile(r"querySelector(?:All)?\([^)]*\)|closest\([^)]*\)")
+PAYLOAD = re.compile(r"arguments:\s*\{[^{}]*\}")
+
+
+def test_no_hardcoded_text_in_dashboard_javascript() -> None:
+    """Auch Text, den Javascript zusammensetzt, gehört in den Katalog."""
+    source = DASHBOARD_SOURCE.read_text(encoding="utf-8")
+    script = source.index("<script>")
+    # Technische Werte schwaerzen, Laenge erhalten, damit die Zeilennummer stimmt.
+    body = source[script:]
+    for pattern in (TECHNICAL_ATTR, CLASSLIST, SELECTOR, PAYLOAD):
+        body = pattern.sub(lambda m: " " * len(m.group(0)), body)
+    offenders = []
+    for match in JS_STRING.finditer(body):
+        text = (match.group(1) or match.group(2) or "").strip()
+        if not DASHBOARD_WORD.search(text) or "{{" in text:
+            continue
+        if "${" in text or JS_FRAGMENT.search(text):
+            continue
+        # Prosa hat ein Satzzeichen, einen Umlaut oder ein Sonderzeichen —
+        # ein reiner Bezeichner wie "pill acc" oder "agent-card" hat das nicht.
+        if NOT_PROSE.match(text):
+            continue
+        line = source[: script + match.start()].count("\n") + 1
+        offenders.append(f"{DASHBOARD_SOURCE.name}:{line}: {text!r}")
+    assert not offenders, (
+        "Text ohne Übersetzung im Javascript des Dashboards:\n" + "\n".join(offenders))
+
+
+def test_dashboard_text_cannot_break_the_page() -> None:
+    """Kein Dashboard-Text darf die Seite zerreissen.
+
+    Die Marken werden in HTML UND in Javascript-Zeichenketten eingesetzt. Ein
+    gerades Apostroph beendet dort die Zeichenkette: aus 'Los geht's' wird ein
+    Syntaxfehler, und das gesamte Dashboard-Javascript ist tot. Genau so ist es
+    beim Bau dieser Uebersetzung passiert.
+
+    Typografische Anfuehrungszeichen (’ „ “ « ») sind erlaubt und ohnehin die
+    richtige Form.
+    """
+    forbidden = {"'": "gerades Apostroph", '"': "gerades Anfuehrungszeichen",
+                 "\\": "Backslash", "</": "schliessendes Tag"}
+    offenders = []
+    for key, entry in i18n.CATALOG.items():
+        if not key.startswith("ui."):
+            continue
+        for language, text in entry.items():
+            for char, name in forbidden.items():
+                if char in text:
+                    offenders.append(f"{key}/{language}: {name} in {text!r}")
+    assert not offenders, (
+        "Zeichen, die HTML oder Javascript zerreissen. Typografische Formen "
+        "verwenden (’ statt '):\n" + "\n".join(offenders))
+
+
+def test_dashboard_markers_exist_in_catalog() -> None:
+    source = DASHBOARD_SOURCE.read_text(encoding="utf-8")
+    markers = set(MARKER.findall(source))
+    assert markers, "keine Marken gefunden — der Test greift ins Leere"
+    # Vier Marken setzt der Renderer selbst zusammen.
+    rendered = {"ui.html_lang", "ui.lang_label", "ui.lang_de_class", "ui.lang_en_class"}
+    missing = sorted(key for key in markers - rendered if key not in i18n.CATALOG)
+    assert not missing, f"Marken ohne Katalog-Eintrag: {missing}"
+
+
+@pytest.mark.parametrize("language", i18n.LANGUAGES)
+def test_dashboard_renders_without_leftover_markers(language) -> None:
+    page = dashboard_html.dashboard_html(language)
+    assert "{{" not in page, "unersetzte Marke im ausgelieferten HTML"
+    assert f'<html lang="{language}">' in page, "lang passt nicht zum Inhalt"
+
+
+def test_dashboard_really_differs_between_languages() -> None:
+    english = dashboard_html.dashboard_html("en")
+    german = dashboard_html.dashboard_html("de")
+    assert english != german
+    assert i18n.translate("ui.tab.overview", "en") in english
+    assert i18n.translate("ui.tab.overview", "de") in german
+    # Die englische Seite darf keinen deutschen Text mehr tragen — vor dem
+    # Umbau standen vier deutsche Tooltips auf englischen Beschriftungen.
+    for key in ("ui.pill.day", "ui.pill.hour", "ui.pill.request", "ui.pill.tool_stop"):
+        assert i18n.translate(key, "de") not in english, f"{key}: deutscher Text in EN"
+
+
+def test_dashboard_language_switch_marks_the_current_one() -> None:
+    german = dashboard_html.dashboard_html("de")
+    assert 'lang="de" class="on"' in german
+    assert 'lang="en" class=""' in german

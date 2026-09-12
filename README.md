@@ -191,6 +191,15 @@ shell never lands on a language nobody chose.
 The section words argparse prints itself (`usage:`, `options:`) come from
 Python and stay English.
 
+The Control Room at `/dashboard` follows the same choice: `?lang=de` picks a
+language and is remembered in a cookie for a year, otherwise the browser
+decides. The switch sits in the header and inside the setup wizard, so it is
+reachable even on a first visit.
+
+Not yet translated: text that arrives from the API (`/v1/control` headline and
+recommendations). Those would need the API to carry codes instead of English
+sentences — a change to the JSON contract, tracked separately.
+
 ---
 
 ## vs gateways (optional reading)

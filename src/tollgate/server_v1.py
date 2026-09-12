@@ -25,11 +25,11 @@ import os
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, Header, HTTPException, Query
+from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from tollgate import __version__, get_keys_service, routed_chat
+from tollgate import __version__, get_keys_service, i18n, routed_chat
 from tollgate.consumers import auth_status, verify_consumer
 from tollgate.gateway.context import RequestClass, RequestContext
 from tollgate.gateway.entry import gateway_call
@@ -80,6 +80,8 @@ def _bootstrap_env() -> None:
 
 _bootstrap_env()
 
+
+LANGUAGE_COOKIE = "tollgate_lang"
 
 @asynccontextmanager
 async def _lifespan(_app: FastAPI):
@@ -622,11 +624,35 @@ def circuits_reset(
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
-def dashboard_page() -> HTMLResponse:
-    """Human-readable control plane (no SPA build)."""
-    from tollgate.dashboard_html import DASHBOARD_HTML
+def dashboard_page(request: Request) -> HTMLResponse:
+    """Human-readable control plane (no SPA build).
 
-    return HTMLResponse(DASHBOARD_HTML)
+    Sprache: ?lang= schlaegt das Cookie, das Cookie schlaegt den Browser.
+    Die Wahl wird ein Jahr lang gemerkt.
+    """
+    from tollgate.dashboard_html import dashboard_html
+
+    chosen = request.query_params.get("lang")
+    if chosen:
+        language = i18n.normalise(chosen)
+    else:
+        cookie = request.cookies.get(LANGUAGE_COOKIE)
+        language = (
+            i18n.normalise(cookie)
+            if cookie
+            else i18n.from_accept_header(request.headers.get("accept-language"))
+        )
+
+    response = HTMLResponse(dashboard_html(language))
+    if chosen:
+        response.set_cookie(
+            LANGUAGE_COOKIE,
+            language,
+            max_age=31536000,
+            samesite="lax",
+            httponly=False,
+        )
+    return response
 
 
 @app.get("/v1/providers")

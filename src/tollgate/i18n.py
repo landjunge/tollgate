@@ -435,6 +435,651 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "[tollgate] open mode (local desk) · dashboard "
               "http://{host}:{port}/dashboard",
     },
+    # --- Dashboard (Control Room) ---
+    "ui.wizard.skip": {
+        "de": "Überspringen",
+        "en": "Skip",
+    },
+    "ui.wizard.back": {
+        "de": "Zurück",
+        "en": "Back",
+    },
+    "ui.wizard.continue": {
+        "de": "Weiter",
+        "en": "Continue",
+    },
+    "ui.brand": {
+        "de": "TOLLGATE",
+        "en": "TOLLGATE",
+    },
+    "ui.setup": {
+        "de": "Einrichten",
+        "en": "Setup",
+    },
+    "ui.key": {
+        "de": "Schlüssel",
+        "en": "key",
+    },
+    "ui.tab.overview": {
+        "de": "Überblick",
+        "en": "Overview",
+    },
+    "ui.tab.agents": {
+        "de": "Agenten",
+        "en": "Agents",
+    },
+    "ui.tab.providers": {
+        "de": "Provider",
+        "en": "Providers",
+    },
+    "ui.tab.prove": {
+        "de": "Prove",
+        "en": "Prove",
+    },
+    "ui.tab.audit": {
+        "de": "Audit",
+        "en": "Audit",
+    },
+    "ui.control_room": {
+        "de": "Control Room",
+        "en": "Control Room",
+    },
+    "ui.overview.lead": {
+        "de": "Ist deine AI sicher, funktioniert sie, und was ist als Nächstes zu tun?",
+        "en": "Is your AI safe, does it work, and what must you do next?",
+    },
+    "ui.reliability": {
+        "de": "Verlässlichkeit",
+        "en": "Reliability",
+    },
+    "ui.agents.heading": {
+        "de": "Agenten · Ausgaben &amp; Grenzen",
+        "en": "Agents · spend &amp; limits",
+    },
+    "ui.loading": {
+        "de": "Wird geladen…",
+        "en": "Loading…",
+    },
+    "ui.manage_limits": {
+        "de": "Grenzen verwalten →",
+        "en": "Manage limits →",
+    },
+    "ui.needs_attention": {
+        "de": "Braucht Aufmerksamkeit",
+        "en": "Needs attention",
+    },
+    "ui.recommendations": {
+        "de": "Empfehlungen",
+        "en": "Recommendations",
+    },
+    "ui.test_loop_block": {
+        "de": "Tool-Schleife testen",
+        "en": "Test tool-loop block",
+    },
+    "ui.unfreeze": {
+        "de": "Zulassung wieder freigeben",
+        "en": "Unfreeze admission",
+    },
+    "ui.limits.intro_a": {
+        "de": "Jede Spur (Agent / Anwendung) hat ihre eigenen harten Grenzen. Öffne",
+        "en": "Each lane (agent / app) has its own hard limits. Open",
+    },
+    "ui.limits.edit": {
+        "de": "Grenzen bearbeiten",
+        "en": "Edit limits",
+    },
+    "ui.limits.intro_b": {
+        "de": ", um Tages-, Stunden- und Request-Budget zu ändern.",
+        "en": "to change day, hour, and per-request budgets.",
+    },
+    "ui.providers.lead": {
+        "de": "Welcher Provider läuft gerade am besten — Zustand, keine Konfigurationsliste.",
+        "en": "Which provider works best right now — health, not a config dump.",
+    },
+    "ui.col.provider": {
+        "de": "Provider",
+        "en": "Provider",
+    },
+    "ui.col.health": {
+        "de": "Zustand",
+        "en": "Health",
+    },
+    "ui.col.success": {
+        "de": "Erfolg",
+        "en": "Success",
+    },
+    "ui.col.latency": {
+        "de": "Antwortzeit",
+        "en": "Latency",
+    },
+    "ui.col.cost_day": {
+        "de": "Kosten heute",
+        "en": "Cost day",
+    },
+    "ui.col.circuit": {
+        "de": "Schutzschalter",
+        "en": "Circuit",
+    },
+    "ui.prove.lead": {
+        "de": "Schaltet es wirklich um — oder steht es nur in der Konfiguration?",
+        "en": "Is failover real — or only configured?",
+    },
+    "ui.prove.test_title": {
+        "de": "Umschalttest für Provider",
+        "en": "Provider failover test",
+    },
+    "ui.prove.last_none": {
+        "de": "Letzter Test: —",
+        "en": "Last test: —",
+    },
+    "ui.prove.run": {
+        "de": "Test starten",
+        "en": "Run test",
+    },
+    "ui.prove.refresh_cert": {
+        "de": "Zeugnis erneuern",
+        "en": "Refresh certificate",
+    },
+    "ui.audit.lead": {
+        "de": "Was Tollgate zugelassen, geblockt oder umgeschaltet hat — nur Betrieb, keine Geheimnisse.",
+        "en": "What Tollgate allowed, blocked, or failed over — ops only, no secrets.",
+    },
+    "ui.refresh": {
+        "de": "Neu laden",
+        "en": "Refresh",
+    },
+    "ui.denies_only": {
+        "de": "Nur Ablehnungen",
+        "en": "Denies only",
+    },
+    "ui.col.when": {
+        "de": "Wann",
+        "en": "When",
+    },
+    "ui.col.agent": {
+        "de": "Agent",
+        "en": "Agent",
+    },
+    "ui.col.event": {
+        "de": "Ereignis",
+        "en": "Event",
+    },
+    "ui.col.detail": {
+        "de": "Detail",
+        "en": "Detail",
+    },
+    "ui.footer.lead": {
+        "de": "Sicherheitsschicht für AI-Agenten · kein Gateway-Katalog ·",
+        "en": "Safety layer for AI agents · not a gateway catalog ·",
+    },
+    "ui.footer.api": {
+        "de": "API",
+        "en": "API",
+    },
+    "ui.footer.website": {
+        "de": "Webseite",
+        "en": "Website",
+    },
+    "ui.footer.github": {
+        "de": "GitHub",
+        "en": "GitHub",
+    },
+    "ui.footer.help": {
+        "de": "tollgate help",
+        "en": "tollgate help",
+    },
+    "ui.no_hard_limits": {
+        "de": "Keine harten Grenzen",
+        "en": "No hard limits",
+    },
+    "ui.agents.none_traffic": {
+        "de": "Noch keine Agenten — schick Verkehr, dann setz die Grenzen unter Agenten.",
+        "en": "No agents yet — send traffic, then set limits under Agents.",
+    },
+    "ui.nothing_urgent": {
+        "de": "✓ Nichts Dringendes — Agenten unter Kontrolle",
+        "en": "✓ Nothing urgent — agents under control",
+    },
+    "ui.open_arrow": {
+        "de": "Öffnen →",
+        "en": "Open →",
+    },
+    "ui.no_provider_traffic": {
+        "de": "Noch kein Provider-Verkehr",
+        "en": "No provider traffic yet",
+    },
+    "ui.agents.none": {
+        "de": "Noch keine Agenten.",
+        "en": "No agents yet.",
+    },
+    "ui.protect_first": {
+        "de": "Ersten Agenten schützen",
+        "en": "Protect first agent",
+    },
+    "ui.test_loop": {
+        "de": "Schleife testen",
+        "en": "Test loop",
+    },
+    "ui.budget.day": {
+        "de": "Tagesbudget ($)",
+        "en": "Day budget ($)",
+    },
+    "ui.budget.day_hint": {
+        "de": "Harter Stopp für den Kalendertag",
+        "en": "Hard stop for the calendar day",
+    },
+    "ui.budget.hour": {
+        "de": "Stundenbudget ($)",
+        "en": "Hour budget ($)",
+    },
+    "ui.budget.hour_hint": {
+        "de": "Oft der Vorgabewert „$2“ — unabhängig vom Tag",
+        "en": "Often the “$2” default — separate from day",
+    },
+    "ui.budget.request": {
+        "de": "Max $ / Request",
+        "en": "Max $ / request",
+    },
+    "ui.budget.request_hint": {
+        "de": "Blockt einzelne Aufrufe, die zu groß sind",
+        "en": "Blocks oversized single calls",
+    },
+    "ui.budget.tool_calls": {
+        "de": "Max Tool-Aufrufe",
+        "en": "Max tool-calls",
+    },
+    "ui.budget.tool_calls_hint": {
+        "de": "Stoppt Agenten-Schleifen, die davonlaufen",
+        "en": "Stops runaway agent loops",
+    },
+    "ui.budget.rpm": {
+        "de": "Max Req / Minute",
+        "en": "Max req / minute",
+    },
+    "ui.budget.rpm_hint": {
+        "de": "Ratenbegrenzung je Spur",
+        "en": "Rate limit per lane",
+    },
+    "ui.save_limits": {
+        "de": "Grenzen speichern",
+        "en": "Save limits",
+    },
+    "ui.cancel": {
+        "de": "Abbrechen",
+        "en": "Cancel",
+    },
+    "ui.no_provider_data": {
+        "de": "Noch keine Provider-Daten",
+        "en": "No provider data yet",
+    },
+    "ui.off": {
+        "de": "(aus)",
+        "en": "(off)",
+    },
+    "ui.health_score": {
+        "de": "Zustandswert",
+        "en": "Health score",
+    },
+    "ui.status": {
+        "de": "Status",
+        "en": "Status",
+    },
+    "ui.requests_today": {
+        "de": "Requests heute",
+        "en": "Requests today",
+    },
+    "ui.errors": {
+        "de": "Fehler",
+        "en": "Errors",
+    },
+    "ui.avg_latency": {
+        "de": "Mittlere Antwortzeit",
+        "en": "Avg latency",
+    },
+    "ui.usd_today": {
+        "de": "USD heute",
+        "en": "USD today",
+    },
+    "ui.resilience": {
+        "de": "Widerstandsfähigkeit",
+        "en": "Resilience",
+    },
+    "ui.policy": {
+        "de": "Regelwerk",
+        "en": "Policy",
+    },
+    "ui.dr_history": {
+        "de": "Notfall-Verlauf",
+        "en": "DR history",
+    },
+    "ui.last_test": {
+        "de": "Letzter Test:",
+        "en": "Last test:",
+    },
+    "ui.never_run": {
+        "de": "Nie gelaufen",
+        "en": "Never run",
+    },
+    "ui.prove.needs_two": {
+        "de": "Braucht ≥2 Provider in free_llm plus Schlüssel, dann den Test unten starten.",
+        "en": "Needs ≥2 providers in free_llm + keys, then run the test below.",
+    },
+    "ui.report_title": {
+        "de": "AI Reliability Report",
+        "en": "AI Reliability Report",
+    },
+    "ui.no_audit_rows": {
+        "de": "Noch keine Audit-Zeilen",
+        "en": "No audit rows yet",
+    },
+    "ui.wizard.welcome": {
+        "de": "Willkommen bei Tollgate",
+        "en": "Welcome to Tollgate",
+    },
+    "ui.wizard.lead": {
+        "de": "Schütze deinen ersten AI-Agenten — statt 50 Gateways einzurichten.",
+        "en": "Protect your first AI agent — not configure 50 gateways.",
+    },
+    "ui.wizard.claim": {
+        "de": "✓ Sicherheitsschicht zwischen Agenten und Providern",
+        "en": "✓ Safety layer between agents and providers",
+    },
+    "ui.wizard.step1": {
+        "de": "1 · Den Agenten benennen",
+        "en": "1 · Name the agent",
+    },
+    "ui.wizard.step2": {
+        "de": "2 · Schutz setzen (Budget + Tool-Schleifen)",
+        "en": "2 · Set protection (budget + tool loops)",
+    },
+    "ui.wizard.step3": {
+        "de": "3 · Nachweisen, dass es wirkt",
+        "en": "3 · Prove it works",
+    },
+    "ui.wizard.who": {
+        "de": "Wen schützen wir?",
+        "en": "Who are we protecting?",
+    },
+    "ui.wizard.who_hint": {
+        "de": "Name der Anwendung oder Agenten-Spur (consumer id).",
+        "en": "Application / agent lane name (consumer id).",
+    },
+    "ui.wizard.app_name": {
+        "de": "Name der Anwendung",
+        "en": "Application name",
+    },
+    "ui.wizard.set_protection": {
+        "de": "Schutz setzen",
+        "en": "Set protection",
+    },
+    "ui.wizard.set_hint": {
+        "de": "Harte Stopps vor der Rechnung. Nachschärfen kannst du später unter Agenten.",
+        "en": "Hard stops before the invoice. You can tighten later under Agents.",
+    },
+    "ui.wizard.daily_budget": {
+        "de": "Tagesbudget ($)",
+        "en": "Daily budget ($)",
+    },
+    "ui.wizard.per_task": {
+        "de": "Max $ / Aufgabe",
+        "en": "Max $ / task",
+    },
+    "ui.wizard.tool_calls": {
+        "de": "Max Tool-Aufrufe",
+        "en": "Max tool calls",
+    },
+    "ui.wizard.rpm": {
+        "de": "Max Requests / Min",
+        "en": "Max requests / min",
+    },
+    "ui.wizard.protected": {
+        "de": "Du bist geschützt",
+        "en": "You’re protected",
+    },
+    "ui.wizard.lane": {
+        "de": "Spur",
+        "en": "Lane",
+    },
+    "ui.wizard.will_get": {
+        "de": "bekommt harte Grenzen.",
+        "en": "will get hard limits.",
+    },
+    "ui.wizard.ok_budget": {
+        "de": "✓ Budget eingerichtet",
+        "en": "✓ Budget configured",
+    },
+    "ui.wizard.ok_loop": {
+        "de": "✓ Tool-Schleifen-Grenze aktiv",
+        "en": "✓ Tool-loop limit enabled",
+    },
+    "ui.wizard.ok_rate": {
+        "de": "✓ Ratenbegrenzung aktiv",
+        "en": "✓ Rate limit enabled",
+    },
+    "ui.pill.day": {
+        "de": "Tagesbudget",
+        "en": "Day budget",
+    },
+    "ui.pill.hour": {
+        "de": "Stundenbudget — oft der „$2“-Wert",
+        "en": "Hour budget — often the “$2” value",
+    },
+    "ui.pill.request": {
+        "de": "Pro Request",
+        "en": "Per request",
+    },
+    "ui.pill.tool_stop": {
+        "de": "Tool-Loop-Stop",
+        "en": "Tool-loop stop",
+    },
+    "ui.key_hint": {
+        "de": "Offener Modus: beliebige Bezeichnung · Anmeldemodus: id:secret",
+        "en": "Open mode: any label · Auth mode: id:secret",
+    },
+    "ui.eg.5": {
+        "de": "z. B. 5",
+        "en": "e.g. 5",
+    },
+    "ui.eg.2": {
+        "de": "z. B. 2",
+        "en": "e.g. 2",
+    },
+    "ui.eg.050": {
+        "de": "z. B. 0,50",
+        "en": "e.g. 0.50",
+    },
+    "ui.eg.20": {
+        "de": "z. B. 20",
+        "en": "e.g. 20",
+    },
+    "ui.eg.40": {
+        "de": "z. B. 40",
+        "en": "e.g. 40",
+    },
+    "ui.lang_label_text": {
+        "de": "Sprache",
+        "en": "Language",
+    },
+    "ui.grade.good": {
+        "de": "GUT",
+        "en": "GOOD",
+    },
+    "ui.grade.fair": {
+        "de": "MITTEL",
+        "en": "FAIR",
+    },
+    "ui.grade.weak": {
+        "de": "SCHWACH",
+        "en": "WEAK",
+    },
+    "ui.stat.spent_today": {
+        "de": "Heute ausgegeben",
+        "en": "Spent today",
+    },
+    "ui.stat.requests": {
+        "de": "Requests",
+        "en": "Requests",
+    },
+    "ui.stat.success": {
+        "de": "Erfolg",
+        "en": "Success",
+    },
+    "ui.stat.agent_stops": {
+        "de": "Agenten gestoppt",
+        "en": "Agent stops",
+    },
+    "ui.stat.circuits_open": {
+        "de": "Schalter offen",
+        "en": "Circuits open",
+    },
+    "ui.stat.agents_protected": {
+        "de": "Agenten geschützt",
+        "en": "Agents protected",
+    },
+    "ui.no_day_cap": {
+        "de": "keine Tagesgrenze",
+        "en": "no day cap",
+    },
+    "ui.pill.day_short": {
+        "de": "Tag",
+        "en": "Day",
+    },
+    "ui.pill.hour_short": {
+        "de": "Stunde",
+        "en": "Hour",
+    },
+    "ui.pill.req_short": {
+        "de": "Req",
+        "en": "Req",
+    },
+    "ui.pill.tools_short": {
+        "de": "Tools",
+        "en": "Tools",
+    },
+    "ui.per_min": {
+        "de": "/Min",
+        "en": "/min",
+    },
+    "ui.suffix.req": {
+        "de": "· Req",
+        "en": "· req",
+    },
+    "ui.frozen_note": {
+        "de": "Die Zulassung ist eingefroren — kein kostenpflichtiger Verkehr.",
+        "en": "Admission is frozen — no billable traffic.",
+    },
+    "ui.prove_pending": {
+        "de": "Prove steht aus: noch kein Umschalttest. Braucht ≥2 Provider plus Schlüssel.",
+        "en": "Prove pending: no failover test yet. Needs ≥2 providers + keys.",
+    },
+    "ui.desk_protected": {
+        "de": "Der Schreibtisch wirkt geschützt. Weiter mit echtem Verkehr.",
+        "en": "Desk looks protected. Keep using real traffic.",
+    },
+    "ui.default_policy": {
+        "de": "· Vorgabe-Regelwerk",
+        "en": "· default policy",
+    },
+    "ui.spent_today_lower": {
+        "de": "heute ausgegeben",
+        "en": "spent today",
+    },
+    "ui.of_open": {
+        "de": "von ",
+        "en": "of ",
+    },
+    "ui.per_day": {
+        "de": " / Tag",
+        "en": " / day",
+    },
+    "ui.left_suffix": {
+        "de": " übrig",
+        "en": " left",
+    },
+    "ui.passed": {
+        "de": "✓ BESTANDEN",
+        "en": "✓ PASSED",
+    },
+    "ui.failed": {
+        "de": "✗ DURCHGEFALLEN",
+        "en": "✗ FAILED",
+    },
+    "ui.test_passed": {
+        "de": "✓ TEST BESTANDEN",
+        "en": "✓ TEST PASSED",
+    },
+    "ui.test_failed": {
+        "de": "✗ TEST DURCHGEFALLEN",
+        "en": "✗ TEST FAILED",
+    },
+    "ui.err.control_plane": {
+        "de": "Lagebild konnte nicht geladen werden:",
+        "en": "Failed to load control plane:",
+    },
+    "ui.cert_refreshed": {
+        "de": "Zeugnis erneuert.",
+        "en": "Certificate refreshed.",
+    },
+    "ui.running_test": {
+        "de": "Umschalttest läuft…",
+        "en": "Running failover test…",
+    },
+    "ui.err.test_start": {
+        "de": "Test konnte nicht starten:",
+        "en": "Test failed to start:",
+    },
+    "ui.testing_loop": {
+        "de": "Prüfe den Schutz gegen Tool-Schleifen für",
+        "en": "Testing tool-loop protection for",
+    },
+    "ui.err.test": {
+        "de": "Test fehlgeschlagen:",
+        "en": "Test failed:",
+    },
+    "ui.numbers_hint": {
+        "de": "Zahlen ≥ 0 verwenden (leer = unbegrenzt)",
+        "en": "Use numbers ≥ 0 (empty = unlimited)",
+    },
+    "ui.saving": {
+        "de": "Wird gespeichert…",
+        "en": "Saving…",
+    },
+    "ui.err.unfreeze": {
+        "de": "Freigeben fehlgeschlagen:",
+        "en": "Unfreeze failed:",
+    },
+    "ui.get_started": {
+        "de": "Los geht’s",
+        "en": "Get started",
+    },
+    "ui.err.name_required": {
+        "de": "Bitte einen Anwendungsnamen eingeben",
+        "en": "Enter an application name",
+    },
+    "ui.err.limit_required": {
+        "de": "Mindestens ein Tagesbudget oder eine Obergrenze für Tool-Aufrufe setzen",
+        "en": "Set at least a daily budget or max tool calls",
+    },
+    "ui.err.save_protection": {
+        "de": "Schutz konnte nicht gespeichert werden:",
+        "en": "Could not save protection:",
+    },
+    "ui.suffix.overall": {
+        "de": "· gesamt",
+        "en": "· overall",
+    },
+    "ui.limits_for_open": {
+        "de": "Grenzen für «",
+        "en": "Limits for «",
+    },
+    "ui.limits_for_close": {
+        "de": "»",
+        "en": "»",
+    },
+    "ui.eod_line": {
+        "de": "Requests · Tokens · Tagesende ~",
+        "en": "requests · tokens · EOD ~",
+    },
     "out.auth_mode": {
         "de": "[tollgate] Anmeldemodus · http://{host}:{port}/dashboard",
         "en": "[tollgate] auth mode · http://{host}:{port}/dashboard",
