@@ -196,9 +196,105 @@ language and is remembered in a cookie for a year, otherwise the browser
 decides. The switch sits in the header and inside the setup wizard, so it is
 reachable even on a first visit.
 
+### Plain or expert wording / Klartext oder Fachsprache
+
+Independent of English/German there are two levels of wording. **Plain is the
+default, expert is opt-in** — never the other way round. Whoever knows the
+terms switches them on; whoever does not is not run over by them.
+
+| Way | Example |
+|---|---|
+| Once | `tollgate --mode expert control` |
+| Always | `export TOLLGATE_MODE=expert` |
+| Control Room | switch next to DE/EN, remembered in a cookie for a year |
+
+| Plain (default) | Expert |
+|---|---|
+| Leitstand · Nachweis · Protokoll · Anbieter | Control Room · Prove · Audit · Provider |
+| "Start Tollgate so agents can reach it" | "Run HTTP server (uvicorn)" |
+| Response time · Safety switch · State | Latency · Circuit · Health |
+
+The level is **not** guessed from the browser or the environment: plain
+applies to everyone until someone says otherwise. Both switches carry the
+other one's choice in their links, so picking EN does not throw the wording
+level away.
+
+Not yet in expert wording: the twelve handbook topics behind
+`tollgate help <topic>`. The switch is wired (`<topic>#expert`), no topic has
+a second version yet, so plain stays.
+
 Not yet translated: text that arrives from the API (`/v1/control` headline and
 recommendations). Those would need the API to carry codes instead of English
 sentences — a change to the JSON contract, tracked separately.
+
+---
+
+## Shared rules of the NetzwerkPunkt tools
+
+TollGate, ThreadDesk and 4AllPass share their look and their language rules.
+Anyone building a new tool takes the same values — they are not taste, they
+are standards you can look up. **4AllPass is the reference.**
+
+**Colours** (identical in all tools)
+
+| Token | Value | For |
+|---|---|---|
+| `--bg` | `#121316` | base surface |
+| `--bg-panel` | `#1a1b1f` | surface |
+| `--bg-card` | `#1e1f24` | card |
+| `--fg` | `#e2e4e9` | text |
+| `--fg-muted` | `#8b909a` | secondary text |
+| `--border` | `#2e3138` | divider between surfaces (decoration) |
+| `--border-strong` | `#5f646f` | **edge of controls** |
+| `--accent` | `#8f98a8` | accent |
+| `--ok` / `--warn` / `--err` | `#3d9b6a` / `#c9a227` / `#dc7070` | states |
+
+In TollGate the same tokens are called `--line`, `--line2`, `--muted`,
+`--acc`, `--bad` — same values, older names.
+
+**Shape and size**
+
+- `border-radius: 0` everywhere. Round only where the shape *means* something
+  (map symbols, progress ring, status dot), with a reason in the code.
+- Exactly four font sizes: **13 / 16 / 20 / 25 px**. 16px base as recommended
+  for body text on the web, the steps around it at a ratio of 1.25 (major
+  third). Other tokens get deleted, not just avoided.
+- Spacing on an 8px grid: 4 / 8 / 12 / 16 / 24 / 32.
+- **Exactly two sizes for controls**, no more: `--control: 40px` for the
+  normal case (button, input, select) and `--control-sm: 32px` for dense
+  rows and tabs. Both sit on the 8px grid. Button, input and select are the
+  same height.
+- Under `@media (pointer: coarse)` every target becomes **44px**
+  (`--control-touch`). That is not a third size, it is the same elements
+  under a different input device — the number comes from Apple and Material.
+  The pointer is the right signal, **not** the window width: a narrow
+  desktop window is not a finger. WCAG 2.2 (2.5.8) asks for 24px as the
+  minimum; all three values are above it.
+- Contrast: **4.5:1** for text, **3:1** for anything else that carries
+  meaning (WCAG 2.2, 1.4.3 and 1.4.11).
+- Selects set `appearance: none` and draw their own arrow — otherwise the
+  operating system draws the menu, on Windows with a 3D effect.
+- Font: the operating system's. Nothing loaded from elsewhere.
+
+**Language**
+
+- Every tool is English **and** German from the start. Retrofitting is
+  expensive. Visible text belongs in a catalogue, never in the template.
+- Always **one** language at a time, never both side by side.
+- Resolution: `?lang=` → cookie → `Accept-Language` → default.
+- Plus the two levels of wording: **plain is the default, expert is opt-in**.
+  An expert version hangs off the same key, separated by `#expert` — not a
+  dot, otherwise `register.expert` would be the expert version of `register`.
+  With no expert version the plain text stays.
+- Every label says what happens. Every field says what it is for. No
+  abbreviation without spelling it out. Errors name the next step.
+- Proper nouns are not translated: TollGate, ThreadDesk, 4AllPass,
+  Gnom-Hub-V1, Grok, Codex, MCP.
+
+**A trap that bit twice:** `argparse` builds the help texts when the parser is
+*created*, not when it parses. `--lang` and `--mode` must therefore be read
+from `argv` by hand beforehand, or `tollgate --mode expert --help` is plain
+again.
 
 ---
 

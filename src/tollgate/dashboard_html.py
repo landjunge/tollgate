@@ -43,6 +43,16 @@ _TEMPLATE = r"""<!DOCTYPE html>
     /* Vier Schriftgroessen, mehr nicht: 16px Grundgroesse wie fuer
        Fliesstext im Web empfohlen, die Stufen darum herum im Verhaeltnis
        1.25 (grosse Terz). */
+    /* Zwei Groessen fuer Bedienelemente, mehr gibt es nicht:
+       --control ist der Regelfall (Knopf, Eingabefeld, Auswahlmenue),
+       --control-sm die kompakte Fassung fuer dichte Zeilen und Reiter.
+       Beide liegen auf dem 8er-Raster. Unter dem Finger werden beide 44px
+       gross — das ist keine dritte Groesse, sondern dieselben Elemente unter
+       einem anderen Eingabegeraet (Apple HIG, Material). Gilt in allen
+       Werkzeugen. */
+    --control: 40px;
+    --control-sm: 32px;
+    --control-touch: 44px;
     --text-sm: 13px;
     --text-base: 16px;
     --text-lg: 20px;
@@ -68,9 +78,7 @@ _TEMPLATE = r"""<!DOCTYPE html>
     border-radius: 0;
     background: var(--acc);
     color: var(--bg); padding: .55rem 1.05rem; font-weight: 600;
-    /* Mindestgroesse fuer Klick- und Tippziele: WCAG 2.2 (2.5.8) verlangt
-       24px, wir geben 32px. */
-    min-height: 32px;
+    min-height: var(--control);
     transition: filter .12s ease, opacity .12s;
   }
   button:hover { filter: brightness(1.08); }
@@ -81,8 +89,23 @@ _TEMPLATE = r"""<!DOCTYPE html>
     box-shadow: none;
   }
   button.ghost:hover { background: var(--panel2); border-color: var(--muted2); filter: none; }
-  button.sm { padding: .35rem .7rem; font-size: var(--text-sm); border-radius: 0; }
-  .lang-switch a, nav a { min-height: 32px; display: inline-flex; align-items: center; }
+  button.sm {
+    padding: .35rem .7rem; font-size: var(--text-sm); border-radius: 0;
+    min-height: var(--control-sm);
+  }
+  .lang-switch a, nav a {
+    min-height: var(--control-sm); display: inline-flex; align-items: center;
+  }
+  @media (pointer: coarse) {
+    /* Unter dem Finger werden alle Ziele 44px. Das ist die Zahl, die Apple
+       und Material dafuer nennen — kein eigener Geschmack. Der Zeiger ist
+       das richtige Signal, nicht die Fensterbreite: ein schmales
+       Desktop-Fenster ist kein Finger. */
+    button, button.sm, .lang-switch a, nav a,
+    .field input, .field select {
+      min-height: var(--control-touch);
+    }
+  }
 
   /* Header */
   header {
@@ -304,7 +327,7 @@ _TEMPLATE = r"""<!DOCTYPE html>
     text-transform: uppercase; letter-spacing: .06em; margin-bottom: .3rem; font-weight: 650;
   }
   .field input, .field select {
-    width: 100%; min-height: 32px;
+    width: 100%; min-height: var(--control);
     background: var(--panel); border: 1px solid var(--line2);
     color: var(--fg); border-radius: 0; padding: .55rem .7rem; font: inherit;
     font-variant-numeric: tabular-nums;
