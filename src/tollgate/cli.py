@@ -5,327 +5,118 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Callable
+
+from tollgate import help_text, i18n
+
+Translator = Callable[..., str]
 
 
-def _format_help(topic: str = "") -> str:
-    """Human help text (mirrors docs/HILFE.md + USER_GUIDE.md)."""
-    t = (topic or "").strip().lower()
-    topics = {
-        "start": """
-# Start / install
+def _translator(language: str) -> Translator:
+    """Bindet die Sprache einmal, damit kein Aufruf sie vergessen kann."""
 
-  python3 -m venv .venv && .venv/bin/pip install -e .
-  export TOLLGATE_HOME=$HOME/.tollgate
-  tollgate serve                    # http://127.0.0.1:8787
-  ./scripts/ten-minute.sh           # cold 10-minute path
-  ./scripts/desk-ready.sh           # doctor + server + smoke
+    def translate(key: str, **values: object) -> str:
+        return i18n.translate(key, language, **values)
 
-  Docker:  docker compose up -d --build
-  UI:      http://127.0.0.1:8787/dashboard
-  API:     http://127.0.0.1:8787/docs
+    return translate
 
-  Keys (optional for Protect demo): $TOLLGATE_HOME/User/Key.txt
-  Handbook: docs/HILFE.md · docs/USER_GUIDE.md · docs/TEN_MINUTE.md
-""",
-        "protect": """
-# Protect — agent must never go out of control
 
-  tollgate consumer-budget support-agent \\
-    --max-usd-day 2 --max-usd-request 0.5 \\
-    --max-tool-calls 20 --max-requests-minute 50
+def resolve_language(argv: list[str]) -> str:
+    """Sprache schon vor dem Parsen bestimmen.
 
-  tollgate consumer-budget support-agent \\
-    --allow-provider opencode_zen --allow-intent free_llm --allow-op chat
+    argparse baut die Hilfetexte beim Anlegen des Parsers, nicht erst beim
+    Parsen. Deshalb muss --lang vorher aus argv gelesen werden, sonst waere
+    `tollgate --lang de --help` weiter englisch.
+    """
+    for index, item in enumerate(argv):
+        if item == "--lang" and index + 1 < len(argv):
+            return i18n.normalise(argv[index + 1])
+        if item.startswith("--lang="):
+            return i18n.normalise(item.split("=", 1)[1])
+    return i18n.from_environment()
 
-  # Tool-loop Aha (no spend required)
-  curl -s http://127.0.0.1:8787/v1/invoke \\
-    -H 'Content-Type: application/json' \\
-    -H 'X-Consumer-Key: support-agent' \\
-    -d '{"provider":"opencode_zen","op":"chat","tool_calls_est":99,"arguments":{"message":"x"}}'
 
-  # OpenAI drop-in: send tool_calls_est or tool history
-  #   body:  "tool_calls_est": 12
-  #   header: X-Tollgate-Tool-Calls-Est: 12
-  #   auto:  count role=tool + assistant.tool_calls in messages
-  # See docs/OPENAI.md
-
-  tollgate freeze --reason "incident"   # kill switch
-  tollgate unfreeze
-  Dashboard: Overview → "Test tool-loop block"
-""",
-        "route": """
-# Route — health-aware failover
-
-  curl -s http://127.0.0.1:8787/v1/route \\
-    -H 'Content-Type: application/json' -H 'X-Consumer-Key: desk' \\
-    -d '{"intent":"free_llm","tokens_est":1000}'
-
-  tollgate circuits list
-  tollgate circuits reset deepseek
-  tollgate circuits reset --all
-""",
-        "prove": """
-# Prove — chaos / resilience / certificate
-
-  tollgate chaos test opencode_zen --requests 10
-  tollgate resilience
-  tollgate certificate --application "Support Agent"
-  tollgate demo                     # Protect + Prove live script
-
-  Dashboard → Prove → Run test
-
-  NOT_RUN / failed chaos is normal when:
-    · only one provider in free_llm chain
-    · missing keys (tollgate doctor)
-  Protect (budgets / max_tool_calls) can PASS without chaos.
-  Next: enable 2nd provider → Key.txt → chaos test → certificate
-""",
-        "ui": """
-# Control Room WebUI
-
-  http://127.0.0.1:8787/dashboard
-
-  Overview  — safe? broken? expensive? what to do?
-  Agents    — budgets, edit protection, loop test
-  Providers — health / latency / cost
-  Prove     — chaos test + certificate
-  Audit     — who was blocked
-
-  Badge: PROTECTED | ATTENTION | FROZEN
-  Setup wizard: first protected lane without CLI
-""",
-        "api": """
-# HTTP surfaces (base http://127.0.0.1:8787)
-
-  GET  /dashboard /docs /metrics
-  GET  /v1/health /v1/control /v1/status /v1/certificate
-  GET  /v1/audit /v1/budget /v1/resilience /v1/chaos
-  POST /v1/route /v1/invoke /v1/chat/completions /v1/messages
-  POST /v1/config /v1/chaos/test /v1/freeze /v1/circuits/reset
-
-  OpenAI drop-in:
-    export OPENAI_BASE_URL=http://127.0.0.1:8787/v1
-    export OPENAI_API_KEY=support-agent
-
-  Full OpenAPI: /docs  ·  Handbooks: docs/HILFE.md docs/USER_GUIDE.md
-""",
-        "ops": """
-# Operations
-
-  tollgate doctor
-  tollgate status
-  tollgate report --format md
-  tollgate audit --event admit_deny --limit 20
-  tollgate alert test
-  tollgate snapshot export -o desk.tgz
-  tollgate search circuit breaker
-
-  Webhook: TOLLGATE_ALERT_WEBHOOK or cost_guard.alert_webhook_url
-  Metrics auth: consumer key | TOLLGATE_METRICS_TOKEN | PUBLIC=1
-  Portable: docs/PORTABLE.md · docs/OPERATIONS.md
-""",
-        "troubleshoot": """
-# Troubleshooting
-
-  Server won't start     → tollgate doctor · free port 8787 · Python ≥ 3.11
-  401 Unauthorized       → auth mode needs id:secret · consumer-add
-  Always blocked         → envelope / freeze status / scopes
-  Chaos failed / NOT_RUN → ≥2 providers in free_llm · keys · doctor
-  Loop never blocks      → send tool_calls_est (body/header) or tool history
-  Stale dashboard        → hard refresh · check /v1/health version
-  Wrong data home        → tollgate paths · echo $TOLLGATE_HOME
-  Metrics 401            → token / consumer / TOLLGATE_METRICS_PUBLIC=1
-
-  Log (desk): /tmp/tollgate-desk.log
-  Docs: docs/OPENAI.md (tool_calls_est) · docs/FAQ.md
-""",
-        "commands": """
-# All CLI commands
-
-  serve mcp health control resilience chaos paths
-  consumer-add consumer-budget provider-add high-risk
-  doctor suggest status certificate demo
-  freeze unfreeze circuits alert snapshot
-  report audit search help
-
-  Examples:
-    tollgate consumer-budget support-agent --max-usd-day 2 --max-tool-calls 20
-    tollgate chaos test opencode_zen --requests 8
-    tollgate certificate
-    tollgate demo --skip-chaos
-""",
-        "env": """
-# Environment variables
-
-  TOLLGATE_HOME              data root (contains User/)
-  GNOM_WS                    fallback data root
-  TOLLGATE_CONFIG            absolute keys_app.json override
-  GNOM_KEYS_CONFIG           alias for config override
-  TOLLGATE_PORTABLE=1        portable path resolution
-  TOLLGATE_REQUIRE_AUTH=1    force auth mode (id:secret)
-  TOLLGATE_CONSUMERS         consumers.json path override
-  TOLLGATE_FROZEN=1          kill switch (also TOLLGATE_ADMISSION_FROZEN)
-  TOLLGATE_ALERT_WEBHOOK     alert URL (or cost_guard.alert_webhook_url)
-  TOLLGATE_METRICS_TOKEN     Bearer for /metrics
-  TOLLGATE_METRICS_PUBLIC=1  open /metrics (lab only)
-  TOLLGATE_STRICT_CONFIG=1   hard-fail invalid config
-  TOLLGATE_URL               client base (default http://127.0.0.1:8787)
-  TOLLGATE_CONSUMER          client default lane
-  HOST / PORT                tollgate serve bind (127.0.0.1 / 8787)
-
-  Provider keys: $TOLLGATE_HOME/User/Key.txt or process env
-  Handbook: docs/HILFE.md §18 · docs/USER_GUIDE.md §16
-""",
-        "config": """
-# Config (keys_app.json)
-
-  Path: $TOLLGATE_HOME/User/keys_app.json
-  Defaults: src/tollgate/app_config.py DEFAULT_CONFIG
-
-  Main blocks:
-    cost_guard          global $ cap, high_risk, soft_warn, webhook
-    consumer_envelopes  per-lane budgets + scopes + tool_calls
-    providers.<id>      enabled, max_usd_day, …
-    circuits            breaker thresholds / cooldown
-    reliability         Prove targets
-    admission           freeze flags
-
-  CLI:
-    tollgate consumer-budget …     # envelopes
-    tollgate high-risk list|add
-    tollgate freeze / unfreeze
-
-  HTTP:
-    GET  /v1/config
-    POST /v1/config   # deep-merge; invalid → 400 not written
-
-  Detail: docs/COST_LIMITS.md · docs/HILFE.md §19
-""",
-        "faq": """
-# FAQ (short)
-
-  Keys for demo?     No for Protect tool-loop; yes for real chat/chaos
-  vs LiteLLM?        LiteLLM routes models; Tollgate stops agents + proves DR
-  Always blocked?    freeze · envelope · scope · audit --event admit_deny
-  tool_calls_est?    Client must send loop depth for max_tool_calls
-  Unlimited budget?  Set dimension to 0 (other dims still apply)
-  Multi-worker?      Share TOLLGATE_HOME (see docs/STABILITY.md)
-  Find code?         tollgate search <q> · tollgate search --map
-  Full FAQ:          docs/FAQ.md · DE handbook docs/HILFE.md
-""",
-    }
-    if t in topics:
-        return topics[t].strip() + "\n"
-    if t:
-        return (
-            f"Unknown topic: {t!r}\n\n"
-            + _format_help("")
-        )
-    return """
-Tollgate — safety layer for AI agents (Protect · Route · Prove)
-
-  “My AI agent must never go out of control.”
-
-Quick start
-  ./scripts/ten-minute.sh
-  tollgate serve
-  open http://127.0.0.1:8787/dashboard
-
-Help topics
-  tollgate help start          install & cold path
-  tollgate help protect        budgets, loops, freeze, scopes
-  tollgate help route          failover & circuits
-  tollgate help prove          chaos, resilience, certificate
-  tollgate help ui             Control Room WebUI
-  tollgate help api            HTTP / OpenAI drop-in
-  tollgate help ops            doctor, audit, snapshot, alerts
-  tollgate help troubleshoot   common failures
-  tollgate help commands       full command list
-  tollgate help env            environment variables
-  tollgate help config         keys_app.json recipes
-  tollgate help faq            short FAQ
-
-Handbooks
-  docs/HILFE.md        German detailed help
-  docs/USER_GUIDE.md   English user guide
-  docs/FAQ.md          FAQ
-  docs/TEN_MINUTE.md   10-minute stranger test
-  docs/DEMO.md         killer demo script
-  docs/PRODUCT.md      positioning
-  Website              https://landjunge.github.io/tollgate/
-
-Repo search
-  tollgate search <query>
-  tollgate search --map
-""".strip() + "\n"
-
+def _format_help(topic: str = "", language: str = i18n.DEFAULT_LANGUAGE) -> str:
+    """Hilfetext fuer Menschen (spiegelt docs/HILFE.md + USER_GUIDE.md)."""
+    code = i18n.normalise(language)
+    name = (topic or "").strip().lower()
+    entry = help_text.TOPICS.get(name)
+    if entry is not None:
+        return entry[code].strip() + "\n"
+    if name:
+        head = help_text.UNKNOWN_TOPIC[code].format(topic=name)
+        return head + "\n\n" + _format_help("", code)
+    return help_text.OVERVIEW[code].strip() + "\n"
 
 def main(argv: list[str] | None = None) -> None:
-    p = argparse.ArgumentParser(
-        prog="tollgate",
-        description=(
-            "Tollgate — safety layer for AI agents (Protect · Route · Prove). "
-            "Try: tollgate help"
-        ),
+    items = sys.argv[1:] if argv is None else argv
+    language = resolve_language(items)
+    t = _translator(language)
+    p = argparse.ArgumentParser(prog="tollgate", description=t("cli.description"))
+    p.add_argument(
+        "--lang",
+        default=language,
+        choices=list(i18n.LANGUAGES),
+        help=t("cli.lang"),
     )
     sub = p.add_subparsers(dest="cmd")
-    help_p = sub.add_parser("help", help="User help — topics and handbook links")
+    help_p = sub.add_parser("help", help=t("cmd.help"))
     help_p.add_argument(
         "topic",
         nargs="?",
         default="",
-        help="start|protect|route|prove|ui|api|ops|troubleshoot|commands|env|config|faq",
+        help=t("cmd.help.topic"),
     )
 
-    sub.add_parser("serve", help="Run HTTP server (uvicorn)")
-    sub.add_parser("mcp", help="Run MCP stdio server")
-    sub.add_parser("health", help="Print local health JSON (paths + auth mode)")
+    sub.add_parser("serve", help=t("cmd.serve"))
+    sub.add_parser("mcp", help=t("cmd.mcp"))
+    sub.add_parser("health", help=t("cmd.health"))
     sub.add_parser(
         "control",
-        help="Control plane snapshot (provider health + consumer burn + headline)",
+        help=t("cmd.control"),
     )
     sub.add_parser(
         "resilience",
-        help="AI Resilience Score (0–100) + warnings",
+        help=t("cmd.resilience"),
     )
     ch = sub.add_parser(
         "chaos",
-        help="Chaos / DR: inject provider outage or run failover test",
+        help=t("cmd.chaos"),
     )
     ch.add_argument(
         "action",
         choices=["status", "start", "stop", "test"],
-        help="status | start | stop | test",
+        help=t("cmd.chaos.action"),
     )
-    ch.add_argument("provider", nargs="?", default="", help="provider id (e.g. opencode_zen)")
+    ch.add_argument("provider", nargs="?", default="", help=t("cmd.chaos.provider"))
     ch.add_argument(
         "--duration",
         default="5m",
-        help="inject duration: 30s, 5m, 1h (default 5m)",
+        help=t("cmd.chaos.duration"),
     )
-    ch.add_argument("--requests", type=int, default=5, help="probes for chaos test")
-    ch.add_argument("--intent", default="free_llm", help="route intent for test")
-    ch.add_argument("--live-chat", action="store_true", help="also send tiny chats (costs)")
-    ch.add_argument("--all", action="store_true", help="stop all injects")
-    sub.add_parser("paths", help="Print portable path snapshot")
+    ch.add_argument("--requests", type=int, default=5, help=t("cmd.chaos.probes"))
+    ch.add_argument("--intent", default="free_llm", help=t("cmd.chaos.intent"))
+    ch.add_argument("--live-chat", action="store_true", help=t("cmd.chaos.chat"))
+    ch.add_argument("--all", action="store_true", help=t("cmd.chaos.all"))
+    sub.add_parser("paths", help=t("cmd.paths"))
 
-    cadd = sub.add_parser("consumer-add", help="Add HTTP consumer (id:secret)")
-    cadd.add_argument("id", help="consumer id (e.g. n8n, gnom)")
-    cadd.add_argument("--admin", action="store_true", help="allow /v1/config")
-    cadd.add_argument("--secret", default="", help="optional fixed secret")
-    cadd.add_argument("--label", default="", help="display label")
+    cadd = sub.add_parser("consumer-add", help=t("cmd.consumer_add"))
+    cadd.add_argument("id", help=t("cmd.consumer_add.id"))
+    cadd.add_argument("--admin", action="store_true", help=t("cmd.consumer_add.config"))
+    cadd.add_argument("--secret", default="", help=t("cmd.consumer_add.secret"))
+    cadd.add_argument("--label", default="", help=t("cmd.consumer_add.label"))
 
     cbud = sub.add_parser(
         "consumer-budget",
-        help="Set / list day envelopes + agent protection (consumer_envelopes)",
+        help=t("cmd.envelope"),
     )
     cbud.add_argument(
         "id",
         nargs="?",
         default="",
-        help="consumer id (omit with --list)",
+        help=t("cmd.envelope.id"),
     )
-    cbud.add_argument("--list", action="store_true", help="list all envelopes + usage")
+    cbud.add_argument("--list", action="store_true", help=t("cmd.envelope.list"))
     cbud.add_argument("--max-calls-day", type=int, default=None, dest="max_calls_day")
     cbud.add_argument("--max-tokens-day", type=int, default=None, dest="max_tokens_day")
     cbud.add_argument("--max-usd-day", type=float, default=None, dest="max_usd_day")
@@ -343,287 +134,287 @@ def main(argv: list[str] | None = None) -> None:
         action="append",
         default=None,
         dest="allow_providers",
-        help="L3 scope: allow provider (repeatable); replaces allowed_providers list",
+        help=t("cmd.envelope.allow_provider"),
     )
     cbud.add_argument(
         "--block-provider",
         action="append",
         default=None,
         dest="block_providers",
-        help="L3 scope: block provider (repeatable)",
+        help=t("cmd.envelope.block_provider"),
     )
     cbud.add_argument(
         "--allow-intent",
         action="append",
         default=None,
         dest="allow_intents",
-        help="L3 scope: allow intent e.g. free_llm,search (repeatable)",
+        help=t("cmd.envelope.allow_intent"),
     )
     cbud.add_argument(
         "--block-intent",
         action="append",
         default=None,
         dest="block_intents",
-        help="L3 scope: block intent (repeatable)",
+        help=t("cmd.envelope.block_intent"),
     )
     cbud.add_argument(
         "--allow-op",
         action="append",
         default=None,
         dest="allow_ops",
-        help="L3 scope: allow op e.g. chat,search (repeatable)",
+        help=t("cmd.envelope.allow_op"),
     )
     cbud.add_argument(
         "--block-op",
         action="append",
         default=None,
         dest="block_ops",
-        help="L3 scope: block op (repeatable)",
+        help=t("cmd.envelope.block_op"),
     )
     cbud.add_argument(
         "--clear-scopes",
         action="store_true",
-        help="remove all allowed_*/blocked_* lists for this consumer",
+        help=t("cmd.envelope.clear_scopes"),
     )
     cbud.add_argument(
         "--clear",
         action="store_true",
-        help="remove envelope for this consumer (fall back to _default)",
+        help=t("cmd.envelope.remove"),
     )
 
-    padd = sub.add_parser("provider-add", help="Scaffold distill JSON for a new provider")
-    padd.add_argument("id", help="provider id (e.g. azure_openai)")
-    padd.add_argument("--title", default="", help="display title")
+    padd = sub.add_parser("provider-add", help=t("cmd.distill"))
+    padd.add_argument("id", help=t("cmd.distill.provider"))
+    padd.add_argument("--title", default="", help=t("cmd.distill.title"))
     padd.add_argument("--base-url", default="", dest="base_url")
     padd.add_argument(
         "--auth",
         default="bearer",
         choices=["bearer", "header_token", "xi_api_key"],
     )
-    padd.add_argument("--env-key", default="", dest="env_key", help="e.g. AZURE_OPENAI_API_KEY")
+    padd.add_argument("--env-key", default="", dest="env_key", help=t("cmd.distill.env"))
     padd.add_argument(
         "--high-risk",
         action="store_true",
-        help="mark high_risk (must enable explicitly + tight $ caps)",
+        help=t("cmd.distill.high_risk"),
     )
 
-    risk = sub.add_parser("high-risk", help="List / set high_risk_providers in keys_app.json")
+    risk = sub.add_parser("high-risk", help=t("cmd.high_risk"))
     risk.add_argument("action", choices=["list", "add", "remove"])
     risk.add_argument("provider", nargs="?", default="")
 
-    doc = sub.add_parser("doctor", help="Self-diagnose install/config (first step after setup)")
-    doc.add_argument("--live", action="store_true", help="include live provider diagnose")
-    doc.add_argument("--json", action="store_true", help="machine-readable output")
+    doc = sub.add_parser("doctor", help=t("cmd.doctor"))
+    doc.add_argument("--live", action="store_true", help=t("cmd.doctor.providers"))
+    doc.add_argument("--json", action="store_true", help=t("cmd.json"))
 
     sub.add_parser(
         "suggest",
-        help="Propose routing/budget tweaks from ledger (never auto-applies)",
+        help=t("cmd.advise"),
     )
 
     st = sub.add_parser(
         "status",
-        help="Compact desk status (freeze · resilience · spend · attention)",
+        help=t("cmd.desk"),
     )
     st.add_argument(
         "--json",
         action="store_true",
-        help="machine-readable JSON (default is human text)",
+        help=t("cmd.desk.json"),
     )
 
     cert = sub.add_parser(
         "certificate",
-        help="AI Reliability Report scorecard (PASS/FAIL for Protect·Route·Prove)",
+        help=t("cmd.report_card"),
     )
     cert.add_argument(
         "--application",
         default="",
-        help="label e.g. Customer Support Agent",
+        help=t("cmd.report_card.label"),
     )
-    cert.add_argument("--json", action="store_true", help="JSON instead of text card")
+    cert.add_argument("--json", action="store_true", help=t("cmd.report_card.json"))
 
     dem = sub.add_parser(
         "demo",
-        help="Killer demo: agent tool-loop block + optional chaos DR proof",
+        help=t("cmd.demo"),
     )
     dem.add_argument(
         "--skip-chaos",
         action="store_true",
-        help="only Protect Aha (no chaos test)",
+        help=t("cmd.demo.protect_only"),
     )
     dem.add_argument(
         "--consumer",
         default="support-agent",
-        help="agent lane id (default support-agent)",
+        help=t("cmd.demo.consumer"),
     )
     dem.add_argument(
         "--provider",
         default="opencode_zen",
-        help="provider for chaos / invoke attempt (default opencode_zen)",
+        help=t("cmd.demo.provider"),
     )
 
     frz = sub.add_parser(
         "freeze",
-        help="Emergency kill switch — deny all billable admission",
+        help=t("cmd.freeze"),
     )
     frz.add_argument(
         "action",
         nargs="?",
         default="on",
         choices=["on", "off", "status", "unfreeze"],
-        help="on (default) | off/unfreeze | status",
+        help=t("cmd.freeze.state"),
     )
     frz.add_argument(
         "--reason",
         default="",
-        help="why freeze (audit + webhook)",
+        help=t("cmd.freeze.reason"),
     )
-    sub.add_parser("unfreeze", help="Alias for: freeze off")
+    sub.add_parser("unfreeze", help=t("cmd.unfreeze"))
 
     circ = sub.add_parser(
         "circuits",
-        help="List or reset circuit breakers",
+        help=t("cmd.circuit"),
     )
     circ.add_argument(
         "action",
         choices=["list", "reset", "status"],
-        help="list | reset | status",
+        help=t("cmd.circuit.action"),
     )
     circ.add_argument(
         "provider",
         nargs="?",
         default="",
-        help="provider id for reset (omit with --all)",
+        help=t("cmd.circuit.provider"),
     )
     circ.add_argument(
         "--all",
         action="store_true",
         dest="all_circuits",
-        help="reset every circuit",
+        help=t("cmd.circuit.all"),
     )
 
     alrt = sub.add_parser(
         "alert",
-        help="Webhook alerts: test delivery or list event catalog",
+        help=t("cmd.alerts"),
     )
     alrt.add_argument(
         "action",
         choices=["test", "events"],
-        help="test | events",
+        help=t("cmd.alerts.action"),
     )
     alrt.add_argument(
         "--message",
         default="tollgate alert test",
-        help="message for alert test",
+        help=t("cmd.alerts.message"),
     )
 
     snap = sub.add_parser(
         "snapshot",
-        help="Export/import desk ops state (portable USB migration)",
+        help=t("cmd.snapshot"),
     )
     snap.add_argument(
         "action",
         choices=["export", "import", "info"],
-        help="export | import | info",
+        help=t("cmd.snapshot.action"),
     )
     snap.add_argument(
         "path",
         nargs="?",
         default="",
-        help="archive path (.tgz)",
+        help=t("cmd.snapshot.path"),
     )
     snap.add_argument(
         "-o",
         "--output",
         default="",
-        help="export destination (default: tollgate-snapshot-<day>.tgz)",
+        help=t("cmd.snapshot.out"),
     )
     snap.add_argument(
         "--include-secrets",
         action="store_true",
-        help="export Key.txt / .env (sensitive — off by default)",
+        help=t("cmd.snapshot.secrets"),
     )
     snap.add_argument(
         "--no-audit",
         action="store_true",
-        help="omit audit.jsonl from export",
+        help=t("cmd.snapshot.no_audit"),
     )
     snap.add_argument(
         "--replace",
         action="store_true",
-        help="import: overwrite existing files (default merges keys_app only)",
+        help=t("cmd.snapshot.force"),
     )
     snap.add_argument(
         "--dry-run",
         action="store_true",
-        help="import: show plan without writing",
+        help=t("cmd.snapshot.dry_run"),
     )
 
     rep = sub.add_parser(
         "report",
-        help="Daily operator report — Protect · Route · Prove evidence",
+        help=t("cmd.report"),
     )
     rep.add_argument(
         "--format",
         choices=["json", "md", "markdown"],
         default="md",
         dest="report_format",
-        help="md (default) or json",
+        help=t("cmd.report.format"),
     )
     rep.add_argument(
         "-o",
         "--output",
         default="",
-        help="write to file (optional)",
+        help=t("cmd.report.out"),
     )
 
     aud = sub.add_parser(
         "audit",
-        help="Query audit trail — who was denied and why (ops only)",
+        help=t("cmd.audit"),
     )
     aud.add_argument(
         "--event",
         default="",
-        help="filter event (admit_deny, usage, …)",
+        help=t("cmd.audit.event"),
     )
-    aud.add_argument("--consumer", default="", help="filter consumer/agent id")
-    aud.add_argument("--provider", default="", help="filter provider id")
-    aud.add_argument("--limit", type=int, default=30, help="max rows (default 30)")
+    aud.add_argument("--consumer", default="", help=t("cmd.audit.consumer"))
+    aud.add_argument("--provider", default="", help=t("cmd.audit.provider"))
+    aud.add_argument("--limit", type=int, default=30, help=t("cmd.audit.limit"))
     aud.add_argument(
         "--summary",
         action="store_true",
-        help="aggregates: top deny reasons + by event/consumer",
+        help=t("cmd.audit.summary"),
     )
-    aud.add_argument("--json", action="store_true", help="machine-readable (default)")
+    aud.add_argument("--json", action="store_true", help=t("cmd.audit.json"))
 
     srch = sub.add_parser(
         "search",
-        help="Search repo modules / docs / HTTP / CLI (find code without guessing paths)",
+        help=t("cmd.search"),
     )
     srch.add_argument(
         "query",
         nargs="*",
         default=[],
-        help="search terms (e.g. circuit breaker); omit with --map",
+        help=t("cmd.search.query"),
     )
     srch.add_argument(
         "--kind",
         action="append",
         dest="kinds",
         default=None,
-        help="filter: concept module doc http cli config script (repeatable)",
+        help=t("cmd.search.kind"),
     )
-    srch.add_argument("--limit", type=int, default=15, help="max hits (default 15)")
-    srch.add_argument("--json", action="store_true", help="machine-readable output")
+    srch.add_argument("--limit", type=int, default=15, help=t("cmd.search.limit"))
+    srch.add_argument("--json", action="store_true", help=t("cmd.json"))
     srch.add_argument(
         "--map",
         action="store_true",
-        help="print full repo map markdown (docs/MAP.md body)",
+        help=t("cmd.search.map"),
     )
 
-    args = p.parse_args(argv)
+    args = p.parse_args(items)
 
     if args.cmd == "help":
-        print(_format_help(getattr(args, "topic", "") or ""))
+        print(_format_help(getattr(args, "topic", "") or "", language))
         return
 
     if args.cmd == "mcp" or (args.cmd is None and len(sys.argv) == 1):
@@ -651,7 +442,7 @@ def main(argv: list[str] | None = None) -> None:
         try:
             warns = assert_config_or_raise(cfg, strict=strict)
             for w in warns:
-                print(f"[tollgate] config: {w}", file=sys.stderr)
+                print(t("out.config", path=w), file=sys.stderr)
         except ValueError as e:
             print(str(e), file=sys.stderr)
             raise SystemExit(2) from e
@@ -662,19 +453,12 @@ def main(argv: list[str] | None = None) -> None:
 
             blocked = open_public_bind_error(host=host)
             if blocked:
-                print(f"[tollgate] ERROR: {blocked}", file=sys.stderr)
+                print(t("out.error", message=blocked), file=sys.stderr)
                 raise SystemExit(2)
             if not auth_required():
-                print(
-                    f"[tollgate] open mode (local desk) · dashboard "
-                    f"http://{host}:{port}/dashboard",
-                    file=sys.stderr,
-                )
+                print(t("out.open_mode", host=host, port=port), file=sys.stderr)
             else:
-                print(
-                    f"[tollgate] auth mode · http://{host}:{port}/dashboard",
-                    file=sys.stderr,
-                )
+                print(t("out.auth_mode", host=host, port=port), file=sys.stderr)
         except Exception as e:  # noqa: BLE001
             from tollgate.soft_fail import soft_fail
 
@@ -709,11 +493,7 @@ def main(argv: list[str] | None = None) -> None:
         q = " ".join(args.query or []).strip()
         if not q:
             print(
-                "usage: tollgate search <query> [--kind module] [--json]\n"
-                "       tollgate search --map\n"
-                "examples: tollgate search circuit breaker\n"
-                "          tollgate search budget --kind concept\n"
-                "map: docs/MAP.md",
+                t("out.search_usage"),
                 file=sys.stderr,
             )
             raise SystemExit(2)
@@ -758,7 +538,7 @@ def main(argv: list[str] | None = None) -> None:
         out_path = (args.output or "").strip()
         if out_path:
             Path(out_path).expanduser().write_text(text + ("" if text.endswith("\n") else "\n"), encoding="utf-8")
-            print(f"wrote {out_path}", file=sys.stderr)
+            print(t("out.wrote", path=out_path), file=sys.stderr)
         print(text)
         return
 
@@ -811,12 +591,7 @@ def main(argv: list[str] | None = None) -> None:
             from tollgate.paths import pin_data_home_env
 
             pin_data_home_env()
-            print(
-                "demo script not found — run from repo checkout:\n"
-                "  ./scripts/demo-agent-safety.sh\n"
-                "or: docs/DEMO.md",
-                file=sys.stderr,
-            )
+            print(t("out.demo_missing"), file=sys.stderr)
             raise SystemExit(2)
         env = os.environ.copy()
         env["DEMO_CONSUMER"] = str(args.consumer or "support-agent")
@@ -1045,7 +820,7 @@ def main(argv: list[str] | None = None) -> None:
         print(json.dumps(out, indent=2))
         if out.get("ok"):
             print(
-                f"\nUse header: X-Consumer-Key: {out['id']}:{out['secret']}",
+                t("out.use_header", key=f"{out['id']}:{out['secret']}"),
                 file=sys.stderr,
             )
         return

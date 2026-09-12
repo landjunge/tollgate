@@ -5,8 +5,12 @@ Designed for operators: see agents, set $ limits, prove failover.
 
 from __future__ import annotations
 
-DASHBOARD_HTML = r"""<!DOCTYPE html>
-<html lang="de">
+import re
+
+from tollgate import i18n
+
+_TEMPLATE = r"""<!DOCTYPE html>
+<html lang="{{ui.html_lang}}">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -94,6 +98,23 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
     background: transparent; border: 0; color: var(--fg);
     width: 7.5rem; font: inherit; outline: none;
   }
+  .lang-switch {
+    display: inline-flex;
+    gap: 2px;
+    border: 1px solid var(--line2);
+    border-radius: 999px;
+    padding: 2px;
+  }
+  .ob-card .lang-switch { float: right; margin: -.25rem 0 .5rem; }
+  .lang-switch a {
+    border-radius: 999px;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: .04em;
+    padding: 3px 9px;
+    text-decoration: none;
+  }
+  .lang-switch a.on { background: var(--acc); color: var(--bg); }
   .badge {
     display: inline-flex; align-items: center; gap: .4rem;
     padding: .32rem .75rem; border-radius: 999px;
@@ -363,15 +384,22 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 </head>
 <body>
 <div id="secBanner" role="status"></div>
-<div id="onboard" role="dialog" aria-label="Setup">
+<div id="onboard" role="dialog" aria-label="{{ui.setup}}">
   <div class="ob-card">
+    <!-- Eigener Schalter im Assistenten. Der Kopf liegt unter dem Dialog, und
+         wer den Assistenten nicht lesen kann, braucht den Schalter genau
+         hier — nicht erst nach dem Wegklicken. -->
+    <div class="lang-switch" role="group" aria-label="{{ui.lang_label}}">
+      <a href="?lang=de" hreflang="de" lang="de" class="{{ui.lang_de_class}}">DE</a>
+      <a href="?lang=en" hreflang="en" lang="en" class="{{ui.lang_en_class}}">EN</a>
+    </div>
     <div class="ob-steps" id="obSteps"><i class="on"></i><i></i><i></i><i></i></div>
     <div id="obBody"></div>
     <div class="ob-actions">
-      <button type="button" class="ghost" id="obSkip">Skip</button>
+      <button type="button" class="ghost" id="obSkip">{{ui.wizard.skip}}</button>
       <div style="display:flex;gap:.5rem">
-        <button type="button" class="ghost" id="obBack" style="display:none">Back</button>
-        <button type="button" id="obNext">Continue</button>
+        <button type="button" class="ghost" id="obBack" style="display:none">{{ui.wizard.back}}</button>
+        <button type="button" id="obNext">{{ui.wizard.continue}}</button>
       </div>
     </div>
     <p class="muted" id="obErr" style="margin:.75rem 0 0;font-size:.85rem;display:none"></p>
@@ -379,11 +407,15 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 </div>
 
 <header>
-  <div class="brand">TOLLGATE <em id="dayLabel"></em></div>
+  <div class="brand">{{ui.brand}} <em id="dayLabel"></em></div>
   <div class="header-right">
-    <button type="button" class="ghost sm" id="btnSetup">Setup</button>
-    <div class="auth-bar" title="Open mode: any label · Auth mode: id:secret">
-      <span>key</span>
+    <div class="lang-switch" role="group" aria-label="{{ui.lang_label}}">
+      <a href="?lang=de" hreflang="de" lang="de" class="{{ui.lang_de_class}}">DE</a>
+      <a href="?lang=en" hreflang="en" lang="en" class="{{ui.lang_en_class}}">EN</a>
+    </div>
+    <button type="button" class="ghost sm" id="btnSetup">{{ui.setup}}</button>
+    <div class="auth-bar" title="{{ui.key_hint}}">
+      <span>{{ui.key}}</span>
       <input id="apiKey" placeholder="desk" value="desk" autocomplete="off"/>
     </div>
     <div class="badge ok" id="statusBadge"><span class="dot"></span><span id="statusText">…</span></div>
@@ -391,17 +423,17 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 </header>
 
 <nav>
-  <a href="#overview" data-view="overview" class="active">Overview</a>
-  <a href="#agents" data-view="agents">Agents</a>
-  <a href="#providers" data-view="providers">Providers</a>
-  <a href="#prove" data-view="prove">Prove</a>
-  <a href="#audit" data-view="audit">Audit</a>
+  <a href="#overview" data-view="overview" class="active">{{ui.tab.overview}}</a>
+  <a href="#agents" data-view="agents">{{ui.tab.agents}}</a>
+  <a href="#providers" data-view="providers">{{ui.tab.providers}}</a>
+  <a href="#prove" data-view="prove">{{ui.tab.prove}}</a>
+  <a href="#audit" data-view="audit">{{ui.tab.audit}}</a>
 </nav>
 
 <main>
   <section class="view active" id="view-overview">
-    <h1 class="page">Control Room</h1>
-    <p class="sub">Is your AI safe, does it work, and what must you do next?</p>
+    <h1 class="page">{{ui.control_room}}</h1>
+    <p class="sub">{{ui.overview.lead}}</p>
 
     <div class="card hero">
       <div>
@@ -409,7 +441,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
           <div class="ring" id="ring" style="--p:0"></div>
           <div class="val" id="ringVal">—</div>
         </div>
-        <div class="ring-label">Reliability</div>
+        <div class="ring-label">{{ui.reliability}}</div>
         <div class="grade" id="grade">—</div>
       </div>
       <div>
@@ -418,43 +450,43 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
       </div>
     </div>
 
-    <h2 class="sec">Agents · spend &amp; limits</h2>
+    <h2 class="sec">{{ui.agents.heading}}</h2>
     <div class="card flat">
-      <div class="overview-agents" id="costSplit"><div class="empty">Loading…</div></div>
+      <div class="overview-agents" id="costSplit"><div class="empty">{{ui.loading}}</div></div>
       <div class="actions" style="margin-top:.85rem">
-        <a href="#agents" class="ghost" style="display:inline-flex;padding:.45rem .9rem;border-radius:10px;border:1px solid var(--line2);font-weight:600;color:var(--fg);text-decoration:none">Manage limits →</a>
+        <a href="#agents" class="ghost" style="display:inline-flex;padding:.45rem .9rem;border-radius:10px;border:1px solid var(--line2);font-weight:600;color:var(--fg);text-decoration:none">{{ui.manage_limits}}</a>
       </div>
     </div>
 
-    <h2 class="sec">Needs attention</h2>
-    <div class="card" id="attention"><div class="empty">Loading…</div></div>
+    <h2 class="sec">{{ui.needs_attention}}</h2>
+    <div class="card" id="attention"><div class="empty">{{ui.loading}}</div></div>
 
-    <h2 class="sec">Recommendations</h2>
-    <div class="card" id="reco"><div class="empty">Loading…</div></div>
+    <h2 class="sec">{{ui.recommendations}}</h2>
+    <div class="card" id="reco"><div class="empty">{{ui.loading}}</div></div>
 
-    <h2 class="sec">Providers</h2>
-    <div class="card" id="provGlance"><div class="empty">Loading…</div></div>
+    <h2 class="sec">{{ui.tab.providers}}</h2>
+    <div class="card" id="provGlance"><div class="empty">{{ui.loading}}</div></div>
 
     <div class="actions">
-      <button type="button" class="ghost" id="btnLoopTest">Test tool-loop block</button>
-      <button type="button" class="ghost" id="btnUnfreeze" style="display:none">Unfreeze admission</button>
+      <button type="button" class="ghost" id="btnLoopTest">{{ui.test_loop_block}}</button>
+      <button type="button" class="ghost" id="btnUnfreeze" style="display:none">{{ui.unfreeze}}</button>
     </div>
   </section>
 
   <div id="blockModal"><div class="card" id="blockModalBody"></div></div>
 
   <section class="view" id="view-agents">
-    <h1 class="page">Agents</h1>
-    <p class="sub">Each lane (agent / app) has its own hard limits. Open <b>Edit limits</b> to change day, hour, and per-request budgets.</p>
-    <div class="agent-grid" id="agentsList"><div class="card empty">Loading…</div></div>
+    <h1 class="page">{{ui.tab.agents}}</h1>
+    <p class="sub">{{ui.limits.intro_a}} <b>{{ui.limits.edit}}</b>{{ui.limits.intro_b}}</p>
+    <div class="agent-grid" id="agentsList"><div class="card empty">{{ui.loading}}</div></div>
   </section>
 
   <section class="view" id="view-providers">
-    <h1 class="page">Providers</h1>
-    <p class="sub">Which provider works best right now — health, not a config dump.</p>
+    <h1 class="page">{{ui.tab.providers}}</h1>
+    <p class="sub">{{ui.providers.lead}}</p>
     <div class="card">
       <table>
-        <thead><tr><th>Provider</th><th>Health</th><th>Success</th><th>Latency</th><th>Cost day</th><th>Circuit</th></tr></thead>
+        <thead><tr><th>{{ui.col.provider}}</th><th>{{ui.col.health}}</th><th>{{ui.col.success}}</th><th>{{ui.col.latency}}</th><th>{{ui.col.cost_day}}</th><th>{{ui.col.circuit}}</th></tr></thead>
         <tbody id="provTable"></tbody>
       </table>
     </div>
@@ -462,19 +494,19 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
   </section>
 
   <section class="view" id="view-prove">
-    <h1 class="page">Prove</h1>
-    <p class="sub">Is failover real — or only configured?</p>
+    <h1 class="page">{{ui.tab.prove}}</h1>
+    <p class="sub">{{ui.prove.lead}}</p>
     <div class="card" id="proveScore"></div>
     <div class="card">
-      <h2 class="sec" style="margin-top:0">Provider failover test</h2>
-      <p class="muted" id="proveLast">Last test: —</p>
+      <h2 class="sec" style="margin-top:0">{{ui.prove.test_title}}</h2>
+      <p class="muted" id="proveLast">{{ui.prove.last_none}}</p>
       <div class="actions">
-        <label class="muted" style="display:flex;align-items:center;gap:.4rem">Provider
+        <label class="muted" style="display:flex;align-items:center;gap:.4rem">{{ui.col.provider}}
           <input id="chaosProvider" value="opencode_zen"
             style="background:var(--bg);border:1px solid var(--line2);color:var(--fg);border-radius:8px;padding:.4rem .55rem"/>
         </label>
-        <button id="btnChaos">Run test</button>
-        <button class="ghost" id="btnCert">Refresh certificate</button>
+        <button id="btnChaos">{{ui.prove.run}}</button>
+        <button class="ghost" id="btnCert">{{ui.prove.refresh_cert}}</button>
       </div>
       <pre id="proveOut" class="muted" style="margin-top:1rem;white-space:pre-wrap;font-size:.85rem;font-family:var(--mono)"></pre>
     </div>
@@ -482,26 +514,26 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
   </section>
 
   <section class="view" id="view-audit">
-    <h1 class="page">Audit</h1>
-    <p class="sub">What Tollgate allowed, blocked, or failed over — ops only, no secrets.</p>
+    <h1 class="page">{{ui.tab.audit}}</h1>
+    <p class="sub">{{ui.audit.lead}}</p>
     <div class="actions" style="margin-bottom:.75rem">
-      <button class="ghost" id="btnAudit">Refresh</button>
-      <button class="ghost" id="btnAuditDenies">Denies only</button>
+      <button class="ghost" id="btnAudit">{{ui.refresh}}</button>
+      <button class="ghost" id="btnAuditDenies">{{ui.denies_only}}</button>
     </div>
     <div class="card">
       <table>
-        <thead><tr><th>When</th><th>Agent</th><th>Event</th><th>Provider</th><th>Detail</th></tr></thead>
+        <thead><tr><th>{{ui.col.when}}</th><th>{{ui.col.agent}}</th><th>{{ui.col.event}}</th><th>{{ui.col.provider}}</th><th>{{ui.col.detail}}</th></tr></thead>
         <tbody id="auditTable"></tbody>
       </table>
     </div>
   </section>
 
   <footer>
-    Safety layer for AI agents · not a gateway catalog ·
-    <a href="/docs">API</a> ·
-    <a href="https://landjunge.github.io/tollgate/" target="_blank" rel="noopener">Website</a> ·
-    <a href="https://github.com/landjunge/tollgate">GitHub</a> ·
-    <code>tollgate help</code>
+    {{ui.footer.lead}}
+    <a href="/docs">{{ui.footer.api}}</a> ·
+    <a href="https://landjunge.github.io/tollgate/" target="_blank" rel="noopener">{{ui.footer.website}}</a> ·
+    <a href="https://github.com/landjunge/tollgate">{{ui.footer.github}}</a> ·
+    <code>{{ui.footer.help}}</code>
   </footer>
 </main>
 
@@ -538,9 +570,9 @@ function when(ts) {
 }
 function grade(score) {
   if (score == null) return { t: '—', c: 'muted' };
-  if (score >= 85) return { t: 'GOOD', c: 'ok' };
-  if (score >= 65) return { t: 'FAIR', c: 'warn' };
-  return { t: 'WEAK', c: 'bad' };
+  if (score >= 85) return { t: '{{ui.grade.good}}', c: 'ok' };
+  if (score >= 65) return { t: '{{ui.grade.fair}}', c: 'warn' };
+  return { t: '{{ui.grade.weak}}', c: 'bad' };
 }
 function cardTone(c) {
   if (!c.protected) return 'is-warn';
@@ -550,12 +582,12 @@ function cardTone(c) {
 }
 function limitPills(c) {
   const pills = [];
-  if (c.max_usd_day) pills.push(`<span class="pill acc" title="Tagesbudget">Day ${money(c.max_usd_day)}</span>`);
-  if (c.max_usd_hour) pills.push(`<span class="pill warn" title="Stundenbudget — oft der „$2“-Wert">Hour ${money(c.max_usd_hour)}</span>`);
-  if (c.max_usd_request) pills.push(`<span class="pill" title="Pro Request">Req ${money4(c.max_usd_request)}</span>`);
-  if (c.max_tool_calls) pills.push(`<span class="pill" title="Tool-Loop-Stop">Tools ${c.max_tool_calls}</span>`);
-  if (c.max_requests_minute) pills.push(`<span class="pill">${c.max_requests_minute}/min</span>`);
-  if (!pills.length) pills.push(`<span class="pill bad">No hard limits</span>`);
+  if (c.max_usd_day) pills.push(`<span class="pill acc" title="{{ui.pill.day}}">{{ui.pill.day_short}} ${money(c.max_usd_day)}</span>`);
+  if (c.max_usd_hour) pills.push(`<span class="pill warn" title="{{ui.pill.hour}}">{{ui.pill.hour_short}} ${money(c.max_usd_hour)}</span>`);
+  if (c.max_usd_request) pills.push(`<span class="pill" title="{{ui.pill.request}}">{{ui.pill.req_short}} ${money4(c.max_usd_request)}</span>`);
+  if (c.max_tool_calls) pills.push(`<span class="pill" title="{{ui.pill.tool_stop}}">{{ui.pill.tools_short}} ${c.max_tool_calls}</span>`);
+  if (c.max_requests_minute) pills.push(`<span class="pill">${c.max_requests_minute}{{ui.per_min}}</span>`);
+  if (!pills.length) pills.push(`<span class="pill bad">{{ui.no_hard_limits}}</span>`);
   return pills.join('');
 }
 
@@ -606,25 +638,25 @@ function renderOverview(ctrl, cert) {
   $('dayLabel').textContent = ctrl.day ? '· ' + ctrl.day : '';
   $('headline').textContent = ctrl.headline || '';
   $('stats').innerHTML = [
-    ['Spent today', money(s.usd)],
-    ['Requests', String(s.calls ?? 0)],
-    ['Success', s.errors != null && s.calls ? pct(1 - (s.errors / (s.calls || 1))) : '—'],
-    ['Agent stops', String(s.agent_protection_blocks ?? 0)],
-    ['Circuits open', String(s.circuits_open ?? 0)],
-    ['Agents protected', String(s.consumers_protected ?? 0)],
+    ['{{ui.stat.spent_today}}', money(s.usd)],
+    ['{{ui.stat.requests}}', String(s.calls ?? 0)],
+    ['{{ui.stat.success}}', s.errors != null && s.calls ? pct(1 - (s.errors / (s.calls || 1))) : '—'],
+    ['{{ui.stat.agent_stops}}', String(s.agent_protection_blocks ?? 0)],
+    ['{{ui.stat.circuits_open}}', String(s.circuits_open ?? 0)],
+    ['{{ui.stat.agents_protected}}', String(s.consumers_protected ?? 0)],
   ].map(([k, v]) => `<div class="stat"><b>${v}</b><span>${k}</span></div>`).join('');
 
   const consumers = ctrl.consumers || [];
   if (!consumers.length) {
-    $('costSplit').innerHTML = `<div class="empty">No agents yet — send traffic, then set limits under Agents.</div>`;
+    $('costSplit').innerHTML = `<div class="empty">{{ui.agents.none_traffic}}</div>`;
   } else {
     $('costSplit').innerHTML = consumers.slice(0, 12).map(c => {
-      const day = c.max_usd_day ? money(c.max_usd_day) + '/day' : 'no day cap';
+      const day = c.max_usd_day ? money(c.max_usd_day) + '/day' : '{{ui.no_day_cap}}';
       const hour = c.max_usd_hour ? ' · ' + money(c.max_usd_hour) + '/hour' : '';
       return `<div class="mini-agent" data-goto-agent="${c.consumer}">
         <div class="n">${c.consumer}</div>
         <div class="s">${money4(c.usd)}</div>
-        <div class="l">${day}${hour} · ${c.calls || 0} req</div>
+        <div class="l">${day}${hour} · ${c.calls || 0} {{ui.suffix.req}}</div>
       </div>`;
     }).join('');
     document.querySelectorAll('[data-goto-agent]').forEach(el => {
@@ -650,7 +682,7 @@ function renderOverview(ctrl, cert) {
 
   const att = ctrl.attention || [];
   if (!att.length) {
-    $('attention').innerHTML = `<div class="ok">✓ Nothing urgent — agents under control</div>`;
+    $('attention').innerHTML = `<div class="ok">{{ui.nothing_urgent}}</div>`;
   } else {
     $('attention').innerHTML = `<div class="muted" style="margin-bottom:.5rem">${att.length} item(s)</div>` +
       att.map(a => {
@@ -662,7 +694,7 @@ function renderOverview(ctrl, cert) {
 
   const recos = [];
   if (ctrl.freeze && ctrl.freeze.frozen) {
-    recos.push({ level: 'bad', text: 'Admission is frozen — no billable traffic.', href: null });
+    recos.push({ level: 'bad', text: '{{ui.frozen_note}}', href: null });
   }
   consumers.filter(c => !c.protected && c.consumer).forEach(c => {
     recos.push({ level: 'warn', text: `«${c.consumer}» has weak limits — set day/hour budgets under Agents.`, href: '#agents' });
@@ -676,18 +708,18 @@ function renderOverview(ctrl, cert) {
   });
   const last = (ctrl.chaos || {}).last_report;
   if (!last) {
-    recos.push({ level: 'warn', text: 'Prove pending: no failover test yet. Needs ≥2 providers + keys.', href: '#prove' });
+    recos.push({ level: 'warn', text: '{{ui.prove_pending}}', href: '#prove' });
   } else if (last.survived === false) {
     recos.push({ level: 'bad', text: `Last DR test failed for ${last.chaos_provider}.`, href: '#prove' });
   }
-  if (!recos.length) recos.push({ level: 'ok', text: 'Desk looks protected. Keep using real traffic.', href: null });
+  if (!recos.length) recos.push({ level: 'ok', text: '{{ui.desk_protected}}', href: null });
   $('reco').innerHTML = recos.map(r =>
-    `<div class="reco ${r.level}">${r.text}${r.href ? ` <a href="${r.href}">Open →</a>` : ''}</div>`
+    `<div class="reco ${r.level}">${r.text}${r.href ? ` <a href="${r.href}">{{ui.open_arrow}}</a>` : ''}</div>`
   ).join('');
 
   const provs = (ctrl.providers || []).filter(p => p.enabled !== false).slice(0, 6);
   if (!provs.length) {
-    $('provGlance').innerHTML = `<div class="empty">No provider traffic yet</div>`;
+    $('provGlance').innerHTML = `<div class="empty">{{ui.no_provider_traffic}}</div>`;
   } else {
     $('provGlance').innerHTML = provs.map(p =>
       `<div class="row">
@@ -704,8 +736,8 @@ function renderOverview(ctrl, cert) {
 function renderAgents(ctrl) {
   const list = ctrl.consumers || [];
   if (!list.length) {
-    $('agentsList').innerHTML = `<div class="card empty">No agents yet.
-      <div class="actions"><button type="button" id="btnSetupAgents">Protect first agent</button></div></div>`;
+    $('agentsList').innerHTML = `<div class="card empty">{{ui.agents.none}}
+      <div class="actions"><button type="button" id="btnSetupAgents">{{ui.protect_first}}</button></div></div>`;
     const b = $('btnSetupAgents');
     if (b) b.onclick = () => { OB.step = 0; renderObSteps(); showOnboard(true); };
     return;
@@ -723,54 +755,54 @@ function renderAgents(ctrl) {
       <div class="agent-top">
         <div>
           <div class="agent-name">${c.consumer}</div>
-          <div class="agent-meta ${stc}">● ${st}${c.uses_default_only ? ' · default policy' : ''}</div>
+          <div class="agent-meta ${stc}">● ${st}${c.uses_default_only ? ' {{ui.default_policy}}' : ''}</div>
         </div>
         <div class="agent-spend">
           <div class="big">${money4(used)}</div>
-          <div class="cap">${max > 0 ? 'of ' + money(max) + ' / day' : 'spent today'}${rem != null && max > 0 ? ' · ' + money4(rem) + ' left' : ''}</div>
+          <div class="cap">${max > 0 ? '{{ui.of_open}}' + money(max) + '{{ui.per_day}}' : '{{ui.spent_today_lower}}'}${rem != null && max > 0 ? ' · ' + money4(rem) + '{{ui.left_suffix}}' : ''}</div>
         </div>
       </div>
       ${max > 0 ? `<div class="bar ${barC}"><i style="width:${ratio}%"></i></div>` : ''}
       <div class="limit-row">${limitPills(c)}</div>
       <div class="agent-foot">
-        <span class="muted">${c.calls || 0} requests · ${c.tokens || 0} tokens · EOD ~ ${money4(c.projected_usd_eod)}</span>
+        <span class="muted">${c.calls || 0} {{ui.eod_line}} ${money4(c.projected_usd_eod)}</span>
         <div style="display:flex;gap:.4rem">
-          <button type="button" class="ghost sm" data-edit="${i}">Edit limits</button>
-          <button type="button" class="ghost sm" data-loop="${c.consumer}">Test loop</button>
+          <button type="button" class="ghost sm" data-edit="${i}">{{ui.limits.edit}}</button>
+          <button type="button" class="ghost sm" data-loop="${c.consumer}">{{ui.test_loop}}</button>
         </div>
       </div>
       <div class="editor" id="agent-d-${i}">
-        <h3>Limits for «${c.consumer}»</h3>
+        <h3>{{ui.limits_for_open}}${c.consumer}{{ui.limits_for_close}}</h3>
         <div class="fields">
           <div class="field">
-            <label>Day budget ($)</label>
-            <input id="ed-day-${i}" type="number" min="0" step="0.5" value="${c.max_usd_day ?? ''}" placeholder="e.g. 5"/>
-            <span class="hint">Hard stop for the calendar day</span>
+            <label>{{ui.budget.day}}</label>
+            <input id="ed-day-${i}" type="number" min="0" step="0.5" value="${c.max_usd_day ?? ''}" placeholder="{{ui.eg.5}}"/>
+            <span class="hint">{{ui.budget.day_hint}}</span>
           </div>
           <div class="field">
-            <label>Hour budget ($)</label>
-            <input id="ed-hour-${i}" type="number" min="0" step="0.25" value="${c.max_usd_hour ?? ''}" placeholder="e.g. 2"/>
-            <span class="hint">Often the “$2” default — separate from day</span>
+            <label>{{ui.budget.hour}}</label>
+            <input id="ed-hour-${i}" type="number" min="0" step="0.25" value="${c.max_usd_hour ?? ''}" placeholder="{{ui.eg.2}}"/>
+            <span class="hint">{{ui.budget.hour_hint}}</span>
           </div>
           <div class="field">
-            <label>Max $ / request</label>
-            <input id="ed-req-${i}" type="number" min="0" step="0.05" value="${c.max_usd_request ?? ''}" placeholder="e.g. 0.50"/>
-            <span class="hint">Blocks oversized single calls</span>
+            <label>{{ui.budget.request}}</label>
+            <input id="ed-req-${i}" type="number" min="0" step="0.05" value="${c.max_usd_request ?? ''}" placeholder="{{ui.eg.050}}"/>
+            <span class="hint">{{ui.budget.request_hint}}</span>
           </div>
           <div class="field">
-            <label>Max tool-calls</label>
-            <input id="ed-tools-${i}" type="number" min="0" step="1" value="${c.max_tool_calls ?? ''}" placeholder="e.g. 20"/>
-            <span class="hint">Stops runaway agent loops</span>
+            <label>{{ui.budget.tool_calls}}</label>
+            <input id="ed-tools-${i}" type="number" min="0" step="1" value="${c.max_tool_calls ?? ''}" placeholder="{{ui.eg.20}}"/>
+            <span class="hint">{{ui.budget.tool_calls_hint}}</span>
           </div>
           <div class="field">
-            <label>Max req / minute</label>
-            <input id="ed-rpm-${i}" type="number" min="0" step="1" value="${c.max_requests_minute ?? ''}" placeholder="e.g. 40"/>
-            <span class="hint">Rate limit per lane</span>
+            <label>{{ui.budget.rpm}}</label>
+            <input id="ed-rpm-${i}" type="number" min="0" step="1" value="${c.max_requests_minute ?? ''}" placeholder="{{ui.eg.40}}"/>
+            <span class="hint">{{ui.budget.rpm_hint}}</span>
           </div>
         </div>
         <div class="actions">
-          <button type="button" data-save="${i}" data-name="${c.consumer}">Save limits</button>
-          <button type="button" class="ghost" data-edit-close="${i}">Cancel</button>
+          <button type="button" data-save="${i}" data-name="${c.consumer}">{{ui.save_limits}}</button>
+          <button type="button" class="ghost" data-edit-close="${i}">{{ui.cancel}}</button>
           <span id="ed-msg-${i}" class="muted" style="font-size:.85rem"></span>
         </div>
       </div>
@@ -783,7 +815,7 @@ function renderAgents(ctrl) {
       const ed = $('agent-d-' + i);
       const open = !ed.classList.contains('open');
       document.querySelectorAll('.editor').forEach(e => e.classList.remove('open'));
-      document.querySelectorAll('[data-edit]').forEach(b => { b.textContent = 'Edit limits'; });
+      document.querySelectorAll('[data-edit]').forEach(b => { b.textContent = '{{ui.limits.edit}}'; });
       if (open) {
         ed.classList.add('open');
         btn.textContent = 'Hide';
@@ -795,7 +827,7 @@ function renderAgents(ctrl) {
       const i = btn.getAttribute('data-edit-close');
       $('agent-d-' + i).classList.remove('open');
       const t = document.querySelector('[data-edit="'+i+'"]');
-      if (t) t.textContent = 'Edit limits';
+      if (t) t.textContent = '{{ui.limits.edit}}';
     };
   });
   document.querySelectorAll('[data-loop]').forEach(btn => {
@@ -809,12 +841,12 @@ function renderAgents(ctrl) {
 function renderProviders(ctrl) {
   const rows = ctrl.providers || [];
   if (!rows.length) {
-    $('provTable').innerHTML = `<tr><td colspan="6" class="muted">No provider data yet</td></tr>`;
+    $('provTable').innerHTML = `<tr><td colspan="6" class="muted">{{ui.no_provider_data}}</td></tr>`;
     return;
   }
   $('provTable').innerHTML = rows.map((p, i) =>
     `<tr class="click" data-prov="${i}">
-      <td><b>${p.provider}</b>${p.enabled === false ? ' <span class="muted">(off)</span>' : ''}</td>
+      <td><b>${p.provider}</b>${p.enabled === false ? ' <span class="muted">{{ui.off}}</span>' : ''}</td>
       <td class="${cls(p.status)}">${p.status}</td>
       <td>${pct(p.success_rate)}</td>
       <td>${p.latency_ms_avg != null ? Math.round(p.latency_ms_avg) + ' ms' : '—'}</td>
@@ -828,14 +860,14 @@ function renderProviders(ctrl) {
       $('provDetail').innerHTML = `<div class="card">
         <b style="font-size:1.1rem">${p.provider}</b>
         <div class="kv" style="margin-top:.75rem">
-          <div><b>Health score</b>${p.score ?? '—'}</div>
-          <div><b>Status</b><span class="${cls(p.status)}">${p.status}</span></div>
-          <div><b>Requests today</b>${p.calls ?? 0}</div>
-          <div><b>Errors</b>${p.errors ?? 0}</div>
-          <div><b>Success</b>${pct(p.success_rate)}</div>
-          <div><b>Avg latency</b>${p.latency_ms_avg != null ? Math.round(p.latency_ms_avg) + ' ms' : '—'}</div>
-          <div><b>USD today</b>${money4(p.usd)}</div>
-          <div><b>Circuit</b>${p.circuit}</div>
+          <div><b>{{ui.health_score}}</b>${p.score ?? '—'}</div>
+          <div><b>{{ui.status}}</b><span class="${cls(p.status)}">${p.status}</span></div>
+          <div><b>{{ui.requests_today}}</b>${p.calls ?? 0}</div>
+          <div><b>{{ui.errors}}</b>${p.errors ?? 0}</div>
+          <div><b>{{ui.col.success}}</b>${pct(p.success_rate)}</div>
+          <div><b>{{ui.avg_latency}}</b>${p.latency_ms_avg != null ? Math.round(p.latency_ms_avg) + ' ms' : '—'}</div>
+          <div><b>{{ui.usd_today}}</b>${money4(p.usd)}</div>
+          <div><b>{{ui.col.circuit}}</b>${p.circuit}</div>
         </div>
       </div>`;
     };
@@ -848,20 +880,20 @@ function renderProve(ctrl, cert) {
   const score = res.score;
   $('proveScore').innerHTML = `
     <div class="stats">
-      <div class="stat"><b>${score != null ? Math.round(score) : '—'}</b><span>Resilience</span></div>
-      <div class="stat"><b>${res.policy_compliant === true ? 'OK' : (res.policy_compliant === false ? '⚠' : '—')}</b><span>Policy</span></div>
-      <div class="stat"><b>${(ctrl.chaos && ctrl.chaos.history || []).length}</b><span>DR history</span></div>
+      <div class="stat"><b>${score != null ? Math.round(score) : '—'}</b><span>{{ui.resilience}}</span></div>
+      <div class="stat"><b>${res.policy_compliant === true ? 'OK' : (res.policy_compliant === false ? '⚠' : '—')}</b><span>{{ui.policy}}</span></div>
+      <div class="stat"><b>${(ctrl.chaos && ctrl.chaos.history || []).length}</b><span>{{ui.dr_history}}</span></div>
     </div>
     <p class="muted" style="margin:.75rem 0 0">${res.summary || ctrl.promise || ''}</p>`;
   if (!last) {
     $('proveLast').innerHTML = `
-      <div style="margin-bottom:.5rem">Last test: <span class="warn">Never run</span></div>
+      <div style="margin-bottom:.5rem">{{ui.last_test}} <span class="warn">{{ui.never_run}}</span></div>
       <div class="muted" style="font-size:.9rem;line-height:1.5">
-        Needs ≥2 providers in free_llm + keys, then run the test below.
+        {{ui.prove.needs_two}}
       </div>`;
   } else {
     const ok = last.survived;
-    $('proveLast').innerHTML = `Last test: <span class="${ok ? 'ok' : 'bad'}">${ok ? '✓ PASSED' : '✗ FAILED'}</span>
+    $('proveLast').innerHTML = `{{ui.last_test}} <span class="${ok ? 'ok' : 'bad'}">${ok ? '{{ui.passed}}' : '{{ui.failed}}'}</span>
       · ${last.chaos_provider} · ${last.successful || 0}/${last.requests_tested || 0} · recovery ${last.recovery_time_ms_best ?? '—'} ms
       <div style="margin-top:.35rem">${last.message || ''}</div>`;
   }
@@ -870,16 +902,16 @@ function renderProve(ctrl, cert) {
       `<div class="row"><span>${ch.label}</span><span class="${cls(ch.status)}">${ch.status}</span></div>
        ${ch.detail ? `<div class="muted" style="font-size:.8rem;margin:-.2rem 0 .45rem">${ch.detail}</div>` : ''}`
     ).join('');
-    $('certCard').innerHTML = `<h2 class="sec" style="margin-top:0">AI Reliability Report</h2>
-      <div class="muted">${cert.application || ''} · overall <b class="${cls(cert.overall)}">${cert.overall}</b></div>
+    $('certCard').innerHTML = `<h2 class="sec" style="margin-top:0">{{ui.report_title}}</h2>
+      <div class="muted">${cert.application || ''} {{ui.suffix.overall}} <b class="${cls(cert.overall)}">${cert.overall}</b></div>
       ${checks}
-      <div style="margin-top:.75rem">Resilience <b>${cert.resilience_score ?? '—'}</b>/100</div>`;
+      <div style="margin-top:.75rem">{{ui.resilience}} <b>${cert.resilience_score ?? '—'}</b>/100</div>`;
   }
 }
 
 function renderAudit(events) {
   if (!events || !events.length) {
-    $('auditTable').innerHTML = `<tr><td colspan="5" class="muted">No audit rows yet</td></tr>`;
+    $('auditTable').innerHTML = `<tr><td colspan="5" class="muted">{{ui.no_audit_rows}}</td></tr>`;
     return;
   }
   $('auditTable').innerHTML = events.map(e => {
@@ -906,7 +938,7 @@ async function loadAll() {
     renderProviders(CTRL);
     renderProve(CTRL, CERT);
   } catch (e) {
-    $('headline').textContent = 'Failed to load control plane: ' + e.message;
+    $('headline').textContent = '{{ui.err.control_plane}} ' + e.message;
   }
 }
 
@@ -944,13 +976,13 @@ $('btnCert').onclick = async () => {
   try {
     CERT = await api('/v1/certificate');
     if (CTRL) renderProve(CTRL, CERT);
-    $('proveOut').textContent = 'Certificate refreshed.';
+    $('proveOut').textContent = '{{ui.cert_refreshed}}';
   } catch (e) { $('proveOut').textContent = e.message; }
 };
 $('btnChaos').onclick = async () => {
   const btn = $('btnChaos');
   btn.disabled = true;
-  $('proveOut').textContent = 'Running failover test…';
+  $('proveOut').textContent = '{{ui.running_test}}';
   try {
     const provider = $('chaosProvider').value.trim() || 'opencode_zen';
     const rep = await api('/v1/chaos/test', {
@@ -958,7 +990,7 @@ $('btnChaos').onclick = async () => {
       body: JSON.stringify({ provider, requests: 8, intent: 'free_llm' }),
     });
     const lines = [
-      rep.survived ? '✓ TEST PASSED' : '✗ TEST FAILED',
+      rep.survived ? '{{ui.test_passed}}' : '{{ui.test_failed}}',
       '',
       `Provider:     ${rep.chaos_provider}`,
       `Requests:     ${rep.requests_tested}`,
@@ -973,7 +1005,7 @@ $('btnChaos').onclick = async () => {
     await loadAll();
     showView('prove');
   } catch (e) {
-    $('proveOut').textContent = 'Test failed to start: ' + e.message;
+    $('proveOut').textContent = '{{ui.err.test_start}} ' + e.message;
   } finally {
     btn.disabled = false;
   }
@@ -997,7 +1029,7 @@ $('blockModal').onclick = (e) => {
 
 async function simulateLoopBlock(consumer) {
   const name = (consumer || '').trim() || 'support-agent';
-  showBlockModal('Testing tool-loop protection for ' + name + '…');
+  showBlockModal('{{ui.testing_loop}} ' + name + '…');
   try {
     const r = await fetch('/v1/invoke', {
       method: 'POST',
@@ -1012,6 +1044,8 @@ async function simulateLoopBlock(consumer) {
         op: 'chat',
         tool_calls_est: 999,
         tokens_est: 10,
+        // Nutzlast an den Provider, kein Bildschirmtext: bleibt stabil,
+        // damit Audit-Zeilen zwischen Sprachen vergleichbar bleiben.
         arguments: { message: 'ui loop test' },
         agent_id: name,
         request_class: 'interactive',
@@ -1023,7 +1057,7 @@ async function simulateLoopBlock(consumer) {
     showBlockModal(header + msg);
     await loadAll();
   } catch (e) {
-    showBlockModal('Test failed: ' + e.message);
+    showBlockModal('{{ui.err.test}} ' + e.message);
   }
 }
 
@@ -1045,7 +1079,7 @@ async function saveAgentProtection(i, name) {
     const tools = numField('ed-tools-' + i);
     const rpm = numField('ed-rpm-' + i);
     if ([day, hour, req, tools, rpm].some(n => Number.isNaN(n) || n < 0)) {
-      throw new Error('Use numbers ≥ 0 (empty = unlimited)');
+      throw new Error('{{ui.numbers_hint}}');
     }
     const env = {
       max_usd_day: day,
@@ -1054,7 +1088,7 @@ async function saveAgentProtection(i, name) {
       max_tool_calls: Math.floor(tools),
       max_requests_minute: Math.floor(rpm),
     };
-    if (msg) { msg.textContent = 'Saving…'; msg.className = 'muted'; }
+    if (msg) { msg.textContent = '{{ui.saving}}'; msg.className = 'muted'; }
     await api('/v1/config', {
       method: 'POST',
       body: JSON.stringify({ consumer_envelopes: { [name]: env } }),
@@ -1080,7 +1114,7 @@ $('btnUnfreeze').onclick = async () => {
     await api('/v1/freeze', { method: 'POST', body: JSON.stringify({ frozen: false }) });
     await loadAll();
   } catch (e) {
-    alert('Unfreeze failed: ' + e.message);
+    alert('{{ui.err.unfreeze}} ' + e.message);
   }
 };
 
@@ -1112,56 +1146,56 @@ function renderObSteps() {
   dots.forEach((d, i) => d.classList.toggle('on', i <= OB.step));
   $('obBack').style.display = OB.step > 0 ? '' : 'none';
   const next = $('obNext');
-  next.textContent = OB.step === 0 ? 'Get started' : (OB.step === 3 ? 'Finish' : 'Continue');
+  next.textContent = OB.step === 0 ? '{{ui.get_started}}' : (OB.step === 3 ? 'Finish' : 'Continue');
   const body = $('obBody');
   $('obErr').style.display = 'none';
 
   if (OB.step === 0) {
     body.innerHTML = `
-      <h1>Welcome to Tollgate</h1>
-      <p class="sub">Protect your first AI agent — not configure 50 gateways.</p>
-      <div class="ob-check ok">✓ Safety layer between agents and providers</div>
-      <div class="ob-check">1 · Name the agent</div>
-      <div class="ob-check">2 · Set protection (budget + tool loops)</div>
-      <div class="ob-check">3 · Prove it works</div>`;
+      <h1>{{ui.wizard.welcome}}</h1>
+      <p class="sub">{{ui.wizard.lead}}</p>
+      <div class="ob-check ok">{{ui.wizard.claim}}</div>
+      <div class="ob-check">{{ui.wizard.step1}}</div>
+      <div class="ob-check">{{ui.wizard.step2}}</div>
+      <div class="ob-check">{{ui.wizard.step3}}</div>`;
   } else if (OB.step === 1) {
     body.innerHTML = `
-      <h1>Who are we protecting?</h1>
-      <p class="sub">Application / agent lane name (consumer id).</p>
+      <h1>{{ui.wizard.who}}</h1>
+      <p class="sub">{{ui.wizard.who_hint}}</p>
       <div class="field">
-        <label>Application name</label>
+        <label>{{ui.wizard.app_name}}</label>
         <input id="obName" value="${OB.name}" placeholder="support-agent"/>
       </div>`;
   } else if (OB.step === 2) {
     body.innerHTML = `
-      <h1>Set protection</h1>
-      <p class="sub">Hard stops before the invoice. You can tighten later under Agents.</p>
+      <h1>{{ui.wizard.set_protection}}</h1>
+      <p class="sub">{{ui.wizard.set_hint}}</p>
       <div class="field-row">
-        <div class="field"><label>Daily budget ($)</label>
+        <div class="field"><label>{{ui.wizard.daily_budget}}</label>
           <input id="obDay" type="number" min="0" step="0.5" value="${OB.maxUsdDay}"/></div>
-        <div class="field"><label>Max $ / task</label>
+        <div class="field"><label>{{ui.wizard.per_task}}</label>
           <input id="obReq" type="number" min="0" step="0.1" value="${OB.maxUsdReq}"/></div>
       </div>
       <div class="field-row">
-        <div class="field"><label>Max tool calls</label>
+        <div class="field"><label>{{ui.wizard.tool_calls}}</label>
           <input id="obTools" type="number" min="1" step="1" value="${OB.maxToolCalls}"/></div>
-        <div class="field"><label>Max requests / min</label>
+        <div class="field"><label>{{ui.wizard.rpm}}</label>
           <input id="obRpm" type="number" min="1" step="1" value="${OB.maxRpm}"/></div>
       </div>`;
   } else {
     body.innerHTML = `
-      <h1>You're protected</h1>
-      <p class="sub">Lane <b>${OB.name}</b> will get hard limits.</p>
-      <div class="ob-check ok">✓ Budget configured</div>
-      <div class="ob-check ok">✓ Tool-loop limit enabled</div>
-      <div class="ob-check ok">✓ Rate limit enabled</div>`;
+      <h1>{{ui.wizard.protected}}</h1>
+      <p class="sub">{{ui.wizard.lane}} <b>${OB.name}</b> {{ui.wizard.will_get}}</p>
+      <div class="ob-check ok">{{ui.wizard.ok_budget}}</div>
+      <div class="ob-check ok">{{ui.wizard.ok_loop}}</div>
+      <div class="ob-check ok">{{ui.wizard.ok_rate}}</div>`;
   }
 }
 
 function readObFields() {
   if (OB.step === 1) {
     const n = ($('obName') && $('obName').value || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
-    if (!n) throw new Error('Enter an application name');
+    if (!n) throw new Error('{{ui.err.name_required}}');
     OB.name = n.slice(0, 64);
   }
   if (OB.step === 2) {
@@ -1170,7 +1204,7 @@ function readObFields() {
     OB.maxToolCalls = Math.max(0, parseInt($('obTools').value, 10) || 0);
     OB.maxRpm = Math.max(0, parseInt($('obRpm').value, 10) || 0);
     if (!OB.maxUsdDay && !OB.maxToolCalls) {
-      throw new Error('Set at least a daily budget or max tool calls');
+      throw new Error('{{ui.err.limit_required}}');
     }
   }
 }
@@ -1206,7 +1240,7 @@ $('obNext').onclick = async () => {
     setTimeout(() => simulateLoopBlock(OB.name), 400);
   } catch (e) {
     $('obErr').style.display = '';
-    $('obErr').textContent = 'Could not save protection: ' + e.message;
+    $('obErr').textContent = '{{ui.err.save_protection}} ' + e.message;
   } finally {
     $('obNext').disabled = false;
   }
@@ -1230,3 +1264,30 @@ setInterval(loadAll, 15000);
 </body>
 </html>
 """
+
+
+_MARKER = re.compile(r"\{\{([\w.]+)\}\}")
+
+
+def dashboard_html(language: str = i18n.DEFAULT_LANGUAGE) -> str:
+    """Das Control Room in einer Sprache.
+
+    Die Marken werden hier ersetzt, nicht im Browser. Damit steht der Text
+    schon im ausgelieferten HTML — er ist ohne JavaScript lesbar und
+    Suchmaschinen sehen ihn.
+    """
+    code = i18n.normalise(language)
+    extra = {
+        "ui.html_lang": code,
+        "ui.lang_label": i18n.translate("ui.lang_label_text", code),
+        "ui.lang_de_class": "on" if code == "de" else "",
+        "ui.lang_en_class": "on" if code == "en" else "",
+    }
+
+    def pick(match: re.Match[str]) -> str:
+        key = match.group(1)
+        if key in extra:
+            return extra[key]
+        return i18n.translate(key, code)
+
+    return _MARKER.sub(pick, _TEMPLATE)
