@@ -255,10 +255,11 @@ def test_every_catalog_key_is_used() -> None:
     used = {text for _, text in _cli_string_literals()
             if text.startswith(("cmd.", "cli.", "out."))}
     used |= _dashboard_markers()
-    # Diese vier setzt dashboard_html() selbst zusammen, sie stehen nicht im
-    # Katalog: die Sprachkennung und die beiden Klassen des Umschalters.
-    used |= {"ui.html_lang", "ui.lang_label", "ui.lang_de_class", "ui.lang_en_class"}
-    declared = set(i18n.CATALOG)
+    used |= dashboard_html.COMPOSED_MARKERS
+    # Eine Fachfassung wird ueber ihren Grundschluessel erreicht, nie direkt.
+    # Sie steht deshalb in keiner Marke und ist trotzdem nicht tot.
+    declared = {key for key in i18n.CATALOG
+                if not key.endswith(i18n.EXPERT_SUFFIX)}
     assert not (declared - used), f"unbenutzte Schlüssel: {sorted(declared - used)}"
 
 
@@ -453,8 +454,7 @@ def test_dashboard_markers_exist_in_catalog() -> None:
     source = DASHBOARD_SOURCE.read_text(encoding="utf-8")
     markers = set(MARKER.findall(source))
     assert markers, "keine Marken gefunden — der Test greift ins Leere"
-    # Vier Marken setzt der Renderer selbst zusammen.
-    rendered = {"ui.html_lang", "ui.lang_label", "ui.lang_de_class", "ui.lang_en_class"}
+    rendered = dashboard_html.COMPOSED_MARKERS
     missing = sorted(key for key in markers - rendered if key not in i18n.CATALOG)
     assert not missing, f"Marken ohne Katalog-Eintrag: {missing}"
 

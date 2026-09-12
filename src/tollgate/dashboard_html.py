@@ -415,8 +415,15 @@ _TEMPLATE = r"""<!DOCTYPE html>
          wer den Assistenten nicht lesen kann, braucht den Schalter genau
          hier — nicht erst nach dem Wegklicken. -->
     <div class="lang-switch" role="group" aria-label="{{ui.lang_label}}">
-      <a href="?lang=de" hreflang="de" lang="de" class="{{ui.lang_de_class}}">DE</a>
-      <a href="?lang=en" hreflang="en" lang="en" class="{{ui.lang_en_class}}">EN</a>
+      <a href="{{ui.lang_de_href}}" hreflang="de" lang="de" class="{{ui.lang_de_class}}">DE</a>
+      <a href="{{ui.lang_en_href}}" hreflang="en" lang="en" class="{{ui.lang_en_class}}">EN</a>
+    </div>
+    <!-- Klartext ist der Normalfall, Fachsprache ist zuschaltbar. -->
+    <div class="lang-switch" role="group" aria-label="{{ui.register_label}}">
+      <a href="{{ui.register_plain_href}}" title="{{ui.register.plain_hint}}"
+         class="{{ui.register_plain_class}}">{{ui.register.plain}}</a>
+      <a href="{{ui.register_expert_href}}" title="{{ui.register.expert_hint}}"
+         class="{{ui.register_expert_class}}">{{ui.register.expert}}</a>
     </div>
     <div class="ob-steps" id="obSteps"><i class="on"></i><i></i><i></i><i></i></div>
     <div id="obBody"></div>
@@ -435,8 +442,15 @@ _TEMPLATE = r"""<!DOCTYPE html>
   <div class="brand">{{ui.brand}} <em id="dayLabel"></em></div>
   <div class="header-right">
     <div class="lang-switch" role="group" aria-label="{{ui.lang_label}}">
-      <a href="?lang=de" hreflang="de" lang="de" class="{{ui.lang_de_class}}">DE</a>
-      <a href="?lang=en" hreflang="en" lang="en" class="{{ui.lang_en_class}}">EN</a>
+      <a href="{{ui.lang_de_href}}" hreflang="de" lang="de" class="{{ui.lang_de_class}}">DE</a>
+      <a href="{{ui.lang_en_href}}" hreflang="en" lang="en" class="{{ui.lang_en_class}}">EN</a>
+    </div>
+    <!-- Klartext ist der Normalfall, Fachsprache ist zuschaltbar. -->
+    <div class="lang-switch" role="group" aria-label="{{ui.register_label}}">
+      <a href="{{ui.register_plain_href}}" title="{{ui.register.plain_hint}}"
+         class="{{ui.register_plain_class}}">{{ui.register.plain}}</a>
+      <a href="{{ui.register_expert_href}}" title="{{ui.register.expert_hint}}"
+         class="{{ui.register_expert_class}}">{{ui.register.expert}}</a>
     </div>
     <button type="button" class="ghost sm" id="btnSetup">{{ui.setup}}</button>
     <div class="auth-bar" title="{{ui.key_hint}}">
@@ -1293,26 +1307,48 @@ setInterval(loadAll, 15000);
 
 _MARKER = re.compile(r"\{\{([\w.]+)\}\}")
 
+# Diese Marken setzt dashboard_html() selbst zusammen; sie stehen nicht im
+# Katalog. Die Liste steht hier und nicht im Test, damit sie nur an einer
+# Stelle gepflegt wird.
+COMPOSED_MARKERS = frozenset({
+    "ui.html_lang",
+    "ui.lang_label", "ui.lang_de_class", "ui.lang_en_class",
+    "ui.lang_de_href", "ui.lang_en_href",
+    "ui.register_label", "ui.register_plain_class", "ui.register_expert_class",
+    "ui.register_plain_href", "ui.register_expert_href",
+})
 
-def dashboard_html(language: str = i18n.DEFAULT_LANGUAGE) -> str:
-    """Das Control Room in einer Sprache.
+
+def dashboard_html(language: str = i18n.DEFAULT_LANGUAGE,
+                   register: str = i18n.DEFAULT_REGISTER) -> str:
+    """Das Control Room in einer Sprache und auf einer Sprachebene.
 
     Die Marken werden hier ersetzt, nicht im Browser. Damit steht der Text
     schon im ausgelieferten HTML — er ist ohne JavaScript lesbar und
     Suchmaschinen sehen ihn.
     """
     code = i18n.normalise(language)
+    level = i18n.normalise_register(register)
+    # Jeder Schalter traegt die Wahl des anderen mit, sonst wirft ein Klick
+    # auf EN die Sprachebene weg und umgekehrt.
     extra = {
         "ui.html_lang": code,
-        "ui.lang_label": i18n.translate("ui.lang_label_text", code),
+        "ui.lang_label": i18n.translate("ui.lang_label_text", code, level),
         "ui.lang_de_class": "on" if code == "de" else "",
         "ui.lang_en_class": "on" if code == "en" else "",
+        "ui.lang_de_href": f"?lang=de&amp;mode={level}",
+        "ui.lang_en_href": f"?lang=en&amp;mode={level}",
+        "ui.register_label": i18n.translate("ui.register_label_text", code, level),
+        "ui.register_plain_class": "on" if level == i18n.PLAIN else "",
+        "ui.register_expert_class": "on" if level == i18n.EXPERT else "",
+        "ui.register_plain_href": f"?mode={i18n.PLAIN}&amp;lang={code}",
+        "ui.register_expert_href": f"?mode={i18n.EXPERT}&amp;lang={code}",
     }
 
     def pick(match: re.Match[str]) -> str:
         key = match.group(1)
         if key in extra:
             return extra[key]
-        return i18n.translate(key, code)
+        return i18n.translate(key, code, level)
 
     return _MARKER.sub(pick, _TEMPLATE)
