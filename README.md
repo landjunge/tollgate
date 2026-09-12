@@ -174,6 +174,23 @@ export OPENAI_BASE_URL=http://127.0.0.1:8787/v1
 export OPENAI_API_KEY=support-agent   # open mode label, or id:secret
 ```
 
+## Language / Sprache
+
+Tollgate speaks English and German. English stays the default, so existing
+scripts that read CLI output keep working.
+
+| Way | Example |
+|---|---|
+| Once | `tollgate --lang de help` |
+| Always | `export TOLLGATE_LANG=de` |
+| Automatic | from `LC_ALL`, `LC_MESSAGES` or `LANG` |
+
+`LANG=C` and `LANG=POSIX` mean "no preference" and are skipped, so a server
+shell never lands on a language nobody chose.
+
+The section words argparse prints itself (`usage:`, `options:`) come from
+Python and stay English.
+
 ---
 
 ## vs gateways (optional reading)
