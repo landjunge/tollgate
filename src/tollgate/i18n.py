@@ -23,6 +23,19 @@ DEFAULT_LANGUAGE = "en"
 
 LANGUAGE_NAMES = {"de": "Deutsch", "en": "English"}
 
+# Zwei Sprachebenen, unabhaengig von DE/EN. Klartext ist der Normalfall,
+# Fachsprache ist zuschaltbar — nie umgekehrt. Wer die Fachwoerter kennt,
+# schaltet sie ein; wer sie nicht kennt, wird nicht damit ueberfahren.
+# Vorbild ist 4AllPass (frontend/src/lib/copy-mode.ts).
+PLAIN = "plain"
+EXPERT = "expert"
+REGISTERS = (PLAIN, EXPERT)
+DEFAULT_REGISTER = PLAIN
+# Ein Fachtext haengt als eigener Eintrag am selben Schluessel. Das
+# Trennzeichen ist bewusst kein Punkt: sonst waere "ui.register.expert" die
+# Fachfassung von "ui.register" statt ein eigener Schluessel.
+EXPERT_SUFFIX = "#expert"
+
 # Reihenfolge fuer die Kommandozeile: unsere eigene Variable schlaegt die
 # Locale des Systems. "C" und "POSIX" heissen "keine Vorliebe" und werden
 # uebersprungen, sonst wuerde jede Server-Shell stumm auf eine Sprache fallen,
@@ -469,18 +482,34 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "Agents",
     },
     "ui.tab.providers": {
+        "de": "Anbieter",
+        "en": "Providers",
+    },
+    "ui.tab.providers#expert": {
         "de": "Provider",
         "en": "Providers",
     },
     "ui.tab.prove": {
+        "de": "Nachweis",
+        "en": "Proof",
+    },
+    "ui.tab.prove#expert": {
         "de": "Prove",
         "en": "Prove",
     },
     "ui.tab.audit": {
+        "de": "Protokoll",
+        "en": "Log",
+    },
+    "ui.tab.audit#expert": {
         "de": "Audit",
         "en": "Audit",
     },
     "ui.control_room": {
+        "de": "Leitstand",
+        "en": "Control room",
+    },
+    "ui.control_room#expert": {
         "de": "Control Room",
         "en": "Control Room",
     },
@@ -513,6 +542,10 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "Recommendations",
     },
     "ui.test_loop_block": {
+        "de": "Endlosschleife testen",
+        "en": "Test the endless-loop stop",
+    },
+    "ui.test_loop_block#expert": {
         "de": "Tool-Schleife testen",
         "en": "Test tool-loop block",
     },
@@ -533,6 +566,12 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "to change day, hour, and per-request budgets.",
     },
     "ui.providers.lead": {
+        "de": "Welcher Anbieter läuft gerade am besten — der Zustand von jetzt, "
+              "nicht die Einstellungen.",
+        "en": "Which provider works best right now — the state it is in, not "
+              "the settings.",
+    },
+    "ui.providers.lead#expert": {
         "de": "Welcher Provider läuft gerade am besten — Zustand, keine Konfigurationsliste.",
         "en": "Which provider works best right now — health, not a config dump.",
     },
@@ -542,6 +581,10 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     "ui.col.health": {
         "de": "Zustand",
+        "en": "State",
+    },
+    "ui.col.health#expert": {
+        "de": "Zustand",
         "en": "Health",
     },
     "ui.col.success": {
@@ -550,6 +593,10 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     "ui.col.latency": {
         "de": "Antwortzeit",
+        "en": "Response time",
+    },
+    "ui.col.latency#expert": {
+        "de": "Antwortzeit",
         "en": "Latency",
     },
     "ui.col.cost_day": {
@@ -557,6 +604,10 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "Cost day",
     },
     "ui.col.circuit": {
+        "de": "Schutzschalter",
+        "en": "Safety switch",
+    },
+    "ui.col.circuit#expert": {
         "de": "Schutzschalter",
         "en": "Circuit",
     },
@@ -578,9 +629,19 @@ CATALOG: dict[str, dict[str, str]] = {
     },
     "ui.prove.refresh_cert": {
         "de": "Zeugnis erneuern",
+        "en": "Refresh the report",
+    },
+    "ui.prove.refresh_cert#expert": {
+        "de": "Zeugnis erneuern",
         "en": "Refresh certificate",
     },
     "ui.audit.lead": {
+        "de": "Was Tollgate durchgelassen, gestoppt oder auf einen anderen "
+              "Anbieter umgeleitet hat. Keine Passwörter, keine Schlüssel.",
+        "en": "What Tollgate let through, stopped, or sent to a different "
+              "provider. No passwords, no keys.",
+    },
+    "ui.audit.lead#expert": {
         "de": "Was Tollgate zugelassen, geblockt oder umgeschaltet hat — nur Betrieb, keine Geheimnisse.",
         "en": "What Tollgate allowed, blocked, or failed over — ops only, no secrets.",
     },
@@ -733,6 +794,10 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "Errors",
     },
     "ui.avg_latency": {
+        "de": "Mittlere Antwortzeit",
+        "en": "Average response time",
+    },
+    "ui.avg_latency#expert": {
         "de": "Mittlere Antwortzeit",
         "en": "Avg latency",
     },
@@ -899,6 +964,26 @@ CATALOG: dict[str, dict[str, str]] = {
     "ui.lang_label_text": {
         "de": "Sprache",
         "en": "Language",
+    },
+    "ui.register_label_text": {
+        "de": "Sprachebene",
+        "en": "Wording",
+    },
+    "ui.register.plain": {
+        "de": "Klartext",
+        "en": "Plain",
+    },
+    "ui.register.expert": {
+        "de": "Fachsprache",
+        "en": "Expert",
+    },
+    "ui.register.plain_hint": {
+        "de": "Kurze Sätze, keine Fachwörter. So startet Tollgate.",
+        "en": "Short sentences, no jargon. This is how Tollgate starts.",
+    },
+    "ui.register.expert_hint": {
+        "de": "Die Fachbegriffe, wenn du sie kennst.",
+        "en": "The technical terms, if you know them.",
     },
     "ui.grade.good": {
         "de": "GUT",
@@ -1119,21 +1204,51 @@ def from_accept_header(header: str | None) -> str:
     return DEFAULT_LANGUAGE
 
 
-def translate(key: str, language: str = DEFAULT_LANGUAGE, **values: object) -> str:
+def normalise_register(register: str | None) -> str:
+    """Gibt immer eine unterstuetzte Sprachebene zurueck."""
+    if not register:
+        return DEFAULT_REGISTER
+    value = register.strip().lower()
+    return value if value in REGISTERS else DEFAULT_REGISTER
+
+
+def _entry(key: str, register: str) -> dict[str, str] | None:
+    """Der Eintrag fuer diesen Schluessel auf dieser Ebene.
+
+    Auf der Fachebene zaehlt die Variante `<schluessel>#expert`, wenn es sie
+    gibt. Gibt es sie nicht, bleibt der Klartext stehen — die meisten Texte
+    brauchen keine zweite Fassung, und einen Fachbegriff zu erfinden waere
+    schlechter als der klare Satz.
+    """
+    if normalise_register(register) == EXPERT:
+        variant = CATALOG.get(key + EXPERT_SUFFIX)
+        if variant is not None:
+            return variant
+    return CATALOG.get(key)
+
+
+def translate(key: str, language: str = DEFAULT_LANGUAGE,
+              register: str = DEFAULT_REGISTER, **values: object) -> str:
     """Uebersetzt einen Schluessel.
 
     Ein unbekannter Schluessel gibt den Schluessel selbst zurueck, damit die
     Oberflaeche nicht zerbricht — der Test faengt ihn vorher ab.
     """
-    entry = CATALOG.get(key)
+    entry = _entry(key, register)
     if entry is None:
         return key
     text = entry.get(normalise(language)) or entry[DEFAULT_LANGUAGE]
     return text.format(**values) if values else text
 
 
-def catalog_for(language: str) -> dict[str, str]:
-    """Der ganze Katalog in einer Sprache."""
+def catalog_for(language: str, register: str = DEFAULT_REGISTER) -> dict[str, str]:
+    """Der ganze Katalog in einer Sprache.
+
+    Die `#expert`-Varianten tauchen nicht als eigene Schluessel auf; sie sind
+    bereits eingesetzt, wo die Fachebene gewaehlt ist.
+    """
     code = normalise(language)
-    return {key: entry.get(code) or entry[DEFAULT_LANGUAGE]
-            for key, entry in CATALOG.items()}
+    keys = (key for key in CATALOG if not key.endswith(EXPERT_SUFFIX))
+    return {key: (_entry(key, register) or CATALOG[key]).get(code)
+                 or CATALOG[key][DEFAULT_LANGUAGE]
+            for key in keys}

@@ -82,6 +82,7 @@ _bootstrap_env()
 
 
 LANGUAGE_COOKIE = "tollgate_lang"
+REGISTER_COOKIE = "tollgate_register"
 
 @asynccontextmanager
 async def _lifespan(_app: FastAPI):
@@ -628,7 +629,10 @@ def dashboard_page(request: Request) -> HTMLResponse:
     """Human-readable control plane (no SPA build).
 
     Sprache: ?lang= schlaegt das Cookie, das Cookie schlaegt den Browser.
-    Die Wahl wird ein Jahr lang gemerkt.
+    Sprachebene: ?mode= schlaegt das Cookie, sonst Klartext. Anders als bei
+    der Sprache fragen wir den Browser nicht — Klartext ist der Normalfall
+    fuer alle, und wer Fachwoerter will, sagt es einmal.
+    Beide Wahlen werden ein Jahr lang gemerkt.
     """
     from tollgate.dashboard_html import dashboard_html
 
@@ -643,11 +647,24 @@ def dashboard_page(request: Request) -> HTMLResponse:
             else i18n.from_accept_header(request.headers.get("accept-language"))
         )
 
-    response = HTMLResponse(dashboard_html(language))
+    chosen_mode = request.query_params.get("mode")
+    register = i18n.normalise_register(
+        chosen_mode if chosen_mode else request.cookies.get(REGISTER_COOKIE)
+    )
+
+    response = HTMLResponse(dashboard_html(language, register))
     if chosen:
         response.set_cookie(
             LANGUAGE_COOKIE,
             language,
+            max_age=31536000,
+            samesite="lax",
+            httponly=False,
+        )
+    if chosen_mode:
+        response.set_cookie(
+            REGISTER_COOKIE,
+            register,
             max_age=31536000,
             samesite="lax",
             httponly=False,
