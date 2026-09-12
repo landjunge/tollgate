@@ -12,13 +12,24 @@ from tollgate import help_text, i18n
 Translator = Callable[..., str]
 
 
-def _translator(language: str) -> Translator:
-    """Bindet die Sprache einmal, damit kein Aufruf sie vergessen kann."""
+def _translator(language: str,
+                register: str = i18n.DEFAULT_REGISTER) -> Translator:
+    """Bindet Sprache und Sprachebene einmal, damit kein Aufruf sie vergisst."""
 
     def translate(key: str, **values: object) -> str:
-        return i18n.translate(key, language, **values)
+        return i18n.translate(key, language, register, **values)
 
     return translate
+
+
+def _flag_value(argv: list[str], flag: str) -> str | None:
+    """Liest `--flag wert` oder `--flag=wert` aus argv."""
+    for index, item in enumerate(argv):
+        if item == flag and index + 1 < len(argv):
+            return argv[index + 1]
+        if item.startswith(flag + "="):
+            return item.split("=", 1)[1]
+    return None
 
 
 def resolve_language(argv: list[str]) -> str:
@@ -28,36 +39,56 @@ def resolve_language(argv: list[str]) -> str:
     Parsen. Deshalb muss --lang vorher aus argv gelesen werden, sonst waere
     `tollgate --lang de --help` weiter englisch.
     """
-    for index, item in enumerate(argv):
-        if item == "--lang" and index + 1 < len(argv):
-            return i18n.normalise(argv[index + 1])
-        if item.startswith("--lang="):
-            return i18n.normalise(item.split("=", 1)[1])
-    return i18n.from_environment()
+    chosen = _flag_value(argv, "--lang")
+    return i18n.normalise(chosen) if chosen else i18n.from_environment()
 
 
-def _format_help(topic: str = "", language: str = i18n.DEFAULT_LANGUAGE) -> str:
-    """Hilfetext fuer Menschen (spiegelt docs/HILFE.md + USER_GUIDE.md)."""
+def resolve_register(argv: list[str]) -> str:
+    """Sprachebene schon vor dem Parsen bestimmen — aus demselben Grund."""
+    chosen = _flag_value(argv, "--mode")
+    return (i18n.normalise_register(chosen) if chosen
+            else i18n.register_from_environment())
+
+
+def _format_help(topic: str = "", language: str = i18n.DEFAULT_LANGUAGE,
+                 register: str = i18n.DEFAULT_REGISTER) -> str:
+    """Hilfetext fuer Menschen (spiegelt docs/HILFE.md + USER_GUIDE.md).
+
+    Ein Thema kann eine Fachfassung unter `<thema>#expert` haben. Bisher hat
+    keines eine — dann bleibt der Klartext stehen, wie ueberall sonst auch.
+    """
     code = i18n.normalise(language)
+    level = i18n.normalise_register(register)
     name = (topic or "").strip().lower()
-    entry = help_text.TOPICS.get(name)
+    entry = None
+    if level == i18n.EXPERT:
+        entry = help_text.TOPICS.get(name + i18n.EXPERT_SUFFIX)
+    if entry is None:
+        entry = help_text.TOPICS.get(name)
     if entry is not None:
         return entry[code].strip() + "\n"
     if name:
         head = help_text.UNKNOWN_TOPIC[code].format(topic=name)
-        return head + "\n\n" + _format_help("", code)
+        return head + "\n\n" + _format_help("", code, level)
     return help_text.OVERVIEW[code].strip() + "\n"
 
 def main(argv: list[str] | None = None) -> None:
     items = sys.argv[1:] if argv is None else argv
     language = resolve_language(items)
-    t = _translator(language)
+    register = resolve_register(items)
+    t = _translator(language, register)
     p = argparse.ArgumentParser(prog="tollgate", description=t("cli.description"))
     p.add_argument(
         "--lang",
         default=language,
         choices=list(i18n.LANGUAGES),
         help=t("cli.lang"),
+    )
+    p.add_argument(
+        "--mode",
+        default=register,
+        choices=list(i18n.REGISTERS),
+        help=t("cli.mode"),
     )
     sub = p.add_subparsers(dest="cmd")
     help_p = sub.add_parser("help", help=t("cmd.help"))
@@ -414,7 +445,7 @@ def main(argv: list[str] | None = None) -> None:
     args = p.parse_args(items)
 
     if args.cmd == "help":
-        print(_format_help(getattr(args, "topic", "") or "", language))
+        print(_format_help(getattr(args, "topic", "") or "", language, register))
         return
 
     if args.cmd == "mcp" or (args.cmd is None and len(sys.argv) == 1):

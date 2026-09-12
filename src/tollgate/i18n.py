@@ -55,6 +55,10 @@ CATALOG: dict[str, dict[str, str]] = {
         "de": "Ausgabesprache: de oder en",
         "en": "Output language: de or en",
     },
+    "cli.mode": {
+        "de": "Sprachebene: plain (Klartext, Standard) oder expert (Fachsprache)",
+        "en": "Wording: plain (default) or expert (technical terms)",
+    },
     # --- Befehle ---
     "cmd.help": {
         "de": "Hilfe — Themen und Handbuch-Verweise",
@@ -65,6 +69,10 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "start|protect|route|prove|ui|api|ops|troubleshoot|commands|env|config|faq",
     },
     "cmd.serve": {
+        "de": "Tollgate starten, damit Agenten es erreichen können",
+        "en": "Start Tollgate so agents can reach it",
+    },
+    "cmd.serve#expert": {
         "de": "HTTP-Server starten (uvicorn)",
         "en": "Run HTTP server (uvicorn)",
     },
@@ -73,10 +81,22 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "Run MCP stdio server",
     },
     "cmd.health": {
+        "de": "Zeigt, ob Tollgate hier läuft: wo seine Dateien liegen und "
+              "wie es anmeldet",
+        "en": "Shows whether Tollgate runs here: where its files are and how "
+              "it signs in",
+    },
+    "cmd.health#expert": {
         "de": "Lokalen Zustand als JSON ausgeben (Pfade + Anmeldeart)",
         "en": "Print local health JSON (paths + auth mode)",
     },
     "cmd.control": {
+        "de": "Lagebild: wie es den Anbietern geht, wer wieviel verbraucht "
+              "hat, und was daraus folgt",
+        "en": "The situation: how the providers are doing, who used how much, "
+              "and what follows from it",
+    },
+    "cmd.control#expert": {
         "de": "Lagebild (Provider-Zustand + Verbrauch je Consumer + Schlagzeile)",
         "en": "Control plane snapshot (provider health + consumer burn + headline)",
     },
@@ -85,6 +105,12 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "AI Resilience Score (0–100) + warnings",
     },
     "cmd.chaos": {
+        "de": "Probe für den Ernstfall: einen Anbieter absichtlich ausfallen "
+              "lassen und sehen, ob umgeschaltet wird",
+        "en": "A drill for the real thing: make a provider fail on purpose "
+              "and see whether it switches over",
+    },
+    "cmd.chaos#expert": {
         "de": "Chaos / Notfall: Provider-Ausfall erzeugen oder Umschalttest fahren",
         "en": "Chaos / DR: inject provider outage or run failover test",
     },
@@ -117,10 +143,18 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "stop all injects",
     },
     "cmd.paths": {
+        "de": "Zeigt, wo Tollgate seine Dateien ablegt",
+        "en": "Shows where Tollgate keeps its files",
+    },
+    "cmd.paths#expert": {
         "de": "Übertragbare Pfadübersicht ausgeben",
         "en": "Print portable path snapshot",
     },
     "cmd.consumer_add": {
+        "de": "Einen Zugang anlegen, damit ein Werkzeug Tollgate benutzen darf",
+        "en": "Create an access so a tool may use Tollgate",
+    },
+    "cmd.consumer_add#expert": {
         "de": "HTTP-Consumer anlegen (id:secret)",
         "en": "Add HTTP consumer (id:secret)",
     },
@@ -141,6 +175,12 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "display label",
     },
     "cmd.envelope": {
+        "de": "Tagesgrenzen je Zugang setzen oder anzeigen — wieviel darf "
+              "heute ausgegeben werden",
+        "en": "Set or show the daily limit per access — how much may be "
+              "spent today",
+    },
+    "cmd.envelope#expert": {
         "de": "Tages-Envelopes und Agentenschutz setzen oder auflisten "
               "(consumer_envelopes)",
         "en": "Set / list day envelopes + agent protection (consumer_envelopes)",
@@ -1178,6 +1218,17 @@ def normalise(language: str | None) -> str:
         return DEFAULT_LANGUAGE
     code = language.strip().lower().replace("_", "-").split("-", 1)[0]
     return code if code in LANGUAGES else DEFAULT_LANGUAGE
+
+
+# Eigene Variable fuer die Sprachebene. Es gibt keine Locale dafuer, also
+# gibt es auch nichts vom System zu erben.
+REGISTER_VARIABLE = "TOLLGATE_MODE"
+
+
+def register_from_environment(env: dict[str, str] | None = None) -> str:
+    """Liest die Sprachebene aus der Umgebung. Ohne Angabe: Klartext."""
+    source = os.environ if env is None else env
+    return normalise_register(source.get(REGISTER_VARIABLE))
 
 
 def from_environment(env: dict[str, str] | None = None) -> str:
