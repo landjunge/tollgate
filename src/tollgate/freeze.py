@@ -113,6 +113,19 @@ def set_frozen(
         adm["frozen_by"] = (by or "cli")[:64]
     cfg["admission"] = adm
     save_config(cfg, root=root)
+    try:
+        from tollgate.authority_emit import emit
+
+        emit(
+            "consumer.frozen" if frozen else "budget.checked",
+            decision="FREEZE" if frozen else "ALLOW",
+            reason_code="admission_frozen" if frozen else "admission_unfrozen",
+            action="freeze",
+            resource="tollgate:admission",
+            actor=str(by or "cli"),
+        )
+    except Exception:  # noqa: BLE001
+        pass
 
     try:
         from tollgate.alerts import maybe_alert

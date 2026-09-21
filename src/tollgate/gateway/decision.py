@@ -12,6 +12,15 @@ from typing import Any
 from tollgate.gateway.errors import ErrorClass
 
 
+def _emit(decision: Decision) -> None:
+    try:
+        from tollgate.authority_emit import emit_from_decision
+
+        emit_from_decision(decision)
+    except Exception:  # noqa: BLE001
+        return
+
+
 @dataclass
 class Decision:
     """Protect/Route decision — one place for deny packaging."""
@@ -55,12 +64,14 @@ class Decision:
 
     @classmethod
     def allow(cls, *, admit: dict[str, Any] | None = None, soft_degrade: bool = False) -> Decision:
-        return cls(
+        out = cls(
             allowed=True,
             code=ErrorClass.BUDGET_SOFT if soft_degrade else ErrorClass.OK,
             admit=admit,
             soft_degrade=soft_degrade,
         )
+        _emit(out)
+        return out
 
     @classmethod
     def deny(
@@ -75,7 +86,7 @@ class Decision:
         blocked: dict[str, Any] | None = None,
         extra: dict[str, Any] | None = None,
     ) -> Decision:
-        return cls(
+        out = cls(
             allowed=False,
             code=code,
             reason=reason,
@@ -86,6 +97,8 @@ class Decision:
             blocked=blocked,
             extra=dict(extra or {}),
         )
+        _emit(out)
+        return out
 
 
 def from_admit_decision(
