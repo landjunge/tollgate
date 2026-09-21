@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from tollgate.consumers import normalize_consumer_id
 from tollgate.gateway.decision import Decision
 from tollgate.gateway.errors import ErrorClass
 from tollgate.redact import redact_secrets
@@ -51,7 +52,7 @@ def package_deny(
         cl = lim.get("consumer_limits") if isinstance(lim.get("consumer_limits"), dict) else {}
         protection = lim.get("protection") or cl.get("protection")
 
-    cid = (consumer or "")[:64]
+    cid = normalize_consumer_id(consumer) if consumer else ""
 
     if audit:
         try:

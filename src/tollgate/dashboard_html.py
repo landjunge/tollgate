@@ -601,6 +601,21 @@ _TEMPLATE = r"""<!DOCTYPE html>
 
 <script>
 const $ = (id) => document.getElementById(id);
+
+// Everything below builds DOM with innerHTML. Any value that originated outside
+// this process — consumer labels from X-Consumer-Key, provider ids from config,
+// chaos labels — must pass through esc() first. The dashboard shares an origin
+// with /v1/config, and in open mode every caller is admin, so markup rendered
+// here runs with full control-plane authority.
+function esc(v) {
+  if (v == null) return '';
+  return String(v)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 function key() { return ($('apiKey').value || 'desk').trim(); }
 function headers() {
   const k = key();
@@ -715,8 +730,8 @@ function renderOverview(ctrl, cert) {
     $('costSplit').innerHTML = consumers.slice(0, 12).map(c => {
       const day = c.max_usd_day ? money(c.max_usd_day) + '/day' : '{{ui.no_day_cap}}';
       const hour = c.max_usd_hour ? ' · ' + money(c.max_usd_hour) + '/hour' : '';
-      return `<div class="mini-agent" data-goto-agent="${c.consumer}">
-        <div class="n">${c.consumer}</div>
+      return `<div class="mini-agent" data-goto-agent="${esc(c.consumer)}">
+        <div class="n">${esc(c.consumer)}</div>
         <div class="s">${money4(c.usd)}</div>
         <div class="l">${day}${hour} · ${c.calls || 0} {{ui.suffix.req}}</div>
       </div>`;
@@ -750,7 +765,7 @@ function renderOverview(ctrl, cert) {
       att.map(a => {
         const c = a.level === 'ok' ? 'ok' : (a.level === 'error' ? 'bad' : 'warn');
         const mark = a.level === 'ok' ? '✓' : (a.level === 'error' ? '⛔' : '⚠');
-        return `<div class="row"><span class="${c}">${mark} ${a.message || ''}</span><span class="muted">${a.code || ''}</span></div>`;
+        return `<div class="row"><span class="${c}">${mark} ${esc(a.message || '')}</span><span class="muted">${esc(a.code || '')}</span></div>`;
       }).join('');
   }
 
@@ -759,12 +774,12 @@ function renderOverview(ctrl, cert) {
     recos.push({ level: 'bad', text: '{{ui.frozen_note}}', href: null });
   }
   consumers.filter(c => !c.protected && c.consumer).forEach(c => {
-    recos.push({ level: 'warn', text: `«${c.consumer}» has weak limits — set day/hour budgets under Agents.`, href: '#agents' });
+    recos.push({ level: 'warn', text: `«${esc(c.consumer)}» has weak limits — set day/hour budgets under Agents.`, href: '#agents' });
   });
   consumers.filter(c => ['warn', 'likely_over', 'over_budget'].includes(c.status)).forEach(c => {
     recos.push({
       level: c.status === 'over_budget' ? 'bad' : 'warn',
-      text: `«${c.consumer}» ${money4(c.usd)}` + (c.max_usd_day ? ` / ${money(c.max_usd_day)} day` : '') + ` (${c.status})`,
+      text: `«${esc(c.consumer)}» ${money4(c.usd)}` + (c.max_usd_day ? ` / ${money(c.max_usd_day)} day` : '') + ` (${esc(c.status)})`,
       href: '#agents',
     });
   });
@@ -772,11 +787,11 @@ function renderOverview(ctrl, cert) {
   if (!last) {
     recos.push({ level: 'warn', text: '{{ui.prove_pending}}', href: '#prove' });
   } else if (last.survived === false) {
-    recos.push({ level: 'bad', text: `Last DR test failed for ${last.chaos_provider}.`, href: '#prove' });
+    recos.push({ level: 'bad', text: `Last DR test failed for ${esc(last.chaos_provider)}.`, href: '#prove' });
   }
   if (!recos.length) recos.push({ level: 'ok', text: '{{ui.desk_protected}}', href: null });
   $('reco').innerHTML = recos.map(r =>
-    `<div class="reco ${r.level}">${r.text}${r.href ? ` <a href="${r.href}">{{ui.open_arrow}}</a>` : ''}</div>`
+    `<div class="reco ${r.level}">${esc(r.text)}${r.href ? ` <a href="${esc(r.href)}">{{ui.open_arrow}}</a>` : ''}</div>`
   ).join('');
 
   const provs = (ctrl.providers || []).filter(p => p.enabled !== false).slice(0, 6);
@@ -785,7 +800,7 @@ function renderOverview(ctrl, cert) {
   } else {
     $('provGlance').innerHTML = provs.map(p =>
       `<div class="row">
-        <span><b>${p.provider}</b> <span class="pill ${cls(p.status)}">${p.status}</span></span>
+        <span><b>${esc(p.provider)}</b> <span class="pill ${cls(p.status)}">${esc(p.status)}</span></span>
         <span class="muted">${pct(p.success_rate)} · ${p.latency_ms_avg != null ? Math.round(p.latency_ms_avg) + 'ms' : '—'} · ${money4(p.usd)}</span>
       </div>`
     ).join('');
@@ -813,11 +828,11 @@ function renderAgents(ctrl) {
       : (c.status === 'warn' || c.status === 'likely_over') ? 'warn' : '';
     const st = c.protected ? (c.status === 'ok' ? 'Protected' : c.status) : 'Unprotected';
     const stc = c.protected && c.status === 'ok' ? 'ok' : cls(c.status);
-    return `<div class="agent-card ${cardTone(c)}" data-name="${c.consumer}" id="agent-card-${i}">
+    return `<div class="agent-card ${cardTone(c)}" data-name="${esc(c.consumer)}" id="agent-card-${i}">
       <div class="agent-top">
         <div>
-          <div class="agent-name">${c.consumer}</div>
-          <div class="agent-meta ${stc}">● ${st}${c.uses_default_only ? ' {{ui.default_policy}}' : ''}</div>
+          <div class="agent-name">${esc(c.consumer)}</div>
+          <div class="agent-meta ${stc}">● ${esc(st)}${c.uses_default_only ? ' {{ui.default_policy}}' : ''}</div>
         </div>
         <div class="agent-spend">
           <div class="big">${money4(used)}</div>
@@ -830,11 +845,11 @@ function renderAgents(ctrl) {
         <span class="muted">${c.calls || 0} {{ui.eod_line}} ${money4(c.projected_usd_eod)}</span>
         <div style="display:flex;gap:.4rem">
           <button type="button" class="ghost sm" data-edit="${i}">{{ui.limits.edit}}</button>
-          <button type="button" class="ghost sm" data-loop="${c.consumer}">{{ui.test_loop}}</button>
+          <button type="button" class="ghost sm" data-loop="${esc(c.consumer)}">{{ui.test_loop}}</button>
         </div>
       </div>
       <div class="editor" id="agent-d-${i}">
-        <h3>{{ui.limits_for_open}}${c.consumer}{{ui.limits_for_close}}</h3>
+        <h3>{{ui.limits_for_open}}${esc(c.consumer)}{{ui.limits_for_close}}</h3>
         <div class="fields">
           <div class="field">
             <label>{{ui.budget.day}}</label>
@@ -863,7 +878,7 @@ function renderAgents(ctrl) {
           </div>
         </div>
         <div class="actions">
-          <button type="button" data-save="${i}" data-name="${c.consumer}">{{ui.save_limits}}</button>
+          <button type="button" data-save="${i}" data-name="${esc(c.consumer)}">{{ui.save_limits}}</button>
           <button type="button" class="ghost" data-edit-close="${i}">{{ui.cancel}}</button>
           <span id="ed-msg-${i}" class="muted" style="font-size:var(--text-base)"></span>
         </div>
@@ -908,8 +923,8 @@ function renderProviders(ctrl) {
   }
   $('provTable').innerHTML = rows.map((p, i) =>
     `<tr class="click" data-prov="${i}">
-      <td><b>${p.provider}</b>${p.enabled === false ? ' <span class="muted">{{ui.off}}</span>' : ''}</td>
-      <td class="${cls(p.status)}">${p.status}</td>
+      <td><b>${esc(p.provider)}</b>${p.enabled === false ? ' <span class="muted">{{ui.off}}</span>' : ''}</td>
+      <td class="${cls(p.status)}">${esc(p.status)}</td>
       <td>${pct(p.success_rate)}</td>
       <td>${p.latency_ms_avg != null ? Math.round(p.latency_ms_avg) + ' ms' : '—'}</td>
       <td>${money4(p.usd)}</td>
@@ -920,16 +935,16 @@ function renderProviders(ctrl) {
     tr.onclick = () => {
       const p = rows[Number(tr.dataset.prov)];
       $('provDetail').innerHTML = `<div class="card">
-        <b style="font-size:var(--text-lg)">${p.provider}</b>
+        <b style="font-size:var(--text-lg)">${esc(p.provider)}</b>
         <div class="kv" style="margin-top:.75rem">
           <div><b>{{ui.health_score}}</b>${p.score ?? '—'}</div>
-          <div><b>{{ui.status}}</b><span class="${cls(p.status)}">${p.status}</span></div>
+          <div><b>{{ui.status}}</b><span class="${cls(p.status)}">${esc(p.status)}</span></div>
           <div><b>{{ui.requests_today}}</b>${p.calls ?? 0}</div>
           <div><b>{{ui.errors}}</b>${p.errors ?? 0}</div>
           <div><b>{{ui.col.success}}</b>${pct(p.success_rate)}</div>
           <div><b>{{ui.avg_latency}}</b>${p.latency_ms_avg != null ? Math.round(p.latency_ms_avg) + ' ms' : '—'}</div>
           <div><b>{{ui.usd_today}}</b>${money4(p.usd)}</div>
-          <div><b>{{ui.col.circuit}}</b>${p.circuit}</div>
+          <div><b>{{ui.col.circuit}}</b>${esc(p.circuit)}</div>
         </div>
       </div>`;
     };
@@ -946,7 +961,7 @@ function renderProve(ctrl, cert) {
       <div class="stat"><b>${res.policy_compliant === true ? 'OK' : (res.policy_compliant === false ? '⚠' : '—')}</b><span>{{ui.policy}}</span></div>
       <div class="stat"><b>${(ctrl.chaos && ctrl.chaos.history || []).length}</b><span>{{ui.dr_history}}</span></div>
     </div>
-    <p class="muted" style="margin:.75rem 0 0">${res.summary || ctrl.promise || ''}</p>`;
+    <p class="muted" style="margin:.75rem 0 0">${esc(res.summary || ctrl.promise || '')}</p>`;
   if (!last) {
     $('proveLast').innerHTML = `
       <div style="margin-bottom:.5rem">{{ui.last_test}} <span class="warn">{{ui.never_run}}</span></div>
@@ -956,16 +971,16 @@ function renderProve(ctrl, cert) {
   } else {
     const ok = last.survived;
     $('proveLast').innerHTML = `{{ui.last_test}} <span class="${ok ? 'ok' : 'bad'}">${ok ? '{{ui.passed}}' : '{{ui.failed}}'}</span>
-      · ${last.chaos_provider} · ${last.successful || 0}/${last.requests_tested || 0} · recovery ${last.recovery_time_ms_best ?? '—'} ms
-      <div style="margin-top:.35rem">${last.message || ''}</div>`;
+      · ${esc(last.chaos_provider)} · ${last.successful || 0}/${last.requests_tested || 0} · recovery ${last.recovery_time_ms_best ?? '—'} ms
+      <div style="margin-top:.35rem">${esc(last.message || '')}</div>`;
   }
   if (cert) {
     const checks = (cert.checks || []).map(ch =>
-      `<div class="row"><span>${ch.label}</span><span class="${cls(ch.status)}">${ch.status}</span></div>
-       ${ch.detail ? `<div class="muted" style="font-size:var(--text-sm);margin:-.2rem 0 .45rem">${ch.detail}</div>` : ''}`
+      `<div class="row"><span>${esc(ch.label)}</span><span class="${cls(ch.status)}">${esc(ch.status)}</span></div>
+       ${ch.detail ? `<div class="muted" style="font-size:var(--text-sm);margin:-.2rem 0 .45rem">${esc(ch.detail)}</div>` : ''}`
     ).join('');
     $('certCard').innerHTML = `<h2 class="sec" style="margin-top:0">{{ui.report_title}}</h2>
-      <div class="muted">${cert.application || ''} {{ui.suffix.overall}} <b class="${cls(cert.overall)}">${cert.overall}</b></div>
+      <div class="muted">${esc(cert.application || '')} {{ui.suffix.overall}} <b class="${cls(cert.overall)}">${esc(cert.overall)}</b></div>
       ${checks}
       <div style="margin-top:.75rem">{{ui.resilience}} <b>${cert.resilience_score ?? '—'}</b>/100</div>`;
   }
@@ -982,10 +997,10 @@ function renderAudit(events) {
     const short = String(detail).slice(0, 90);
     return `<tr>
       <td class="muted">${when(e.ts)}</td>
-      <td>${e.consumer || '—'}</td>
-      <td class="${ev === 'admit_deny' ? 'bad' : ''}">${ev}</td>
-      <td>${e.provider || '—'}</td>
-      <td class="muted" title="${String(detail).replace(/"/g, '&quot;')}">${short}</td>
+      <td>${esc(e.consumer || '—')}</td>
+      <td class="${ev === 'admit_deny' ? 'bad' : ''}">${esc(ev)}</td>
+      <td>${esc(e.provider || '—')}</td>
+      <td class="muted" title="${esc(short)}">${esc(short)}</td>
     </tr>`;
   }).join('');
 }
@@ -1010,7 +1025,7 @@ async function loadAudit(deniesOnly) {
     const d = await api('/v1/audit' + q);
     renderAudit(d.events || []);
   } catch (e) {
-    $('auditTable').innerHTML = `<tr><td colspan="5" class="bad">${e.message}</td></tr>`;
+    $('auditTable').innerHTML = `<tr><td colspan="5" class="bad">${esc(e.message)}</td></tr>`;
   }
 }
 
@@ -1226,7 +1241,7 @@ function renderObSteps() {
       <p class="sub">{{ui.wizard.who_hint}}</p>
       <div class="field">
         <label>{{ui.wizard.app_name}}</label>
-        <input id="obName" value="${OB.name}" placeholder="support-agent"/>
+        <input id="obName" value="${esc(OB.name)}" placeholder="support-agent"/>
       </div>`;
   } else if (OB.step === 2) {
     body.innerHTML = `
@@ -1247,7 +1262,7 @@ function renderObSteps() {
   } else {
     body.innerHTML = `
       <h1>{{ui.wizard.protected}}</h1>
-      <p class="sub">{{ui.wizard.lane}} <b>${OB.name}</b> {{ui.wizard.will_get}}</p>
+      <p class="sub">{{ui.wizard.lane}} <b>${esc(OB.name)}</b> {{ui.wizard.will_get}}</p>
       <div class="ob-check ok">{{ui.wizard.ok_budget}}</div>
       <div class="ob-check ok">{{ui.wizard.ok_loop}}</div>
       <div class="ob-check ok">{{ui.wizard.ok_rate}}</div>`;

@@ -35,13 +35,15 @@ class RequestContext:
 
     def consumer_id(self) -> str:
         """Prefer explicit consumer; fall back to agent_id for desk paths."""
+        from tollgate.consumers import normalize_consumer_id
+
         c = (self.consumer or "").strip()
         if c:
-            return c[:64]
+            return normalize_consumer_id(c)
         a = (self.agent_id or "").strip()
         if a.startswith("openai:"):
             a = a[7:]
-        return (a or "anonymous")[:64]
+        return normalize_consumer_id(a)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -62,7 +64,11 @@ class RequestContext:
             request_class=RequestClass.SYSTEM,
             billable=False,
             agent_id=kw.get("agent_id") or "system",
-            **{k: v for k, v in kw.items() if k not in ("agent_id", "request_class", "billable")},
+            **{
+                k: v
+                for k, v in kw.items()
+                if k not in ("agent_id", "request_class", "billable")
+            },
         )
 
     @classmethod

@@ -375,9 +375,16 @@ CATALOG: dict[str, dict[str, str]] = {
         "en": "omit audit.jsonl from export",
     },
     "cmd.snapshot.force": {
-        "de": "Import: vorhandene Dateien überschreiben (Vorgabe führt nur "
-              "keys_app zusammen)",
-        "en": "import: overwrite existing files (default merges keys_app only)",
+        "de": "Import: vorhandene Dateien überschreiben, auch keys_app.json",
+        "en": "import: overwrite existing files, including keys_app.json",
+    },
+    "cmd.snapshot.merge_config": {
+        "de": "Import: keys_app.json aus dem Archiv mit der lokalen Datei "
+              "zusammenführen. Nur für eigene Snapshots — ein fremdes Archiv "
+              "kann eine Provider-base_url umbiegen und damit die API-Keys.",
+        "en": "import: deep-merge keys_app.json from the archive onto the local one. "
+              "Only for snapshots you produced yourself — a foreign archive can "
+              "redirect a provider base_url and with it your API keys.",
     },
     "cmd.snapshot.dry_run": {
         "de": "Import: Plan zeigen, ohne zu schreiben",

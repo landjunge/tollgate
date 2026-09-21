@@ -14,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from tollgate.consumers import normalize_consumer_id
 from tollgate.filelock import FileLock
 from tollgate.paths import user_dir
 
@@ -82,7 +83,7 @@ def _slot(row: dict[str, Any], kind: str, bucket: str) -> dict[str, Any]:
 
 def peek_rates(consumer: str, *, root: Path | None = None) -> dict[str, Any]:
     """Read-only current minute/hour counters for a consumer."""
-    cid = (consumer or "anonymous").strip()[:64] or "anonymous"
+    cid = normalize_consumer_id(consumer)
     path = rates_path(root)
     with _LOCK:
         with FileLock(path):
@@ -132,7 +133,7 @@ def record_attempt(
 
     Called after protection checks pass (so blocked requests do not burn quota).
     """
-    cid = (consumer or "anonymous").strip()[:64] or "anonymous"
+    cid = normalize_consumer_id(consumer)
     path = rates_path(root)
     tok = max(0, int(tokens_est or 0))
     usd = max(0.0, float(usd_est or 0.0))

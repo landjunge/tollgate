@@ -9,7 +9,7 @@ Auth mode:
   - Header: X-Consumer-Key: <id>:<secret>
   - Or: X-Consumer-Id + X-Consumer-Key: <secret>
 
-Secrets stored only as sha256 hashes on disk.
+Secrets stored only as salted hashes on disk (scrypt; legacy SHA-256 still verifies).
 """
 
 from __future__ import annotations
@@ -18,6 +18,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import secrets
 import threading
 from dataclasses import dataclass
@@ -42,6 +43,105 @@ class Consumer:
 
 def _sha256(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+# Consumer secrets are hashed with salted scrypt from the standard library.
+#
+# Auto-generated secrets carry 192 bits, so a plain digest would already be out
+# of reach. Operator-chosen secrets (`consumer-add --secret`) are the reason for
+# this: an unsalted single-round SHA-256 of a human-picked string falls to a
+# wordlist the moment consumers.json is read by anything else on the box.
+#
+# n=2**14 keeps `verify_consumer` at roughly a millisecond, which is affordable
+# on a request path that also does network I/O.
+_SCRYPT_N = 2**14
+_SCRYPT_R = 8
+_SCRYPT_P = 1
+_SCRYPT_PREFIX = "scrypt$"
+
+# Advisory only. Salted scrypt is what actually protects a stored secret; this
+# threshold exists so `consumer-add --secret hunter2` says something out loud
+# instead of succeeding silently. It deliberately does not refuse: the operator
+# asked for that secret, and breaking existing desks to enforce a style rule
+# would be the wrong trade.
+WEAK_CUSTOM_SECRET_LEN = 16
+
+
+def _scrypt_hash(secret: str, salt: bytes) -> str:
+    digest = hashlib.scrypt(
+        secret.encode("utf-8"),
+        salt=salt,
+        n=_SCRYPT_N,
+        r=_SCRYPT_R,
+        p=_SCRYPT_P,
+        dklen=32,
+    )
+    return f"{_SCRYPT_PREFIX}{salt.hex()}${digest.hex()}"
+
+
+def hash_consumer_secret(secret: str) -> str:
+    return _scrypt_hash(secret, secrets.token_bytes(16))
+
+
+def verify_consumer_secret(secret: str, stored: str) -> bool:
+    """Constant-time check against either hash format.
+
+    Files written before the scrypt change hold a bare SHA-256 hex digest. Those
+    keep working so an upgrade never locks a desk out of its own consumers; they
+    are re-hashed on the next `consumer-add` for that id.
+    """
+    stored = (stored or "").strip()
+    if stored.startswith(_SCRYPT_PREFIX):
+        try:
+            salt_hex, digest_hex = stored[len(_SCRYPT_PREFIX) :].split("$", 1)
+            salt = bytes.fromhex(salt_hex)
+        except ValueError:
+            return False
+        computed = _scrypt_hash(secret, salt)
+        if len(computed) != len(stored):
+            return False
+        return hmac.compare_digest(computed, stored)
+    # Legacy: unsalted sha256.
+    digest = _sha256(secret)
+    if len(stored) != len(digest):
+        return False
+    return hmac.compare_digest(stored, digest)
+
+
+def secret_hash_is_legacy(stored: str) -> bool:
+    return not (stored or "").strip().startswith(_SCRYPT_PREFIX)
+
+
+# A consumer id is client-asserted: it arrives in the X-Consumer-Key header and,
+# in open mode, any label is accepted. It then flows into the usage ledger, into
+# GET /v1/control, and from there into the dashboard DOM. Without a charset it
+# is an injection vector into the control plane's own UI, so it is constrained
+# here — once, at the edge — rather than at each of the places that render it.
+# Colon is excluded on purpose: X-Consumer-Key is documented as `<id>:<secret>`
+# and is split on the first `:`. An id that itself contains `:` cannot ride
+# that header.
+CONSUMER_ID_RE = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
+
+ANONYMOUS = "anonymous"
+
+
+def normalize_consumer_id(value: str | None) -> str:
+    """Canonical consumer id, or ``anonymous`` when the label is unusable.
+
+    Rejecting rather than sanitizing is deliberate: a silently stripped label
+    would silently split one lane's budget across two ledger keys.
+    """
+    cid = (value or "").strip()[:64]
+    if not cid or cid in (ANONYMOUS, "*"):
+        return ANONYMOUS
+    if CONSUMER_ID_RE.fullmatch(cid) is None:
+        return ANONYMOUS
+    return cid
+
+
+def consumer_id_is_valid(value: str | None) -> bool:
+    cid = (value or "").strip()
+    return bool(cid) and CONSUMER_ID_RE.fullmatch(cid) is not None
 
 
 def consumers_path() -> Path:
@@ -92,11 +192,13 @@ def list_consumers() -> list[Consumer]:
             continue
         cid = str(row.get("id") or "").strip()
         sh = str(row.get("secret_hash") or "").strip()
-        if not cid or not sh:
+        # Invalid ids stay out of the dashboard / principal list (XSS).
+        # They still hold auth — see `_stored_credentials_require_auth`.
+        if not cid or not sh or not consumer_id_is_valid(cid):
             continue
         out.append(
             Consumer(
-                id=cid[:64],
+                id=cid,
                 secret_hash=sh,
                 admin=bool(row.get("admin")),
                 enabled=bool(row.get("enabled", True)),
@@ -154,6 +256,25 @@ def refuse_open_public_bind(*, host: str | None = None) -> None:
         raise RuntimeError(msg)
 
 
+def _stored_credentials_require_auth() -> bool:
+    """True when consumers.json holds at least one id + secret_hash row.
+
+    ``list_consumers()`` drops ids that fail the charset so they never become
+    dashboard principals. Auth must still stay on: a desk whose only stored
+    row is a pre-charset id (`support agent`, markup) would otherwise fall
+    into open mode — the opposite of the `_corrupt` fail-closed posture.
+    """
+    raw = _load_raw()
+    for row in raw.get("consumers") or []:
+        if not isinstance(row, dict):
+            continue
+        cid = str(row.get("id") or "").strip()
+        sh = str(row.get("secret_hash") or "").strip()
+        if cid and sh:
+            return True
+    return False
+
+
 def auth_required() -> bool:
     if (os.environ.get("TOLLGATE_REQUIRE_AUTH") or "").strip().lower() in (
         "1",
@@ -164,7 +285,7 @@ def auth_required() -> bool:
         return True
     if consumers_corrupt():
         return True
-    return any(c.enabled for c in list_consumers())
+    return _stored_credentials_require_auth()
 
 
 def parse_consumer_header(
@@ -174,15 +295,15 @@ def parse_consumer_header(
     raw = (x_consumer_key or "").strip()
     cid_h = (x_consumer_id or "").strip()
     if not raw and not cid_h:
-        return "anonymous", ""
+        return ANONYMOUS, ""
     if ":" in raw and not cid_h:
         left, right = raw.split(":", 1)
-        return (left.strip()[:64] or "anonymous"), right.strip()
+        return normalize_consumer_id(left), right.strip()
     if cid_h:
-        return cid_h[:64], raw
+        return normalize_consumer_id(cid_h), raw
     if auth_required():
-        return "anonymous", raw
-    return (raw[:64] or "anonymous"), ""
+        return ANONYMOUS, raw
+    return normalize_consumer_id(raw), ""
 
 
 def verify_consumer(
@@ -215,14 +336,16 @@ def verify_consumer(
             "mode": "auth",
             "error": "missing consumer secret (use X-Consumer-Key: id:secret)",
         }
-    digest = _sha256(secret)
     matched: Consumer | None = None
     for c in list_consumers():
         if not c.enabled:
             continue
-        if not hmac.compare_digest(c.secret_hash, digest):
+        if not verify_consumer_secret(secret, c.secret_hash):
             continue
-        # secret matches — prefer id match, else accept hash match
+        # Secret match authenticates the *stored* id, not the claimed one.
+        # `desk:n8n_secret` therefore becomes n8n. Not a privilege gain (you
+        # already hold n8n's secret); left unchanged because callers may rely
+        # on it. Do not treat the header id as the authenticated principal.
         if cid in ("", "anonymous") or c.id == cid:
             matched = c
             break
@@ -260,18 +383,31 @@ def add_consumer(
     label: str = "",
 ) -> dict[str, Any]:
     cid = (consumer_id or "").strip()[:64]
-    if not cid or cid == "anonymous":
-        return {"ok": False, "error": "invalid consumer id"}
+    if not cid or cid == ANONYMOUS or not consumer_id_is_valid(cid):
+        return {
+            "ok": False,
+            "error": "invalid consumer id (allowed: letters, digits, . _ - up to 64 chars)",
+        }
     plain = secret or secrets.token_urlsafe(24)
+    warning = None
+    if secret is not None and len(secret) < WEAK_CUSTOM_SECRET_LEN:
+        warning = (
+            f"custom secret is shorter than {WEAK_CUSTOM_SECRET_LEN} characters — "
+            "omit --secret to have a strong one generated"
+        )
     path = consumers_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     with _LOCK:
         raw = _load_raw()
-        rows = [r for r in (raw.get("consumers") or []) if not (isinstance(r, dict) and r.get("id") == cid)]
+        rows = [
+            r
+            for r in (raw.get("consumers") or [])
+            if not (isinstance(r, dict) and r.get("id") == cid)
+        ]
         rows.append(
             {
                 "id": cid,
-                "secret_hash": _sha256(plain),
+                "secret_hash": hash_consumer_secret(plain),
                 "admin": bool(admin),
                 "enabled": True,
                 "label": label or cid,
@@ -282,14 +418,17 @@ def add_consumer(
         global _CACHE, _CACHE_MTIME
         _CACHE = raw
         _CACHE_MTIME = path.stat().st_mtime
-    return {
+    out: dict[str, Any] = {
         "ok": True,
         "id": cid,
         "secret": plain,
         "admin": admin,
         "path": str(path),
-        "note": "store secret now — only the hash is kept on disk",
+        "note": "store secret now — only a salted hash is kept on disk",
     }
+    if warning:
+        out["warning"] = warning
+    return out
 
 
 def auth_status() -> dict[str, Any]:
