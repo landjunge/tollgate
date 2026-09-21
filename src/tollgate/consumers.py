@@ -9,7 +9,7 @@ Auth mode:
   - Header: X-Consumer-Key: <id>:<secret>
   - Or: X-Consumer-Id + X-Consumer-Key: <secret>
 
-Secrets stored only as sha256 hashes on disk.
+Secrets stored only as salted hashes on disk (scrypt; legacy SHA-256 still verifies).
 """
 
 from __future__ import annotations
@@ -69,7 +69,12 @@ WEAK_CUSTOM_SECRET_LEN = 16
 
 def _scrypt_hash(secret: str, salt: bytes) -> str:
     digest = hashlib.scrypt(
-        secret.encode("utf-8"), salt=salt, n=_SCRYPT_N, r=_SCRYPT_R, p=_SCRYPT_P, dklen=32
+        secret.encode("utf-8"),
+        salt=salt,
+        n=_SCRYPT_N,
+        r=_SCRYPT_R,
+        p=_SCRYPT_P,
+        dklen=32,
     )
     return f"{_SCRYPT_PREFIX}{salt.hex()}${digest.hex()}"
 
@@ -112,7 +117,10 @@ def secret_hash_is_legacy(stored: str) -> bool:
 # GET /v1/control, and from there into the dashboard DOM. Without a charset it
 # is an injection vector into the control plane's own UI, so it is constrained
 # here — once, at the edge — rather than at each of the places that render it.
-CONSUMER_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{1,64}$")
+# Colon is excluded on purpose: X-Consumer-Key is documented as `<id>:<secret>`
+# and is split on the first `:`. An id that itself contains `:` cannot ride
+# that header.
+CONSUMER_ID_RE = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 
 ANONYMOUS = "anonymous"
 
@@ -184,6 +192,8 @@ def list_consumers() -> list[Consumer]:
             continue
         cid = str(row.get("id") or "").strip()
         sh = str(row.get("secret_hash") or "").strip()
+        # Invalid ids stay out of the dashboard / principal list (XSS).
+        # They still hold auth — see `_stored_credentials_require_auth`.
         if not cid or not sh or not consumer_id_is_valid(cid):
             continue
         out.append(
@@ -246,6 +256,25 @@ def refuse_open_public_bind(*, host: str | None = None) -> None:
         raise RuntimeError(msg)
 
 
+def _stored_credentials_require_auth() -> bool:
+    """True when consumers.json holds at least one id + secret_hash row.
+
+    ``list_consumers()`` drops ids that fail the charset so they never become
+    dashboard principals. Auth must still stay on: a desk whose only stored
+    row is a pre-charset id (`support agent`, markup) would otherwise fall
+    into open mode — the opposite of the `_corrupt` fail-closed posture.
+    """
+    raw = _load_raw()
+    for row in raw.get("consumers") or []:
+        if not isinstance(row, dict):
+            continue
+        cid = str(row.get("id") or "").strip()
+        sh = str(row.get("secret_hash") or "").strip()
+        if cid and sh:
+            return True
+    return False
+
+
 def auth_required() -> bool:
     if (os.environ.get("TOLLGATE_REQUIRE_AUTH") or "").strip().lower() in (
         "1",
@@ -256,7 +285,7 @@ def auth_required() -> bool:
         return True
     if consumers_corrupt():
         return True
-    return any(c.enabled for c in list_consumers())
+    return _stored_credentials_require_auth()
 
 
 def parse_consumer_header(
@@ -357,7 +386,7 @@ def add_consumer(
     if not cid or cid == ANONYMOUS or not consumer_id_is_valid(cid):
         return {
             "ok": False,
-            "error": "invalid consumer id (allowed: letters, digits, . _ - : up to 64 chars)",
+            "error": "invalid consumer id (allowed: letters, digits, . _ - up to 64 chars)",
         }
     plain = secret or secrets.token_urlsafe(24)
     warning = None
@@ -370,7 +399,11 @@ def add_consumer(
     path.parent.mkdir(parents=True, exist_ok=True)
     with _LOCK:
         raw = _load_raw()
-        rows = [r for r in (raw.get("consumers") or []) if not (isinstance(r, dict) and r.get("id") == cid)]
+        rows = [
+            r
+            for r in (raw.get("consumers") or [])
+            if not (isinstance(r, dict) and r.get("id") == cid)
+        ]
         rows.append(
             {
                 "id": cid,

@@ -33,7 +33,7 @@ HOSTILE = [
     "lane\nX-Injected: 1",
 ]
 
-LEGITIMATE = ["n8n", "gnom", "desk", "support-agent", "lane.2", "a_b-c", "n8n:prod"]
+LEGITIMATE = ["n8n", "gnom", "desk", "support-agent", "lane.2", "a_b-c", "n8n-prod"]
 
 
 # ── layer 1: the edge normalizer ────────────────────────────────────────────
@@ -60,6 +60,89 @@ def test_header_parsing_normalizes_the_claimed_id():
     assert cid == ANONYMOUS
     # The secret half must still be forwarded for verification.
     assert secret == "s3cret"
+
+
+def test_colon_is_rejected_because_the_header_splits_on_it(tmp_path, monkeypatch):
+    monkeypatch.setenv("TOLLGATE_HOME", str(tmp_path))
+    (tmp_path / "User").mkdir(parents=True, exist_ok=True)
+
+    from tollgate.consumers import add_consumer, clear_cache
+
+    clear_cache()
+    assert not consumer_id_is_valid("n8n:prod")
+    assert normalize_consumer_id("n8n:prod") == ANONYMOUS
+    assert add_consumer("n8n:prod")["ok"] is False
+
+
+def test_hyphenated_id_roundtrips_through_x_consumer_key(tmp_path, monkeypatch):
+    monkeypatch.setenv("TOLLGATE_HOME", str(tmp_path))
+    monkeypatch.setenv("TOLLGATE_REQUIRE_AUTH", "1")
+    (tmp_path / "User").mkdir(parents=True, exist_ok=True)
+
+    from tollgate.consumers import add_consumer, clear_cache, verify_consumer
+
+    clear_cache()
+    created = add_consumer("n8n-prod")
+    assert created["ok"] is True
+    clear_cache()
+    ok = verify_consumer(f"n8n-prod:{created['secret']}")
+    assert ok["ok"] is True and ok["consumer"] == "n8n-prod"
+
+
+@pytest.mark.parametrize(
+    "stored_id",
+    ["support agent", "<img src=x onerror=alert(1)>"],
+)
+def test_pre_charset_stored_id_keeps_auth_on(tmp_path, monkeypatch, stored_id):
+    """A file with id+hash still requires auth even if the id is now illegal.
+
+    Ungültige Ids dürfen nicht im Dashboard auftauchen — sie dürfen Auth
+    nicht abschalten. Sonst fällt ein Desk mit genau einer solchen Zeile
+    in Open Mode (`verify_consumer(None)` → admin).
+    """
+    monkeypatch.setenv("TOLLGATE_HOME", str(tmp_path))
+    monkeypatch.delenv("TOLLGATE_REQUIRE_AUTH", raising=False)
+    monkeypatch.delenv("TOLLGATE_CONSUMERS", raising=False)
+    (tmp_path / "User").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "User" / "consumers.json").write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "consumers": [
+                    {
+                        "id": stored_id,
+                        "secret_hash": "a" * 64,
+                        "admin": True,
+                        "enabled": True,
+                        "label": stored_id,
+                    }
+                ],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    from tollgate.consumers import (
+        auth_required,
+        clear_cache,
+        list_consumers,
+        verify_consumer,
+    )
+
+    clear_cache()
+    assert list_consumers() == []
+    assert auth_required() is True
+    denied = verify_consumer(None)
+    assert denied["ok"] is False
+    assert denied["admin"] is False
+
+
+def test_request_context_uses_the_same_normalizer():
+    from tollgate.gateway.context import RequestContext
+
+    ctx = RequestContext(consumer=HOSTILE[0])
+    assert ctx.consumer_id() == ANONYMOUS
 
 
 # ── layer 2: nothing hostile survives into the control plane ────────────────
@@ -98,7 +181,9 @@ def test_control_endpoint_never_emits_markup_in_consumer_names(tmp_path, monkeyp
         body = client.get("/v1/control").text
 
     for hostile in HOSTILE:
-        assert hostile not in body, f"hostile consumer label reached /v1/control: {hostile!r}"
+        assert hostile not in body, (
+            f"hostile consumer label reached /v1/control: {hostile!r}"
+        )
 
     names = [c.get("consumer") for c in json.loads(body).get("consumers", [])]
     assert all(consumer_id_is_valid(n) or n == ANONYMOUS for n in names), names
@@ -132,7 +217,9 @@ def test_free_text_fields_are_escaped_before_innerHTML():
         "${ch.label}",
     ]
     for sink in raw_sinks:
-        assert sink not in DASHBOARD_HTML, f"unescaped interpolation still present: {sink}"
+        assert sink not in DASHBOARD_HTML, (
+            f"unescaped interpolation still present: {sink}"
+        )
         assert sink.replace("${", "${esc(").replace("}", ")}") in DASHBOARD_HTML
     for needle in (
         "${esc(e.consumer",

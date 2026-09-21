@@ -57,9 +57,12 @@ def test_verification_rejects_the_wrong_secret():
 def test_hashing_is_deliberately_slow():
     """A digest fast enough to loop is a digest fast enough to crack."""
     start = time.perf_counter()
-    C.hash_consumer_secret("timing-probe-secret")
+    stored = C.hash_consumer_secret("timing-probe-secret")
     elapsed = time.perf_counter() - start
-    assert elapsed > 0.0005, f"scrypt returned in {elapsed * 1000:.3f}ms — parameters too low"
+    assert stored.startswith("scrypt$")
+    assert elapsed > 0.0005, (
+        f"scrypt returned in {elapsed * 1000:.3f}ms — parameters too low"
+    )
 
 
 # ── upgrade path ────────────────────────────────────────────────────────────

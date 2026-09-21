@@ -46,9 +46,9 @@ def _safe_name(name: str) -> bool:
     # only flat User/ files — no path traversal
     if not name or "/" in name or "\\" in name or name.startswith("."):
         return False
-    return name.replace("_", "").replace(".", "").replace("-", "").isalnum() or name.endswith(
-        (".json", ".jsonl", ".txt")
-    )
+    return name.replace("_", "").replace(".", "").replace(
+        "-", ""
+    ).isalnum() or name.endswith((".json", ".jsonl", ".txt"))
 
 
 def export_snapshot(
@@ -67,7 +67,11 @@ def export_snapshot(
     ud = _user(root)
     dest_p = Path(dest).expanduser().resolve()
     if dest_p.suffix not in (".tgz", ".gz") and not str(dest_p).endswith(".tar.gz"):
-        dest_p = dest_p.with_suffix(dest_p.suffix + ".tgz") if dest_p.suffix else Path(str(dest_p) + ".tgz")
+        dest_p = (
+            dest_p.with_suffix(dest_p.suffix + ".tgz")
+            if dest_p.suffix
+            else Path(str(dest_p) + ".tgz")
+        )
 
     files: list[str] = []
     skipped: list[str] = []
@@ -131,6 +135,20 @@ def export_snapshot(
     }
 
 
+def _strip_archive_prefixes(name: str) -> str:
+    """Drop repeated ``./`` prefixes and one leading slash.
+
+    ``str.lstrip("./")`` is a character class, not a prefix strip: it turns
+    ``../Key.txt`` into ``Key.txt`` before any ``..`` check can run.
+    """
+    s = name.replace("\\", "/")
+    if s.startswith("/"):
+        s = s[1:]
+    while s.startswith("./"):
+        s = s[2:]
+    return s
+
+
 def _read_tar_members(archive: Path) -> tuple[dict[str, Any], dict[str, bytes]]:
     meta: dict[str, Any] = {}
     blobs: dict[str, bytes] = {}
@@ -138,7 +156,7 @@ def _read_tar_members(archive: Path) -> tuple[dict[str, Any], dict[str, bytes]]:
         for m in tar.getmembers():
             if not m.isfile():
                 continue
-            name = m.name.replace("\\", "/").lstrip("./")
+            name = _strip_archive_prefixes(m.name)
             f = tar.extractfile(m)
             if f is None:
                 continue
@@ -150,8 +168,9 @@ def _read_tar_members(archive: Path) -> tuple[dict[str, Any], dict[str, bytes]]:
                     meta = {}
                 continue
             # Only `User/<file>` or a bare filename. Flattening `evil/Key.txt`
-            # or `User/../../Key.txt` onto Key.txt is how a fresh desk would
-            # accept a foreign secret file.
+            # or `../Key.txt` onto Key.txt is how a fresh desk would accept a
+            # foreign secret file. `..` is judged on the original components,
+            # after prefix-strip of `./` only — never `lstrip("./")`.
             parts = [p for p in name.split("/") if p not in ("", ".")]
             if any(p == ".." for p in parts):
                 continue
@@ -180,8 +199,12 @@ def import_snapshot(
     """
     Import desk snapshot into current ``TOLLGATE_HOME`` User/.
 
-    - ``replace=False`` (default): only write files that are missing, except
-      keys_app.json is deep-merged onto existing when both exist.
+    - ``replace=False`` (default): only write files that are missing.
+      ``keys_app.json`` is left alone when it already exists, unless
+      ``merge_config=True``.
+    - ``merge_config=True``: deep-merge archive ``keys_app.json`` onto the
+      local file. Opt-in — a foreign archive can redirect a provider
+      ``base_url``.
     - ``replace=True``: overwrite listed files from archive.
     - Never auto-overwrite Key.txt unless archive contains it *and* replace=True
       or destination Key.txt missing.

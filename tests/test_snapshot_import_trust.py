@@ -28,7 +28,10 @@ HONEST_CONFIG = {
 
 HOSTILE_CONFIG = {
     "providers": {
-        "opencode_zen": {"base_url": "https://attacker.example/collect", "enabled": True}
+        "opencode_zen": {
+            "base_url": "https://attacker.example/collect",
+            "enabled": True,
+        }
     },
     "cost_guard": {"soft_warn_ratio": 1.0},
 }
@@ -49,7 +52,9 @@ def desk(tmp_path, monkeypatch):
     """A desk that already has honest local config."""
     home = tmp_path / "home"
     (home / "User").mkdir(parents=True)
-    (home / "User" / "keys_app.json").write_text(json.dumps(HONEST_CONFIG), encoding="utf-8")
+    (home / "User" / "keys_app.json").write_text(
+        json.dumps(HONEST_CONFIG), encoding="utf-8"
+    )
     monkeypatch.setenv("TOLLGATE_HOME", str(home))
 
     archive = tmp_path / "foreign.tgz"
@@ -90,7 +95,9 @@ def test_merge_config_opt_in_still_works(desk):
 
     home, archive = desk
     import_snapshot(archive, merge_config=True)
-    assert _local_base_url(home) == EXFIL_URL, "explicit --merge-config must still merge"
+    assert _local_base_url(home) == EXFIL_URL, (
+        "explicit --merge-config must still merge"
+    )
 
 
 def test_replace_still_overwrites(desk):
@@ -102,13 +109,23 @@ def test_replace_still_overwrites(desk):
 
 
 def test_archive_paths_are_flattened_not_traversed(tmp_path, monkeypatch):
-    """Existing protection, pinned so it cannot regress."""
+    """Existing protection, pinned so it cannot regress.
+
+    ``../Key.txt`` / ``.../Key.txt`` used to survive ``lstrip("./")`` as a
+    bare ``Key.txt``. Those names must stay out of ``blobs``.
+    """
     from tollgate.snapshot import _read_tar_members
 
     archive = tmp_path / "evil.tgz"
-    payload = b"pwned"
+    payload = b"pwned-secret"
     with tarfile.open(archive, "w:gz") as tar:
-        for name in ("../../../../etc/cron.d/evil", "User/../../Key.txt"):
+        for name in (
+            "../../../../etc/cron.d/evil",
+            "User/../../Key.txt",
+            "../Key.txt",
+            "../../Key.txt",
+            ".../Key.txt",
+        ):
             info = tarfile.TarInfo(name=name)
             info.size = len(payload)
             tar.addfile(info, BytesIO(payload))
@@ -118,3 +135,22 @@ def test_archive_paths_are_flattened_not_traversed(tmp_path, monkeypatch):
     assert blobs == {}
     for key in blobs:
         assert "/" not in key and "\\" not in key and not key.startswith("..")
+
+
+def test_user_and_bare_filenames_still_import(tmp_path):
+    from tollgate.snapshot import _read_tar_members
+
+    archive = tmp_path / "ok.tgz"
+    payload = b"ok-secret"
+    with tarfile.open(archive, "w:gz") as tar:
+        for name in ("User/Key.txt", "./User/keys_app.json", "circuits.json"):
+            info = tarfile.TarInfo(name=name)
+            info.size = len(payload)
+            tar.addfile(info, BytesIO(payload))
+
+    _meta, blobs = _read_tar_members(archive)
+    assert blobs == {
+        "Key.txt": payload,
+        "keys_app.json": payload,
+        "circuits.json": payload,
+    }
