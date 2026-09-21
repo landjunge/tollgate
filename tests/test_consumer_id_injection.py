@@ -193,11 +193,12 @@ def test_control_endpoint_never_emits_markup_in_consumer_names(tmp_path, monkeyp
 
 
 def test_dashboard_defines_an_escape_helper():
-    from tollgate.dashboard_html import DASHBOARD_HTML
+    from tollgate.dashboard_html import dashboard_html
 
-    assert "function esc(" in DASHBOARD_HTML
+    html = dashboard_html()
+    assert "function esc(" in html
     for entity in ("&amp;", "&lt;", "&gt;", "&quot;", "&#39;"):
-        assert entity in DASHBOARD_HTML, f"esc() does not encode {entity}"
+        assert entity in html, f"esc() does not encode {entity}"
 
 
 def test_free_text_fields_are_escaped_before_innerHTML():
@@ -206,8 +207,9 @@ def test_free_text_fields_are_escaped_before_innerHTML():
     Pinned by field name so that re-introducing a raw `${c.consumer}` in a new
     template literal fails here rather than in production.
     """
-    from tollgate.dashboard_html import DASHBOARD_HTML
+    from tollgate.dashboard_html import dashboard_html
 
+    html = dashboard_html()
     raw_sinks = [
         "${c.consumer}",
         "${p.provider}",
@@ -217,10 +219,8 @@ def test_free_text_fields_are_escaped_before_innerHTML():
         "${ch.label}",
     ]
     for sink in raw_sinks:
-        assert sink not in DASHBOARD_HTML, (
-            f"unescaped interpolation still present: {sink}"
-        )
-        assert sink.replace("${", "${esc(").replace("}", ")}") in DASHBOARD_HTML
+        assert sink not in html, f"unescaped interpolation still present: {sink}"
+        assert sink.replace("${", "${esc(").replace("}", ")}") in html
     for needle in (
         "${esc(e.consumer",
         "${esc(e.provider",
@@ -230,4 +230,4 @@ def test_free_text_fields_are_escaped_before_innerHTML():
         "${esc(a.message",
         "${esc(a.code",
     ):
-        assert needle in DASHBOARD_HTML, f"missing escaped sink: {needle}"
+        assert needle in html, f"missing escaped sink: {needle}"
