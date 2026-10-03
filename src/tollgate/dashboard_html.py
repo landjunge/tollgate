@@ -6,6 +6,7 @@ Designed for operators: see agents, set $ limits, prove failover.
 from __future__ import annotations
 
 import re
+from importlib.resources import files
 
 from tollgate import i18n
 
@@ -16,48 +17,40 @@ _TEMPLATE = r"""<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Tollgate · Control Room</title>
 <style>
+/* NETWORKPUNKT_FOUNDATION */
   :root {
-    /* Ein Design fuer alle Werkzeuge. Dieselben Werte stehen in ThreadDesk
-       (ui/static/style.css) und in 4AllPass (frontend/src/tokens.css). */
-    --bg: #121316;
-    --bg2: #1a1b1f;
-    --panel: #1e1f24;
-    --panel2: #24262d;
+    /* Product aliases for networkpunkt.css, pinned in README. */
+    --bg: var(--np-canvas);
+    --bg2: var(--np-surface);
+    --panel: var(--np-surface);
+    --panel2: var(--np-hover);
     /* --line trennt Flaechen (Deko). --line2 zeichnet die Kante von
        Bedienelementen und haelt dafuer 3:1 gegen den Hintergrund ein
        (WCAG 2.2, 1.4.11 Non-text Contrast). */
-    --line: #2e3138;
-    --line2: #5f646f;
-    --fg: #e2e4e9;
-    --muted: #8b909a;
-    --muted2: #6b7280;
-    --ok: #3d9b6a;
+    --line: var(--np-divider);
+    --line2: var(--np-control-border);
+    --fg: var(--np-text);
+    --muted: var(--np-muted);
+    --muted2: var(--np-muted);
+    --ok: var(--np-success);
     --ok-dim: rgba(61,155,106,.12);
-    --warn: #c9a227;
+    --warn: var(--np-warning);
     --warn-dim: rgba(201,162,39,.12);
-    --bad: #dc7070;
+    --bad: var(--np-danger);
     --bad-dim: rgba(220,112,112,.12);
-    --acc: #8f98a8;
-    --acc2: #6b7280;
+    --acc: var(--np-action);
+    --acc2: var(--np-focus);
     --acc-dim: rgba(143,152,168,.12);
-    /* Vier Schriftgroessen, mehr nicht: 16px Grundgroesse wie fuer
-       Fliesstext im Web empfohlen, die Stufen darum herum im Verhaeltnis
-       1.25 (grosse Terz). */
-    /* Zwei Groessen fuer Bedienelemente, mehr gibt es nicht:
-       --control ist der Regelfall (Knopf, Eingabefeld, Auswahlmenue),
-       --control-sm die kompakte Fassung fuer dichte Zeilen und Reiter.
-       Beide liegen auf dem 8er-Raster. Unter dem Finger werden beide 44px
-       gross — das ist keine dritte Groesse, sondern dieselben Elemente unter
-       einem anderen Eingabegeraet (Apple HIG, Material). Gilt in allen
-       Werkzeugen. */
-    --control: 40px;
-    --control-sm: 32px;
-    --control-touch: 44px;
-    --text-sm: 13px;
-    --text-base: 16px;
-    --text-lg: 20px;
-    --text-xl: 25px;
-    --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+
+    --control: var(--np-control);
+    --control-sm: var(--np-control);
+    --control-touch: var(--np-control-touch);
+    --text-sm: var(--np-meta);
+    --text-base: var(--np-body);
+    --text-lg: var(--np-heading);
+    --text-xl: var(--np-title);
+    --font: var(--np-font);
     --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
   * { box-sizing: border-box; }
@@ -96,16 +89,7 @@ _TEMPLATE = r"""<!DOCTYPE html>
   .lang-switch a, nav a {
     min-height: var(--control-sm); display: inline-flex; align-items: center;
   }
-  @media (pointer: coarse) {
-    /* Unter dem Finger werden alle Ziele 44px. Das ist die Zahl, die Apple
-       und Material dafuer nennen — kein eigener Geschmack. Der Zeiger ist
-       das richtige Signal, nicht die Fensterbreite: ein schmales
-       Desktop-Fenster ist kein Finger. */
-    button, button.sm, .lang-switch a, nav a,
-    .field input, .field select {
-      min-height: var(--control-touch);
-    }
-  }
+
 
   /* Header */
   header {
@@ -200,10 +184,7 @@ _TEMPLATE = r"""<!DOCTYPE html>
   .hero {
     display: grid; grid-template-columns: 150px 1fr; gap: 1.5rem; align-items: center;
   }
-  @media (max-width:720px) {
-    .hero { grid-template-columns: 1fr; }
-    nav { overflow-x: auto; flex-wrap: nowrap; }
-  }
+
 
   .ring-box { position: relative; width: 128px; height: 128px; margin: 0 auto; }
   .ring {
@@ -226,7 +207,7 @@ _TEMPLATE = r"""<!DOCTYPE html>
   .grade { text-align: center; font-weight: 700; font-size: var(--text-base); margin-top: .15rem; }
 
   .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: .65rem; }
-  @media (max-width:560px) { .stats { grid-template-columns: 1fr 1fr; } }
+
   .stat {
     background: var(--bg); border: 1px solid var(--line); border-radius: 0;
     padding: .7rem .8rem;
@@ -319,8 +300,8 @@ _TEMPLATE = r"""<!DOCTYPE html>
   .fields {
     display: grid; grid-template-columns: repeat(3, 1fr); gap: .65rem;
   }
-  @media (max-width:700px) { .fields { grid-template-columns: 1fr 1fr; } }
-  @media (max-width:480px) { .fields { grid-template-columns: 1fr; } }
+
+
   .field { margin: 0; }
   .field label {
     display: block; font-size: var(--text-sm); color: var(--muted2);
@@ -428,9 +409,34 @@ _TEMPLATE = r"""<!DOCTYPE html>
   #secBanner.bad {
     background: var(--bad-dim); color: var(--bad); border-color: var(--bad);
   }
+
+  /* Stable desktop composition, current task first. */
+  * { scrollbar-width: none; }
+  *::-webkit-scrollbar { width: 0; height: 0; }
+  body { font-size: var(--text-base); }
+  body > header { min-height: 72px; padding: 12px 24px; background: var(--bg); backdrop-filter: none; }
+  body > nav { gap: 24px; padding: 0 32px; background: var(--bg); }
+  nav a { border: 0; border-bottom: 2px solid transparent; padding: 12px 0; }
+  nav a.active { border: 0; border-bottom: 2px solid var(--fg); background: transparent; }
+  main { max-width: 1440px; padding: 24px 32px; }
+  .card { padding: 24px; box-shadow: none; }
+  .hero { background: transparent; border: 0; padding: 16px 0 24px; gap: 32px; }
+  h2.sec { font-size: var(--text-lg); text-transform: none; letter-spacing: normal; color: var(--fg); }
+  .header-right { flex-wrap: nowrap; }
+  input:not([type="checkbox"]), select, button.sm { min-height: var(--control); font-size: var(--text-base); }
+  input::placeholder { color: var(--muted); }
+  .auth-bar { border: 1px solid var(--line2); background: transparent; padding: 0 8px; }
+  .auth-bar input { min-height: 38px; }
+  .lang-switch { border: 0; }
+  .lang-switch a.on { color: var(--fg); background: var(--panel2); }
+  :focus-visible { outline: 2px solid var(--np-focus); outline-offset: 3px; }
+  .np-button[data-variant="primary"] { color: var(--np-action-text) !important; }
+  .view { animation: none; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
 </style>
 </head>
-<body>
+<body class="np-ui np-desktop np-scroll">
 <div id="secBanner" role="status"></div>
 <div id="onboard" role="dialog" aria-label="{{ui.setup}}">
   <div class="ob-card">
@@ -516,18 +522,22 @@ _TEMPLATE = r"""<!DOCTYPE html>
     <div class="card flat">
       <div class="overview-agents" id="costSplit"><div class="empty">{{ui.loading}}</div></div>
       <div class="actions" style="margin-top:.85rem">
-        <a href="#agents" class="ghost" style="display:inline-flex;padding:.45rem .9rem;border-radius:0;border:1px solid var(--line2);font-weight:600;color:var(--fg);text-decoration:none">{{ui.manage_limits}}</a>
+        <a href="#agents" class="np-button" data-variant="primary" style="display:inline-flex;padding:.45rem .9rem;border-radius:0;border:1px solid var(--line2);font-weight:600;color:var(--fg);text-decoration:none">{{ui.manage_limits}}</a>
       </div>
     </div>
 
     <h2 class="sec">{{ui.needs_attention}}</h2>
     <div class="card" id="attention"><div class="empty">{{ui.loading}}</div></div>
 
-    <h2 class="sec">{{ui.recommendations}}</h2>
-    <div class="card" id="reco"><div class="empty">{{ui.loading}}</div></div>
+    <details class="np-disclosure">
+      <summary>{{ui.recommendations}}</summary>
+      <div class="card" id="reco"><div class="empty">{{ui.loading}}</div></div>
+    </details>
 
-    <h2 class="sec">{{ui.tab.providers}}</h2>
-    <div class="card" id="provGlance"><div class="empty">{{ui.loading}}</div></div>
+    <details class="np-disclosure">
+      <summary>{{ui.tab.providers}}</summary>
+      <div class="card" id="provGlance"><div class="empty">{{ui.loading}}</div></div>
+    </details>
 
     <div class="actions">
       <button type="button" class="ghost" id="btnLoopTest">{{ui.test_loop_block}}</button>
@@ -1389,4 +1399,8 @@ def dashboard_html(language: str = i18n.DEFAULT_LANGUAGE,
             return extra[key]
         return i18n.translate(key, code, level)
 
-    return _MARKER.sub(pick, _TEMPLATE)
+    template = _TEMPLATE.replace(
+        "/* NETWORKPUNKT_FOUNDATION */",
+        files("tollgate").joinpath("networkpunkt.css").read_text(encoding="utf-8"),
+    )
+    return _MARKER.sub(pick, template)

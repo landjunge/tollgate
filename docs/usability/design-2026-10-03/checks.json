@@ -1,0 +1,43 @@
+{
+  "date": "2026-10-03",
+  "shared_css_source": "https://github.com/landjunge/threaddesk/blob/b0b6815d1996b7d28f374841c616dcb458304848/src/threaddesk/ui/static/networkpunkt.css",
+  "shared_css_sha256": "98371bd9edc96fb940a0e0de34933740fed1062b510aa516498fcb53e112591e",
+  "rules": "https://github.com/landjunge/threaddesk/blob/b0b6815d1996b7d28f374841c616dcb458304848/docs/usability/GOLDENRULES.MD#19-gemeinsame-bedienbasis-für-die-fünf-produkte",
+  "browser": "Chromium 145 / Linux, synthetic test workspaces",
+  "viewports": [
+    [
+      1440,
+      900
+    ],
+    [
+      1024,
+      700
+    ]
+  ],
+  "minimum_desktop": [
+    1180,
+    760
+  ],
+  "native_builds": false,
+  "user_acceptance": false,
+  "media_pipeline_owner": "Grok; not produced by these checks",
+  "css_adapter": "src/tollgate/networkpunkt.css",
+  "passed": [
+    "setup",
+    "budget-save-reload",
+    "warnings-visible",
+    "recommendations-disclosure",
+    "desktop-scroll"
+  ],
+  "real_provider_calls": 0,
+  "base": "d07c3ffb7513473a3de1c87bd01e9a1c9ea39c85",
+  "targeted_tests_passed": 97,
+  "targeted_test_files": [
+    "test_i18n.py",
+    "test_consumer_id_injection.py",
+    "test_consumers.py",
+    "test_status.py",
+    "test_audit_query.py"
+  ],
+  "seconds": 1.32
+}

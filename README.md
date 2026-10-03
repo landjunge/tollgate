@@ -231,50 +231,15 @@ sentences — a change to the JSON contract, tracked separately.
 
 ## Shared rules of the NetzwerkPunkt tools
 
-TollGate, ThreadDesk and 4AllPass share their look and their language rules.
-Anyone building a new tool takes the same values — they are not taste, they
-are standards you can look up. **4AllPass is the reference.**
+The current desktop decision is [GOLDENRULES §19](https://github.com/landjunge/threaddesk/blob/b0b6815d1996b7d28f374841c616dcb458304848/docs/usability/GOLDENRULES.MD#19-gemeinsame-bedienbasis-für-die-fünf-produkte). It supersedes the older R2 and responsive control sizes. The local `src/tollgate/networkpunkt.css` is an exact copy of the [pinned shared foundation](https://github.com/landjunge/threaddesk/blob/b0b6815d1996b7d28f374841c616dcb458304848/src/threaddesk/ui/static/networkpunkt.css), embedded by `dashboard_html.py` and included as package data. No runtime CDN or automatic updates.
 
-**Colours** (identical in all tools)
+- Neutral surfaces and actions; system font; four roles 12 / 14 / 16 / 24 px.
+- Square controls, 40 px high; spacing 4 / 8 / 12 / 16 / 24 / 32.
+- Stable desktop composition, minimum 1180 × 760 CSS px. Smaller windows scroll; columns do not turn into a mobile layout.
+- Costs, warnings and protection state remain visible. Recommendations and provider details open on demand. Budget and auth behavior is unchanged.
+- Existing aliases (`--line`, `--line2`, `--muted`, `--acc`, `--bad`) map to the shared roles.
 
-| Token | Value | For |
-|---|---|---|
-| `--bg` | `#121316` | base surface |
-| `--bg-panel` | `#1a1b1f` | surface |
-| `--bg-card` | `#1e1f24` | card |
-| `--fg` | `#e2e4e9` | text |
-| `--fg-muted` | `#8b909a` | secondary text |
-| `--border` | `#2e3138` | divider between surfaces (decoration) |
-| `--border-strong` | `#5f646f` | **edge of controls** |
-| `--accent` | `#8f98a8` | accent |
-| `--ok` / `--warn` / `--err` | `#3d9b6a` / `#c9a227` / `#dc7070` | states |
-
-In TollGate the same tokens are called `--line`, `--line2`, `--muted`,
-`--acc`, `--bad` — same values, older names.
-
-**Shape and size**
-
-- `border-radius: 0` everywhere. Round only where the shape *means* something
-  (map symbols, progress ring, status dot), with a reason in the code.
-- Exactly four font sizes: **13 / 16 / 20 / 25 px**. 16px base as recommended
-  for body text on the web, the steps around it at a ratio of 1.25 (major
-  third). Other tokens get deleted, not just avoided.
-- Spacing on an 8px grid: 4 / 8 / 12 / 16 / 24 / 32.
-- **Exactly two sizes for controls**, no more: `--control: 40px` for the
-  normal case (button, input, select) and `--control-sm: 32px` for dense
-  rows and tabs. Both sit on the 8px grid. Button, input and select are the
-  same height.
-- Under `@media (pointer: coarse)` every target becomes **44px**
-  (`--control-touch`). That is not a third size, it is the same elements
-  under a different input device — the number comes from Apple and Material.
-  The pointer is the right signal, **not** the window width: a narrow
-  desktop window is not a finger. WCAG 2.2 (2.5.8) asks for 24px as the
-  minimum; all three values are above it.
-- Contrast: **4.5:1** for text, **3:1** for anything else that carries
-  meaning (WCAG 2.2, 1.4.3 and 1.4.11).
-- Selects set `appearance: none` and draw their own arrow — otherwise the
-  operating system draws the menu, on Windows with a 3D effect.
-- Font: the operating system's. Nothing loaded from elsewhere.
+97 targeted tests passed. A local Chromium user path created a synthetic consumer, saved its budget, confirmed it after reload, opened recommendations and reached controls at a smaller viewport. No provider calls. [Evidence and limits](docs/usability/design-2026-10-03/checks.json), [browser image](docs/usability/design-2026-10-03/tollgate.png). This is not native or complete safety acceptance.
 
 **Language**
 
