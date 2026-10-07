@@ -322,4 +322,4 @@ again.
 | [N8N.md](docs/N8N.md) · [OPENAI.md](docs/OPENAI.md) | Integrations |
 | [CHANGELOG.md](CHANGELOG.md) | Releases · **v1.0.0+** |
 
-**License:** MIT · **Python:** ≥ 3.11 · **Repo:** [landjunge/tollgate](https://github.com/landjunge/tollgate)
+**License:** All Rights Reserved · **Python:** ≥ 3.11 · **Repo:** [landjunge/tollgate](https://github.com/landjunge/tollgate)
