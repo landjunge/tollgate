@@ -1,0 +1,12 @@
+{
+  "source": "ThreadDesk src/threaddesk/ui/static/networkpunkt.css, NetzwerkPunkt Bedienbasis 0.1",
+  "sha256": "98371bd9edc96fb940a0e0de34933740fed1062b510aa516498fcb53e112591e",
+  "packaged_resource": "tollgate/static/networkpunkt.css",
+  "roles_px": [
+    12,
+    14,
+    16,
+    24
+  ],
+  "adopted_without_new_logo_or_ui_library": true
+}

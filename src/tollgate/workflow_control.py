@@ -13,12 +13,23 @@ import re
 import tempfile
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterator
 
 from tollgate.audit_log import append_audit
+from tollgate.consumers import consumer_id_is_valid
 from tollgate.filelock import FileLock
 from tollgate.paths import user_dir
+
+def _unique_pairs(pairs):
+    out = {}
+    for key, value in pairs:
+        if key in out:
+            raise ValueError("duplicate key")
+        out[key] = value
+    return out
+
 
 UNIT = "USD_MICRO"
 MAX_AMOUNT = 10**15
@@ -68,6 +79,8 @@ class AttemptIdentity:
             raise ControlError("INVALID_SCOPE")
         for key in ("task_id", "actor_id", "consumer_id", "attempt_id"):
             _id(getattr(self, key))
+        if not consumer_id_is_valid(self.consumer_id):
+            raise ControlError("INVALID_CONSUMER")
         for key in ("parent_task_id", "subtask_id"):
             _id(getattr(self, key), optional=True)
         if not isinstance(self.request_hash, str) or not _HASH.fullmatch(self.request_hash):
@@ -132,12 +145,13 @@ class WorkflowControl:
     @contextmanager
     def _transaction(self, scope: WorkflowScope) -> Iterator[tuple[Path, dict[str, Any]]]:
         path = self._path(scope)
+        path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         with FileLock(path, timeout_s=self.lock_timeout_s):
             if path.exists():
                 try:
                     if path.stat().st_size > 8_000_000:
                         raise ValueError("size")
-                    data = json.loads(path.read_text())
+                    data = json.loads(path.read_text(), object_pairs_hook=_unique_pairs)
                     self._validate(data, scope)
                 except Exception as exc:
                     raise ControlError("JOURNAL_UNAVAILABLE") from exc
@@ -176,6 +190,7 @@ class WorkflowControl:
     def _commit(path: Path, data: dict[str, Any]) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         data["seq"] += 1
+        data["updated_at"] = datetime.now(timezone.utc).isoformat()
         fd, name = tempfile.mkstemp(dir=path.parent, prefix=".control-", suffix=".tmp")
         try:
             os.fchmod(fd, 0o600)
@@ -199,6 +214,13 @@ class WorkflowControl:
         append_audit("workflow_" + event, op=event, ok=code == "OK", error=code,
                      extra={"scope_ref": self._path(scope).stem}, root=self.root)
 
+    def _admitted(self, identity: AttemptIdentity, quote: Quote) -> bool:
+        try:
+            return self.admission(identity, quote) is True
+        except Exception:
+            # Dependency text may contain credentials; never expose or audit it.
+            raise ControlError("DEPENDENCY_UNAVAILABLE") from None
+
     @staticmethod
     def _binding(identity: AttemptIdentity, quote: Quote) -> dict[str, Any]:
         return {"identity": asdict(identity), "quote": asdict(quote)}
@@ -221,7 +243,9 @@ class WorkflowControl:
         return {"actor_id": actor_id, "consumer_id": budget["consumer_id"],
                 "unit": UNIT, "limit": budget["limit"], "spent": budget["spent"],
                 "reserved": held, "available": max(0, budget["limit"] - budget["spent"] - held),
-                "cost_kind": "evidenced_final" if budget["spent"] else "no_final_cost",
+                "cost_kind": "evidenced_final" if any(
+                    a["state"] == "SETTLED" and a["identity"]["actor_id"] == actor_id
+                    for a in data["attempts"].values()) else "no_final_cost",
                 "incident": budget.get("incident", False)}
 
     def configure_budget(self, scope: WorkflowScope, actor_id: str, consumer_id: str,
@@ -229,13 +253,15 @@ class WorkflowControl:
         """Trusted operator configuration, not an agent tool. Existing lane never migrates."""
         _id(actor_id)
         _id(consumer_id)
+        if not consumer_id_is_valid(consumer_id):
+            raise ControlError("INVALID_CONSUMER")
         _money(limit_microusd)
         with self._transaction(scope) as (path, data):
             previous = data["budgets"].get(actor_id)
             if previous:
                 if previous["consumer_id"] != consumer_id:
                     raise ControlError("BUDGET_LANE_CONFLICT")
-                if limit_microusd > previous["limit"] and not authorize_increase:
+                if limit_microusd > previous["limit"] and authorize_increase is not True:
                     raise ControlError("BUDGET_INCREASE_NOT_AUTHORIZED")
                 previous["limit"] = limit_microusd
             else:
@@ -262,7 +288,7 @@ class WorkflowControl:
                 reason = "ACCOUNTING_MISMATCH"
             elif quote.max_cost_microusd > self._summary(data, identity.actor_id)["available"]:
                 reason = "BUDGET_EXCEEDED"
-            elif not self.admission(identity, quote):
+            elif not self._admitted(identity, quote):
                 reason = "ADMISSION_DENIED"
             attempt = {**self._binding(identity, quote),
                        "state": "RESERVED" if reason == "OK" else "DENIED",
@@ -286,12 +312,37 @@ class WorkflowControl:
             if attempt["state"] != "RESERVED":
                 return self._project_attempt(attempt)
             quote = Quote(**attempt["quote"])
-            if (data["stopped"] or self.registered_quotes.get(quote.adapter_id) != quote
-                    or not self.admission(identity, quote)):
-                attempt.update(state="CANCELLED_NO_SEND", held=0,
-                               reason_code="WORKFLOW_STOPPED" if data["stopped"] else "ADMISSION_DENIED")
+            budget = data["budgets"][identity.actor_id]
+            summary = self._summary(data, identity.actor_id)
+            deny = ""
+            if data["stopped"]:
+                deny = "WORKFLOW_STOPPED"
+            elif budget.get("incident"):
+                deny = "ACCOUNTING_MISMATCH"
+            elif summary["spent"] + summary["reserved"] > summary["limit"]:
+                deny = "BUDGET_EXCEEDED"
+            elif self.registered_quotes.get(quote.adapter_id) != quote:
+                deny = "UNBOUNDED_COST"
+            elif not self._admitted(identity, quote):
+                deny = "ADMISSION_DENIED"
+            if deny:
+                attempt.update(state="CANCELLED_NO_SEND", held=0, reason_code=deny)
                 self._commit(path, data)
+                self._audit("dispatch", identity.scope, code=deny)
                 return self._project_attempt(attempt)
+            from tollgate.usage_ledger import try_reserve_day_call
+
+            try:
+                day = try_reserve_day_call(quote.provider, consumer=identity.consumer_id,
+                                           op=quote.operation, root=self.root)
+            except Exception:
+                raise ControlError("DEPENDENCY_UNAVAILABLE") from None
+            if not day.get("ok"):
+                attempt.update(state="CANCELLED_NO_SEND", held=0, reason_code="DAY_LIMIT_DENIED")
+                self._commit(path, data)
+                self._audit("dispatch", identity.scope, code="DAY_LIMIT_DENIED")
+                return self._project_attempt(attempt)
+            attempt["day_call_reserved"] = bool(day.get("reserved"))
             attempt.update(state="DISPATCH_ATTEMPTED", reason_code="AWAITING_FINAL_EVIDENCE")
             self._commit(path, data)  # must succeed before touching the outside world
             try:
@@ -319,6 +370,9 @@ class WorkflowControl:
                 if attempt["settlement"] != settlement:
                     raise ControlError("SETTLEMENT_CONFLICT")
                 return self._project_attempt(attempt)
+            if any(other is not attempt and other.get("settlement", {}).get("settlement_id") == settlement_id
+                   for other in data["attempts"].values()):
+                raise ControlError("SETTLEMENT_CONFLICT")
             if attempt["state"] not in {"DISPATCH_ATTEMPTED", "OUTCOME_UNKNOWN"}:
                 raise ControlError("SETTLEMENT_NOT_ALLOWED")
             budget = data["budgets"][identity.actor_id]
@@ -337,14 +391,14 @@ class WorkflowControl:
         try:
             with self._transaction(scope) as (path, data):
                 if not data["stopped"]:
-                    data.update(stopped=True, stop_id=stop_id)
+                    data.update(stopped=True, stop_id=stop_id, barrier_seq=data["seq"] + 1)
                     for attempt in data["attempts"].values():
                         if attempt["state"] == "RESERVED":
                             attempt.update(state="CANCELLED_NO_SEND", held=0,
                                            reason_code="WORKFLOW_STOPPED")
                     self._commit(path, data)
                 result = {"status": "EFFECTIVE", "further_dispatch_blocked": True,
-                          "stop_id": data["stop_id"], "barrier_seq": data["seq"],
+                          "stop_id": data["stop_id"], "barrier_seq": data["barrier_seq"],
                           "abort_confirmed": False,
                           "external_effect": "unknown" if any(a["state"] in {
                               "DISPATCH_ATTEMPTED", "OUTCOME_UNKNOWN"} for a in data["attempts"].values())
@@ -362,7 +416,8 @@ class WorkflowControl:
                 "state": "OUTCOME_UNKNOWN" if attempt["state"] == "DISPATCH_ATTEMPTED" else attempt["state"],
                 "dispatch_started": attempt["state"] in {"DISPATCH_ATTEMPTED", "OUTCOME_UNKNOWN", "SETTLED"},
                 "reason_code": attempt["reason_code"], "reserved_microusd": attempt["held"],
-                "unit": UNIT, "project_completion_verified": False}
+                "unit": UNIT, "day_call_reserved": attempt.get("day_call_reserved", False),
+                "project_completion_verified": False}
 
     def get_attempt(self, identity: AttemptIdentity) -> dict[str, Any]:
         with self._transaction(identity.scope) as (_, data):
@@ -370,6 +425,7 @@ class WorkflowControl:
 
     def status(self, scope: WorkflowScope) -> dict[str, Any]:
         with self._transaction(scope) as (_, data):
-            return {"scope": asdict(scope), "seq": data["seq"], "stopped": data["stopped"],
+            return {"scope": asdict(scope), "seq": data["seq"], "updated_at": data.get("updated_at"),
+                    "stopped": data["stopped"],
                     "budgets": [self._summary(data, actor) for actor in sorted(data["budgets"])],
                     "attempts": [self._project_attempt(a) for a in data["attempts"].values()]}

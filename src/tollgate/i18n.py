@@ -44,6 +44,20 @@ ENVIRONMENT_VARIABLES = ("TOLLGATE_LANG", "LC_ALL", "LC_MESSAGES", "LANG")
 NEUTRAL_LOCALES = {"c", "posix", ""}
 
 CATALOG: dict[str, dict[str, str]] = {
+    "ui.control.scope_title": {
+        "de": "Was hier kontrolliert wird",
+        "en": "What is controlled here",
+    },
+    "ui.control.scope_body": {
+        "de": "Tagesverbrauch kann geschätzt sein. Freeze sperrt neue angeschlossene Aufrufe; "
+              "es beendet keine fremden Prozesse. Dauerhafte Auftragsbudgets gelten nur am "
+              "angeschlossenen Versandweg. Dessen Dummy-Prüfung ist keine Live-Anbieterabnahme. "
+              "Eine bestätigte Sperre ist noch kein bestätigter Abbruch; unklare Kosten bleiben reserviert.",
+        "en": "Daily usage may be estimated. Freeze blocks new connected calls; it does not "
+              "terminate other processes. Durable workflow budgets apply only at the connected "
+              "dispatch boundary. Its dummy test is not live-provider acceptance. A confirmed "
+              "block is not a confirmed abort; unknown costs remain reserved.",
+    },
     # --- Programm ---
     "cli.description": {
         "de": "Tollgate — Sicherheitsschicht für AI-Agenten (Protect · Route · Prove). "

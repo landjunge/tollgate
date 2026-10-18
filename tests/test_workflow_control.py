@@ -13,6 +13,13 @@ SCOPE = WorkflowScope("project-a", "workflow-a")
 QUOTE = Quote("dummy-v1", "dummy", "bounded-send", "local-dummy", 60, "fixed-v1")
 
 
+@pytest.fixture(autouse=True)
+def isolated_configuration(monkeypatch, tmp_path):
+    monkeypatch.setenv("TOLLGATE_HOME", str(tmp_path))
+    from tollgate.app_config import load_config
+    load_config(force=True, root=tmp_path)
+
+
 def identity(n="a", **changes):
     return replace(AttemptIdentity(SCOPE, "task:1", "codex", "codex-lane", n, "a" * 64), **changes)
 
@@ -180,3 +187,87 @@ def test_corrupt_journal_fails_closed_and_rechecks_admission(tmp_path):
     c._path(SCOPE).write_text("{bad-json")
     with pytest.raises(ControlError, match="JOURNAL_UNAVAILABLE"):
         c.status(SCOPE)
+
+
+def test_lowered_limit_or_accounting_incident_blocks_prior_reservation(tmp_path):
+    c = setup(tmp_path, 200)
+    c.reserve(identity(), QUOTE)
+    c.reserve(identity("b"), QUOTE)
+    c.configure_budget(SCOPE, "codex", "codex-lane", 100)
+    calls = []
+    assert c.dispatch(identity(), lambda: calls.append(1))["reason_code"] == "BUDGET_EXCEEDED"
+    # Lowering does not silently erase commitments; the other reservation remains.
+    assert c.status(SCOPE)["budgets"][0]["reserved"] == 60
+    c.configure_budget(SCOPE, "codex", "codex-lane", 200, authorize_increase=True)
+    c.dispatch(identity("b"), lambda: None)
+    c.reserve(identity("c"), QUOTE)
+    c.settle(identity("b"), 61, "bill-over", "final-over")
+    assert c.dispatch(identity("c"), lambda: calls.append(1))["reason_code"] == "ACCOUNTING_MISMATCH"
+    assert not calls
+
+
+def test_duplicate_json_keys_fail_closed(tmp_path):
+    c = setup(tmp_path)
+    text = c._path(SCOPE).read_text()
+    c._path(SCOPE).write_text(text.replace('"seq":1', '"seq":0,"seq":1'))
+    with pytest.raises(ControlError, match="JOURNAL_UNAVAILABLE"):
+        c.status(SCOPE)
+
+
+def test_existing_real_admission_freeze_blocks_workflow_dispatch(tmp_path, monkeypatch):
+    c = setup(tmp_path)
+    c.reserve(identity(), QUOTE)
+    monkeypatch.setenv("TOLLGATE_HOME", str(tmp_path))
+    monkeypatch.setattr("tollgate.freeze.is_frozen", lambda: True)
+    monkeypatch.setattr("tollgate.freeze.freeze_status", lambda: {"reason": "synthetic freeze"})
+    actual_admission = WorkflowControl(root=tmp_path, registered_quotes={QUOTE.adapter_id: QUOTE})
+    calls = []
+    assert actual_admission.dispatch(identity(), lambda: calls.append(1))["reason_code"] == "ADMISSION_DENIED"
+    assert not calls
+
+
+def test_same_billing_id_cannot_settle_two_attempts_and_dependency_is_redacted(tmp_path):
+    c = setup(tmp_path, 200)
+    for name in ("a", "b"):
+        c.reserve(identity(name), QUOTE)
+        c.dispatch(identity(name), lambda: None)
+    c.settle(identity(), 40, "one-bill", "receipt")
+    with pytest.raises(ControlError, match="SETTLEMENT_CONFLICT"):
+        c.settle(identity("b"), 40, "one-bill", "receipt")
+    def broken(*_):
+        raise RuntimeError("must-not-leak-secret")
+    broken_control = WorkflowControl(root=tmp_path, admission=broken, registered_quotes={QUOTE.adapter_id: QUOTE})
+    with pytest.raises(ControlError, match="DEPENDENCY_UNAVAILABLE") as error:
+        broken_control.reserve(identity("c"), QUOTE)
+    assert "must-not-leak-secret" not in str(error.value)
+    assert c.status(SCOPE)["budgets"][0]["reserved"] == 60
+
+
+def test_actual_daily_call_reservation_is_not_bypassed(tmp_path, monkeypatch):
+    from tollgate.app_config import load_config, save_config
+    cfg = load_config(force=True, root=tmp_path)
+    cfg.setdefault("providers", {})["dummy"] = {"enabled": True, "max_calls_day": 1}
+    save_config(cfg, root=tmp_path)
+    c = setup(tmp_path, 200)
+    c.reserve(identity(), QUOTE)
+    c.reserve(identity("b"), QUOTE)
+    calls = []
+    assert c.dispatch(identity(), lambda: calls.append(1))["day_call_reserved"] is True
+    assert c.dispatch(identity("b"), lambda: calls.append(2))["reason_code"] == "DAY_LIMIT_DENIED"
+    assert calls == [1]
+
+
+@pytest.mark.parametrize("consumer", ["wrong:lane", "a" * 65])
+def test_consumer_identity_never_collapses_into_anonymous_lane(tmp_path, consumer):
+    with pytest.raises(ControlError, match="INVALID_CONSUMER"):
+        identity(consumer_id=consumer)
+    with pytest.raises(ControlError, match="INVALID_CONSUMER"):
+        control(tmp_path).configure_budget(SCOPE, "codex", consumer, 100)
+
+
+def test_final_zero_bill_is_still_evidenced_final_cost(tmp_path):
+    c = setup(tmp_path)
+    c.reserve(identity(), QUOTE)
+    c.dispatch(identity(), lambda: None)
+    c.settle(identity(), 0, "zero-bill", "final-zero-evidence")
+    assert c.status(SCOPE)["budgets"][0]["cost_kind"] == "evidenced_final"

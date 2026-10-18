@@ -6,6 +6,7 @@ Designed for operators: see agents, set $ limits, prove failover.
 from __future__ import annotations
 
 import re
+from importlib.resources import files
 
 from tollgate import i18n
 
@@ -16,49 +17,27 @@ _TEMPLATE = r"""<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Tollgate · Control Room</title>
 <style>
+  /* Local versioned NetzwerkPunkt basis; no CDN or new UI framework. */
+  __NP_CSS__
   :root {
-    /* Ein Design fuer alle Werkzeuge. Dieselben Werte stehen in ThreadDesk
-       (ui/static/style.css) und in 4AllPass (frontend/src/tokens.css). */
-    --bg: #121316;
-    --bg2: #1a1b1f;
-    --panel: #1e1f24;
-    --panel2: #24262d;
-    /* --line trennt Flaechen (Deko). --line2 zeichnet die Kante von
-       Bedienelementen und haelt dafuer 3:1 gegen den Hintergrund ein
-       (WCAG 2.2, 1.4.11 Non-text Contrast). */
-    --line: #2e3138;
-    --line2: #5f646f;
-    --fg: #e2e4e9;
-    --muted: #8b909a;
-    --muted2: #6b7280;
-    --ok: #3d9b6a;
-    --ok-dim: rgba(61,155,106,.12);
-    --warn: #c9a227;
-    --warn-dim: rgba(201,162,39,.12);
-    --bad: #dc7070;
-    --bad-dim: rgba(220,112,112,.12);
-    --acc: #8f98a8;
-    --acc2: #6b7280;
-    --acc-dim: rgba(143,152,168,.12);
-    /* Vier Schriftgroessen, mehr nicht: 16px Grundgroesse wie fuer
-       Fliesstext im Web empfohlen, die Stufen darum herum im Verhaeltnis
-       1.25 (grosse Terz). */
-    /* Zwei Groessen fuer Bedienelemente, mehr gibt es nicht:
-       --control ist der Regelfall (Knopf, Eingabefeld, Auswahlmenue),
-       --control-sm die kompakte Fassung fuer dichte Zeilen und Reiter.
-       Beide liegen auf dem 8er-Raster. Unter dem Finger werden beide 44px
-       gross — das ist keine dritte Groesse, sondern dieselben Elemente unter
-       einem anderen Eingabegeraet (Apple HIG, Material). Gilt in allen
-       Werkzeugen. */
-    --control: 40px;
-    --control-sm: 32px;
-    --control-touch: 44px;
-    --text-sm: 13px;
-    --text-base: 16px;
-    --text-lg: 20px;
-    --text-xl: 25px;
-    --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --bg: var(--np-canvas); --bg2: var(--np-surface);
+    --panel: var(--np-surface); --panel2: var(--np-hover);
+    --line: var(--np-divider); --line2: var(--np-control-border);
+    --fg: var(--np-text); --muted: var(--np-muted); --muted2: var(--np-muted);
+    --ok: var(--np-success); --warn: var(--np-warning); --bad: var(--np-danger);
+    --ok-dim: rgba(123,218,167,.12); --warn-dim: rgba(228,190,112,.12);
+    --bad-dim: rgba(244,155,155,.12); --acc-dim: rgba(237,240,244,.12);
+    --acc: var(--np-action); --acc2: var(--np-muted);
+    --control: var(--np-control); --control-sm: 32px; --control-touch: var(--np-control-touch);
+    --text-sm: var(--np-meta); --text-base: var(--np-body);
+    --text-lg: var(--np-heading); --text-xl: var(--np-title);
+    --font: var(--np-font); --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  :focus-visible { outline: 2px solid var(--np-focus); outline-offset: 3px; }
+  .control-scope { border-left: 2px solid var(--warn); padding: .6rem .9rem; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto !important; }
+    *, *::before, *::after { animation: none !important; transition: none !important; }
   }
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
@@ -430,7 +409,7 @@ _TEMPLATE = r"""<!DOCTYPE html>
   }
 </style>
 </head>
-<body>
+<body class="np-ui">
 <div id="secBanner" role="status"></div>
 <div id="onboard" role="dialog" aria-label="{{ui.setup}}">
   <div class="ob-card">
@@ -496,6 +475,10 @@ _TEMPLATE = r"""<!DOCTYPE html>
   <section class="view active" id="view-overview">
     <h1 class="page">{{ui.control_room}}</h1>
     <p class="sub">{{ui.overview.lead}}</p>
+    <aside class="control-scope" aria-label="{{ui.control.scope_title}}">
+      <strong>{{ui.control.scope_title}}</strong>
+      <p>{{ui.control.scope_body}}</p>
+    </aside>
 
     <div class="card hero">
       <div>
@@ -1389,4 +1372,5 @@ def dashboard_html(language: str = i18n.DEFAULT_LANGUAGE,
             return extra[key]
         return i18n.translate(key, code, level)
 
-    return _MARKER.sub(pick, _TEMPLATE)
+    return _MARKER.sub(pick, _TEMPLATE).replace(
+        "__NP_CSS__", files("tollgate").joinpath("static/networkpunkt.css").read_text(encoding="utf-8"))

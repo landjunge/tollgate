@@ -1,0 +1,68 @@
+{
+  "synthetic_only": true,
+  "effects": [
+    "synthetic-dispatch"
+  ],
+  "stop": {
+    "status": "EFFECTIVE",
+    "further_dispatch_blocked": true,
+    "stop_id": "stop-1",
+    "barrier_seq": 5,
+    "abort_confirmed": false,
+    "external_effect": "no_unresolved_dispatch"
+  },
+  "denied": {
+    "attempt_id": "attempt-2",
+    "state": "DENIED",
+    "dispatch_started": false,
+    "reason_code": "WORKFLOW_STOPPED",
+    "reserved_microusd": 0,
+    "unit": "USD_MICRO",
+    "day_call_reserved": false,
+    "project_completion_verified": false
+  },
+  "status": {
+    "scope": {
+      "project_id": "dummy-project",
+      "workflow_id": "dummy-workflow"
+    },
+    "seq": 6,
+    "updated_at": "2026-10-18T16:53:33.605523+00:00",
+    "stopped": true,
+    "budgets": [
+      {
+        "actor_id": "codex",
+        "consumer_id": "codex-lane",
+        "unit": "USD_MICRO",
+        "limit": 100,
+        "spent": 40,
+        "reserved": 0,
+        "available": 60,
+        "cost_kind": "evidenced_final",
+        "incident": false
+      }
+    ],
+    "attempts": [
+      {
+        "attempt_id": "attempt-1",
+        "state": "SETTLED",
+        "dispatch_started": true,
+        "reason_code": "OK",
+        "reserved_microusd": 0,
+        "unit": "USD_MICRO",
+        "day_call_reserved": true,
+        "project_completion_verified": false
+      },
+      {
+        "attempt_id": "attempt-2",
+        "state": "DENIED",
+        "dispatch_started": false,
+        "reason_code": "WORKFLOW_STOPPED",
+        "reserved_microusd": 0,
+        "unit": "USD_MICRO",
+        "day_call_reserved": false,
+        "project_completion_verified": false
+      }
+    ]
+  }
+}
