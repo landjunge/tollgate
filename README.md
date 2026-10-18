@@ -341,3 +341,10 @@ again.
 | [CHANGELOG.md](CHANGELOG.md) | Releases · **v1.0.0+** |
 
 **License:** All Rights Reserved · **Python:** ≥ 3.11 · **Repo:** [landjunge/tollgate](https://github.com/landjunge/tollgate)
+
+### Owned CLI stop-only adapter / Auftragseigener CLI-Stopp
+
+An optional trusted process adapter can share the durable workflow stop barrier;
+CLI cost remains unknown, without a hard dollar cap or invented zero-cost quote.
+Optionale betreibergebundene Prozessadapter teilen die dauerhafte Auftragssperre;
+Kosten bleiben unbekannt. [DE/EN contract](docs/WORKFLOW-PROCESS-STOP.md).
