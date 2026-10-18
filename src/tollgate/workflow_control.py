@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import re
 import tempfile
@@ -21,6 +22,7 @@ from tollgate.audit_log import append_audit
 from tollgate.consumers import consumer_id_is_valid
 from tollgate.filelock import FileLock
 from tollgate.paths import user_dir
+
 
 def _unique_pairs(pairs):
     out = {}
@@ -130,6 +132,9 @@ class WorkflowControl:
                  admission: Callable[[AttemptIdentity, Quote], bool] = _provider_admit,
                  lock_timeout_s: float = 1.0,
                  registered_quotes: dict[str, Quote] | None = None):
+        if (type(lock_timeout_s) not in (int, float)
+                or not 0 < lock_timeout_s <= 30 or not math.isfinite(lock_timeout_s)):
+            raise ControlError("INVALID_LOCK_TIMEOUT")
         self.root = root
         self.directory = user_dir(root) / "workflow_control"
         self.registered_quotes = dict(registered_quotes or {})

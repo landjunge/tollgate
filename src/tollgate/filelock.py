@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import sys
 import time
 from pathlib import Path
@@ -13,6 +14,14 @@ class FileLock:
     """Context manager: exclusive lock on ``path`` (+ ``.lock`` sidecar)."""
 
     def __init__(self, path: Path, *, timeout_s: float = 10.0) -> None:
+        if type(timeout_s) not in (int, float):
+            raise ValueError("lock timeout must be a finite non-negative number")
+        try:
+            finite = math.isfinite(timeout_s)
+        except OverflowError:
+            finite = False
+        if not finite or timeout_s < 0:
+            raise ValueError("lock timeout must be a finite non-negative number")
         self.path = Path(path)
         self.lock_path = self.path.with_name(self.path.name + ".lock")
         self.timeout_s = timeout_s
@@ -21,15 +30,20 @@ class FileLock:
     def __enter__(self) -> FileLock:
         self.lock_path.parent.mkdir(parents=True, exist_ok=True)
         self._fh = open(self.lock_path, "a+", encoding="utf-8")
-        deadline = time.time() + self.timeout_s
-        while True:
-            try:
-                self._lock()
-                return self
-            except OSError:
-                if time.time() >= deadline:
-                    raise TimeoutError(f"lock timeout: {self.lock_path}")
-                time.sleep(0.02)
+        try:
+            deadline = time.monotonic() + self.timeout_s
+            while True:
+                try:
+                    self._lock()
+                    return self
+                except OSError:
+                    if time.monotonic() >= deadline:
+                        raise TimeoutError(f"lock timeout: {self.lock_path}")
+                    time.sleep(0.02)
+        except BaseException:
+            self._fh.close()
+            self._fh = None
+            raise
 
     def __exit__(
         self,
