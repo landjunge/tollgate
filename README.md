@@ -50,6 +50,24 @@ TollGate ist kein KI-Modell, kein Agent und kein Passwort-Tresor. Es ersetzt auc
 | Technik | Python und FastAPI |
 | Reife | In Entwicklung; vor Produktion selbst prüfen |
 
+### Kontrollumfang / Control scope
+
+Freeze sperrt neue angeschlossene Aufrufe; es beendet keine beliebigen Prozesse
+und macht bereits versandte Wirkung nicht rückgängig. Tagesgrenzen und grobe
+USD-Schätzungen sind keine bestätigte Anbieterrechnung. Der neue lokale
+[Auftragskontrollkern](docs/WORKFLOW-CONTROL.md) reserviert ganzzahlige
+USD-Microbeträge je KI/Gesamtauftrag dauerhaft und koppelt Stopps an den
+**tatsächlichen angeschlossenen Dispatch**. Neustart, Tageswechsel und Timeout
+geben unklare Reservierungen nicht frei. Die Abnahme nutzt synthetische Adapter;
+KiraBridge/4AllPass-Livebetrieb und beliebige CLI-Kosten sind damit nicht freigegeben.
+
+Freeze blocks new connected calls; it does not terminate arbitrary processes or
+undo already sent effects. Daily estimates are not provider invoices. The local
+[workflow-control core](docs/WORKFLOW-CONTROL.md) adds durable integer-dollar
+reservations per AI/workflow and an ordered stop/dispatch barrier. Unknown
+obligations survive restart/day changes. Synthetic acceptance is not a production
+KiraBridge/4AllPass adapter or a hard cap for arbitrary subscription CLIs.
+
 [Produktseite](https://tollgate.netzwerkpunkt.de/) · [Schnellstart](docs/QUICKSTART.md)
 
 ---
@@ -163,7 +181,7 @@ tollgate status
 tollgate certificate --application "Customer Support Agent"
 tollgate consumer-budget support-agent --max-usd-day 2 --max-tool-calls 20
 tollgate chaos test opencode_zen --requests 10
-tollgate freeze --reason "panic"    # kill switch
+tollgate freeze --reason "panic"    # blocks new controlled calls; not process termination
 tollgate report                     # day brief
 ```
 

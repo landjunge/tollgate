@@ -1,0 +1,40 @@
+{
+  "checkedAt": "2026-10-18T16:51:06.003Z",
+  "browser": "155.0.8059.85",
+  "results": [
+    {
+      "lang": "de",
+      "font": "14px",
+      "title": "Was hier kontrolliert wird",
+      "message": "Tagesverbrauch kann geschätzt sein. Freeze sperrt neue angeschlossene Aufrufe; es beendet keine fremden Prozesse. Dauerhafte Auftragsbudgets gelten nur am angeschlossenen Versandweg. Dessen Dummy-Prüfung ist keine Live-Anbieterabnahme. Eine bestätigte Sperre ist noch kein bestätigter Abbruch; unklare Kosten bleiben reserviert.",
+      "focus": "solid",
+      "focusWidth": "2px",
+      "motion": "auto",
+      "npBody": "14px",
+      "unresolvedMarkers": false,
+      "zoom": {
+        "scrollWidth": 670,
+        "clientWidth": 670,
+        "visible": true
+      },
+      "scope": "isolated rendered HTML; network blocked; no live API acceptance"
+    },
+    {
+      "lang": "en",
+      "font": "14px",
+      "title": "What is controlled here",
+      "message": "Daily usage may be estimated. Freeze blocks new connected calls; it does not terminate other processes. Durable workflow budgets apply only at the connected dispatch boundary. Its dummy test is not live-provider acceptance. A confirmed block is not a confirmed abort; unknown costs remain reserved.",
+      "focus": "solid",
+      "focusWidth": "2px",
+      "motion": "auto",
+      "npBody": "14px",
+      "unresolvedMarkers": false,
+      "zoom": {
+        "scrollWidth": 670,
+        "clientWidth": 670,
+        "visible": true
+      },
+      "scope": "isolated rendered HTML; network blocked; no live API acceptance"
+    }
+  ]
+}
