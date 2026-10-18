@@ -131,13 +131,20 @@ class WorkflowControl:
     def __init__(self, *, root: Path | None = None,
                  admission: Callable[[AttemptIdentity, Quote], bool] = _provider_admit,
                  lock_timeout_s: float = 1.0,
-                 registered_quotes: dict[str, Quote] | None = None):
+                 registered_quotes: dict[str, Quote] | None = None,
+                 registered_process_actors: dict[str, str] | None = None):
         if (type(lock_timeout_s) not in (int, float)
                 or not 0 < lock_timeout_s <= 30 or not math.isfinite(lock_timeout_s)):
             raise ControlError("INVALID_LOCK_TIMEOUT")
         self.root = root
         self.directory = user_dir(root) / "workflow_control"
         self.registered_quotes = dict(registered_quotes or {})
+        # Trusted host configuration only. This mode grants no bounded-cost claim.
+        self.registered_process_actors = dict(registered_process_actors or {})
+        for actor, consumer in self.registered_process_actors.items():
+            _id(actor)
+            if not consumer_id_is_valid(consumer):
+                raise ControlError("INVALID_CONSUMER")
         if any(key != quote.adapter_id for key, quote in self.registered_quotes.items()):
             raise ControlError("INVALID_ADAPTER_REGISTRY")
         self.admission = admission
@@ -168,7 +175,8 @@ class WorkflowControl:
     @staticmethod
     def _validate(data: dict[str, Any], scope: WorkflowScope) -> None:
         if (data["schema"] != 1 or data["scope"] != asdict(scope)
-                or type(data["seq"]) is not int or type(data["stopped"]) is not bool):
+                or type(data["seq"]) is not int or type(data["stopped"]) is not bool
+                or data.get("dispatch_mode") not in {None, "bounded", "stop_only"}):
             raise ValueError("schema")
         for actor, budget in data["budgets"].items():
             _id(actor)
@@ -181,9 +189,18 @@ class WorkflowControl:
             identity = dict(attempt["identity"])
             identity["scope"] = WorkflowScope(**identity["scope"])
             ident = AttemptIdentity(**identity)
-            quote = Quote(**attempt["quote"])
             if ident.scope != scope or ident.attempt_id != attempt_id:
                 raise ValueError("identity")
+            if attempt.get("control_mode") == "stop_only":
+                if (data.get("dispatch_mode") != "stop_only" or data["budgets"]
+                        or "quote" in attempt or "held" in attempt
+                        or attempt["state"] not in {"DISPATCH_ATTEMPTED", "OUTCOME_UNKNOWN", "DENIED"}
+                        or type(attempt.get("spawn_observed")) is not bool):
+                    raise ValueError("stop-only schema")
+                continue
+            if data.get("dispatch_mode") == "stop_only":
+                raise ValueError("mixed control modes")
+            quote = Quote(**attempt["quote"])
             if attempt["state"] not in {"RESERVED", "DISPATCH_ATTEMPTED", "OUTCOME_UNKNOWN",
                                         "SETTLED", "CANCELLED_NO_SEND", "DENIED"}:
                 raise ValueError("state")
@@ -262,6 +279,9 @@ class WorkflowControl:
             raise ControlError("INVALID_CONSUMER")
         _money(limit_microusd)
         with self._transaction(scope) as (path, data):
+            if data.get("dispatch_mode") == "stop_only":
+                raise ControlError("CONTROL_MODE_CONFLICT")
+            data["dispatch_mode"] = "bounded"
             previous = data["budgets"].get(actor_id)
             if previous:
                 if previous["consumer_id"] != consumer_id:
@@ -277,6 +297,8 @@ class WorkflowControl:
 
     def reserve(self, identity: AttemptIdentity, quote: Quote) -> dict[str, Any]:
         with self._transaction(identity.scope) as (path, data):
+            if data.get("dispatch_mode") == "stop_only":
+                raise ControlError("CONTROL_MODE_CONFLICT")
             if identity.attempt_id in data["attempts"]:
                 return self._project_attempt(self._existing(data, identity, quote))
             if len(data["attempts"]) >= 10_000:
@@ -314,6 +336,8 @@ class WorkflowControl:
         """
         with self._transaction(identity.scope) as (path, data):
             attempt = self._existing(data, identity)
+            if attempt.get("control_mode") == "stop_only":
+                raise ControlError("CONTROL_MODE_CONFLICT")
             if attempt["state"] != "RESERVED":
                 return self._project_attempt(attempt)
             quote = Quote(**attempt["quote"])
@@ -369,6 +393,8 @@ class WorkflowControl:
         _id(evidence_ref)
         with self._transaction(identity.scope) as (path, data):
             attempt = self._existing(data, identity)
+            if attempt.get("control_mode") == "stop_only":
+                raise ControlError("CONTROL_MODE_CONFLICT")
             settlement = {"settlement_id": settlement_id, "evidence_ref": evidence_ref,
                           "actual_microusd": actual_microusd}
             if attempt["state"] == "SETTLED":
@@ -390,6 +416,52 @@ class WorkflowControl:
             result = self._project_attempt(attempt)
         self._audit("settle", identity.scope, code=result["reason_code"])
         return result
+
+    @contextmanager
+    def process_start(self, identity: AttemptIdentity) -> Iterator[dict[str, Any]]:
+        """Hold the existing scope barrier over actual owned spawn and registration.
+
+        Stop-only is an explicit trusted-host mode for CLI processes with unknown
+        cost. It cannot enter or replace a bounded-budget scope. The caller must
+        keep this context open across the actual spawn (including an async await)
+        and owned process registration. Never export ``start_allowed`` as a token.
+        A durable attempt is never replayed, including after crash/unknown spawn.
+        """
+        if self.registered_process_actors.get(identity.actor_id) != identity.consumer_id:
+            raise ControlError("PROCESS_ADAPTER_UNAVAILABLE")
+        with self._transaction(identity.scope) as (path, data):
+            if data.get("dispatch_mode") not in {None, "stop_only"} or data["budgets"] or any(
+                a.get("control_mode") != "stop_only" for a in data["attempts"].values()
+            ):
+                raise ControlError("CONTROL_MODE_CONFLICT")
+            if identity.attempt_id in data["attempts"]:
+                attempt = self._existing(data, identity)
+                yield {**self._project_attempt(attempt), "start_allowed": False}
+                return
+            if len(data["attempts"]) >= 10_000:
+                raise ControlError("JOURNAL_CAPACITY")
+            data["dispatch_mode"] = "stop_only"
+            attempt = {
+                "identity": asdict(identity), "control_mode": "stop_only",
+                "state": "DENIED" if data["stopped"] else "DISPATCH_ATTEMPTED",
+                "reason_code": "WORKFLOW_STOPPED" if data["stopped"] else "PROCESS_START_UNKNOWN",
+                "spawn_observed": False,
+            }
+            data["attempts"][identity.attempt_id] = attempt
+            self._commit(path, data)
+            if data["stopped"]:
+                yield {**self._project_attempt(attempt), "start_allowed": False}
+                return
+            try:
+                yield {**self._project_attempt(attempt), "start_allowed": True}
+            except BaseException:
+                attempt.update(state="OUTCOME_UNKNOWN", reason_code="PROCESS_START_UNKNOWN")
+                self._commit(path, data)
+                raise
+            else:
+                attempt.update(spawn_observed=True, reason_code="PROCESS_SPAWN_OBSERVED")
+                self._commit(path, data)
+        self._audit("process_start", identity.scope)
 
     def stop(self, scope: WorkflowScope, stop_id: str) -> dict[str, Any]:
         _id(stop_id)
@@ -417,6 +489,15 @@ class WorkflowControl:
     @staticmethod
     def _project_attempt(attempt: dict[str, Any]) -> dict[str, Any]:
         # Private request hashes and arbitrary adapter output stay out of reports.
+        if attempt.get("control_mode") == "stop_only":
+            return {
+                "attempt_id": attempt["identity"]["attempt_id"], "control_mode": "stop_only",
+                "state": "OUTCOME_UNKNOWN" if attempt["state"] == "DISPATCH_ATTEMPTED" else attempt["state"],
+                "dispatch_started": attempt["state"] != "DENIED",
+                "spawn_observed": attempt["spawn_observed"], "reason_code": attempt["reason_code"],
+                "cost_kind": "unknown", "hard_cost_cap": False,
+                "project_completion_verified": False,
+            }
         return {"attempt_id": attempt["identity"]["attempt_id"],
                 "state": "OUTCOME_UNKNOWN" if attempt["state"] == "DISPATCH_ATTEMPTED" else attempt["state"],
                 "dispatch_started": attempt["state"] in {"DISPATCH_ATTEMPTED", "OUTCOME_UNKNOWN", "SETTLED"},
