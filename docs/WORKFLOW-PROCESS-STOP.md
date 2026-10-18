@@ -45,3 +45,29 @@ remain readable. No queue, external transport, provider calls, installation or
 runtime activation is added by this source change. Targeted tests use synthetic
 identities and effects only; existing admission and bounded-cost dispatch remain
 independent controls.
+
+## Beständige Journalzuordnung / Persistent journal binding
+
+`control_identity(scope)` ist ein expliziter vertrauenswürdiger Metadatenschritt,
+keine reine Lese-Bereitschaftsprüfung. Er liefert `journal_id` (32 kleine Hexzeichen,
+UUID4), scope, schema=1 und source_authenticated=false. Die ID steht ausschließlich
+im bestehenden Scopejournal. Neue Persistenz ergänzt sie automatisch; alte Journale
+ohne das Feld erhalten sie einmal unter derselben Sperre. Sperr-/Budget-/Versuchsfakten
+bleiben erhalten. Wiederholung/Neustart liest dieselbe ID ohne neuen Commit oder Seq.
+Ungültige vorhandene IDs werden abgewiesen, nicht repariert oder zurückgesetzt.
+
+Neu angelegtes Journal oder anderer state_root erzeugt eine andere ID. Ein Consumer
+muss die tatsächliche Zuordnung selbst dauerhaft binden und bei Abweichung sperren;
+die ID verhindert allein weder Löschen noch Kopieren eines Journals. Sie ist kein
+Secret, keine kryptografisch authentifizierte Identität und kein Budget-/Startgrant.
+Keine zusätzliche Datei, Queue oder externe Aktion. Tests verändern ausschließlich
+temporäre synthetische Journale: `pytest -q tests/test_workflow_control_identity.py`
+(10 Fälle). Vorhandene Betriebsdaten werden nicht migriert, gelöscht oder angefasst.
+
+`control_identity(scope)` explicitly establishes/reads an opaque random UUID4 in
+the existing scope journal. It is a trusted metadata write, never a read-only
+readiness check. Legacy journals gain it once without changing stop/budget/attempt
+facts; repeat/restart does not rewrite it. Invalid existing IDs fail closed.
+Recreated journals or different roots have different IDs. Consumers must persist
+their actual binding and reject mismatch. Copying/tampering is not prevented by this
+unauthenticated correlation ID. No extra sidecar, queue, secret or financial grant.

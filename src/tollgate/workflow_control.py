@@ -12,6 +12,7 @@ import math
 import os
 import re
 import tempfile
+import uuid
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
@@ -178,6 +179,11 @@ class WorkflowControl:
                 or type(data["seq"]) is not int or type(data["stopped"]) is not bool
                 or data.get("dispatch_mode") not in {None, "bounded", "stop_only"}):
             raise ValueError("schema")
+        if "journal_id" in data:
+            identity = data["journal_id"]
+            if (type(identity) is not str or re.fullmatch(r"[a-f0-9]{32}", identity) is None
+                    or uuid.UUID(hex=identity).version != 4):
+                raise ValueError("journal identity")
         for actor, budget in data["budgets"].items():
             _id(actor)
             _id(budget["consumer_id"])
@@ -211,6 +217,8 @@ class WorkflowControl:
     @staticmethod
     def _commit(path: Path, data: dict[str, Any]) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
+        if "journal_id" not in data:
+            data["journal_id"] = uuid.uuid4().hex
         data["seq"] += 1
         data["updated_at"] = datetime.now(timezone.utc).isoformat()
         fd, name = tempfile.mkstemp(dir=path.parent, prefix=".control-", suffix=".tmp")
@@ -508,6 +516,21 @@ class WorkflowControl:
     def get_attempt(self, identity: AttemptIdentity) -> dict[str, Any]:
         with self._transaction(identity.scope) as (_, data):
             return self._project_attempt(self._existing(data, identity))
+
+    def control_identity(self, scope: WorkflowScope) -> dict[str, Any]:
+        """Explicit trusted-host metadata write, never a read-only readiness probe.
+
+        Establish a random identity in the existing scope journal, preserving all
+        stop/budget/attempt facts. Legacy journals acquire one once. Recreated or
+        independently located journals get a different identity; consumers must
+        persist their binding and fail closed on a later mismatch. The ID is an
+        opaque correlation value, not a secret or authenticated identity proof.
+        """
+        with self._transaction(scope) as (path, data):
+            if "journal_id" not in data:
+                self._commit(path, data)
+            return {"journal_id": data["journal_id"], "scope": asdict(scope),
+                    "schema": 1, "source_authenticated": False}
 
     def status(self, scope: WorkflowScope) -> dict[str, Any]:
         with self._transaction(scope) as (_, data):
