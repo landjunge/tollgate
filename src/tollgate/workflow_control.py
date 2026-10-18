@@ -56,6 +56,12 @@ def _money(value: int) -> None:
         raise ControlError("INVALID_AMOUNT")
 
 
+def _journal_id(value: str) -> None:
+    if (type(value) is not str or re.fullmatch(r"[a-f0-9]{32}", value) is None
+            or uuid.UUID(hex=value).version != 4):
+        raise ControlError("INVALID_JOURNAL_IDENTITY")
+
+
 @dataclass(frozen=True)
 class WorkflowScope:
     project_id: str
@@ -180,10 +186,7 @@ class WorkflowControl:
                 or data.get("dispatch_mode") not in {None, "bounded", "stop_only"}):
             raise ValueError("schema")
         if "journal_id" in data:
-            identity = data["journal_id"]
-            if (type(identity) is not str or re.fullmatch(r"[a-f0-9]{32}", identity) is None
-                    or uuid.UUID(hex=identity).version != 4):
-                raise ValueError("journal identity")
+            _journal_id(data["journal_id"])
         for actor, budget in data["budgets"].items():
             _id(actor)
             _id(budget["consumer_id"])
@@ -426,7 +429,8 @@ class WorkflowControl:
         return result
 
     @contextmanager
-    def process_start(self, identity: AttemptIdentity) -> Iterator[dict[str, Any]]:
+    def process_start(self, identity: AttemptIdentity, *,
+                      expected_journal_id: str | None = None) -> Iterator[dict[str, Any]]:
         """Hold the existing scope barrier over actual owned spawn and registration.
 
         Stop-only is an explicit trusted-host mode for CLI processes with unknown
@@ -434,10 +438,16 @@ class WorkflowControl:
         keep this context open across the actual spawn (including an async await)
         and owned process registration. Never export ``start_allowed`` as a token.
         A durable attempt is never replayed, including after crash/unknown spawn.
+        Configured consumers must pass their previously bound journal identity;
+        it is rechecked under the actual dispatch lock, not as an earlier token.
         """
+        if expected_journal_id is not None:
+            _journal_id(expected_journal_id)
         if self.registered_process_actors.get(identity.actor_id) != identity.consumer_id:
             raise ControlError("PROCESS_ADAPTER_UNAVAILABLE")
         with self._transaction(identity.scope) as (path, data):
+            if expected_journal_id is not None and data.get("journal_id") != expected_journal_id:
+                raise ControlError("JOURNAL_IDENTITY_CHANGED")
             if data.get("dispatch_mode") not in {None, "stop_only"} or data["budgets"] or any(
                 a.get("control_mode") != "stop_only" for a in data["attempts"].values()
             ):
@@ -471,10 +481,15 @@ class WorkflowControl:
                 self._commit(path, data)
         self._audit("process_start", identity.scope)
 
-    def stop(self, scope: WorkflowScope, stop_id: str) -> dict[str, Any]:
+    def stop(self, scope: WorkflowScope, stop_id: str, *,
+             expected_journal_id: str | None = None) -> dict[str, Any]:
         _id(stop_id)
+        if expected_journal_id is not None:
+            _journal_id(expected_journal_id)
         try:
             with self._transaction(scope) as (path, data):
+                if expected_journal_id is not None and data.get("journal_id") != expected_journal_id:
+                    raise ControlError("JOURNAL_IDENTITY_CHANGED")
                 if not data["stopped"]:
                     data.update(stopped=True, stop_id=stop_id, barrier_seq=data["seq"] + 1)
                     for attempt in data["attempts"].values():
