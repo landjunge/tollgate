@@ -71,3 +71,33 @@ facts; repeat/restart does not rewrite it. Invalid existing IDs fail closed.
 Recreated journals or different roots have different IDs. Consumers must persist
 their actual binding and reject mismatch. Copying/tampering is not prevented by this
 unauthenticated correlation ID. No extra sidecar, queue, secret or financial grant.
+
+## Identität an der tatsächlichen Wirkung prüfen / Verify identity at actual dispatch
+
+Die optionalen Keywords `process_start(identity, *, expected_journal_id=None)` und
+`stop(scope, stop_id, *, expected_journal_id=None)` vergleichen eine zuvor gebundene
+Journal-ID **unter der tatsächlichen vorhandenen Scopesperre**, vor Startmarke oder
+Stopcommit. Austausch/Löschung nach einer früheren Vorabprüfung darf keinen neuen
+Start und kein falsches EFFECTIVE aus einem anderen Journal erzeugen.
+
+Gesetzte Erwartungen müssen32 kleine Hexzeichen einer UUID4 sein, sonst
+INVALID_JOURNAL_IDENTITY vor Persistenz. Fehlendes/anderes Journal meldet
+JOURNAL_IDENTITY_CHANGED; es wird dabei nicht neu angelegt und kein Versuch/Stop
+persistiert. Fehlerhafte gespeicherte IDs bleiben JOURNAL_UNAVAILABLE. Der Consumer
+muss UNKNOWN melden und darf seinen eigenen Abbruchweg getrennt weiter nutzen.
+
+Das Keyword kommt ausschließlich aus der internen vertrauenswürdigen Bindung,
+nicht aus Agenten-/Task-Payloads. Alte Aufrufer ohne Keyword bleiben kompatibel,
+behaupten damit aber keine Journalepochenbindung. Budget-/Quote-Dispatch wird nicht
+verändert. Gezielt:8 neue Fälle in tests/test_workflow_journal_dispatch.py; nur
+synthetische temporäre Journale, keine Provider/Prozesse oder Betriebsdaten.
+
+Both process_start and stop optionally accept expected_journal_id. When present,
+the prior bound UUID4 is compared under the actual shared workflow lock, before
+any dispatch-attempt marker or stop commit. Replaced/missing journals fail with
+JOURNAL_IDENTITY_CHANGED without creating a journal/start/stop; malformed expected
+IDs fail before persistence. Never report EFFECTIVE from a replaced journal.
+Consumers should report UNKNOWN and may separately abort only owned processes.
+Legacy callers without this keyword retain their scope-only behavior and make no
+epoch-binding claim. The expectation must come from trusted internal binding,
+not caller payloads. No new journal/queue, budget effect or runtime activation.
