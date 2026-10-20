@@ -1,4 +1,7 @@
-<p align="center"><img src="brand/mark.svg" width="180" alt="TollGate Bildmarke"></p>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/design/icons/dark/TollGate-dark-128.png">
+  <img src="assets/design/icons/light/TollGate-light-128.png" alt="TollGate" width="96" height="96">
+</picture>
 <p align="center"><img src="brand/wordmark.svg" width="520" alt="TollGate"></p>
 
 <p align="center"><strong>Eine Sicherheitsschranke für KI-Agenten.</strong></p>
@@ -10,6 +13,15 @@ TollGate prüft eine Handlung, bevor ein Agent sie ausführt. Es kann Schleifen 
 ### 🛠️ [Für Entwickler – Code und technische Dokumentation](#für-entwickler)
 
 ---
+
+## Aktueller Funktionsstand / Current capabilities
+
+**Deutsch:** TollGate prüft angeschlossene Modell- und Werkzeugaufrufe vor der Ausführung. Das Gateway bietet Verbrauchsgrenzen, Schleifenschutz, Scopes, Freeze und kontrollierte Weiterleitung. Der lokale Auftragskontrollkern ergänzt dauerhafte Reservierungen und Stopps für ausdrücklich angeschlossene Adapter. Freeze blockiert neue Aufrufe; es beendet keine beliebigen Prozesse und macht bereits ausgelöste Wirkungen nicht rückgängig. Kostenschätzungen sind keine Anbieterabrechnung.
+
+**English:** TollGate checks connected model and tool calls before execution. The gateway provides usage limits, loop protection, scopes, freeze and controlled routing. Its local workflow-control core adds durable reservations and stop barriers for explicitly connected adapters. Freeze blocks new calls; it does not terminate arbitrary processes or undo effects already sent. Cost estimates are not provider invoices.
+
+Python 3.11+; Paketstand / package version: 1.0.12. [Schnellstart / Quick start](docs/QUICKSTART.md) · [Auftragskontrolle und Grenzen / Workflow control and limits](docs/WORKFLOW-CONTROL.md).
+
 
 ## Für Nutzer
 
