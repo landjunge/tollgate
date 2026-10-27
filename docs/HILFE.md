@@ -680,7 +680,7 @@ CLI: `tollgate search <begriff>` · `tollgate search --map`
 
 - Issues & Code: https://github.com/landjunge/tollgate  
 - Feedback zur **10-Minuten-Reibung** ist wertvoller als Feature-Wünsche.  
-- Lizenz: MIT  
+- Lizenz: [proprietärer Rechtevorbehalt](../LICENSE). Bestehende MIT-Altrechte einschließlich der MIT-Rechte am vorhandenen n8n-Connector bleiben erhalten. Fremdkomponenten behalten ihre eigenen Lizenzen. [Lizenzhistorie](LICENSING.md).
 
 **Pay the toll — or don't call.**
 

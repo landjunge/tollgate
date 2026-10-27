@@ -70,4 +70,9 @@ See [docs/N8N.md](../docs/N8N.md).
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE), reproduced unchanged from the historical repository license.
+
+The connector source at repository revision `7a6c4429cd3db6c230d8012c4e67bcc981a37ba1`
+is unchanged from the last revision before the root license notice changed.
+Its existing MIT rights are preserved; the root notice does not revoke them.
+See [component license history](https://github.com/landjunge/tollgate/blob/main/docs/LICENSING.md). n8n itself has separate terms.

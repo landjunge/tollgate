@@ -101,7 +101,7 @@ Ich bin kein klassischer Softwareentwickler und kein Security-Spezialist. Die te
 Was ich einbringe: Idee, Systemdenken, Anforderungen, gewünschtes Verhalten, klare Grenzen.  
 Was überprüfbar sein muss: der Code, die Specs, die Tests. Reviews sind willkommen.
 
-Open Source und öffentlich entwickelt. Kritik, Tests und Beiträge sind willkommen.
+Der Quelltext ist öffentlich einsehbar. Für neu unter dem Rechtevorbehalt veröffentlichtes Material gilt die [LICENSE](LICENSE); bestehende MIT-Altrechte bleiben erhalten. Kritik, Tests und Beiträge sind willkommen.
 
 TollGate beantwortet **„Darf ich handeln?“** — ein eigenes Produkt, kein Plugin der anderen.
 
@@ -352,7 +352,11 @@ again.
 | [N8N.md](docs/N8N.md) · [OPENAI.md](docs/OPENAI.md) | Integrations |
 | [CHANGELOG.md](CHANGELOG.md) | Releases · **v1.0.0+** |
 
-**License:** All Rights Reserved · **Python:** ≥ 3.11 · **Repo:** [landjunge/tollgate](https://github.com/landjunge/tollgate)
+**Lizenz:** [Proprietärer Rechtevorbehalt / Source-available Notice](LICENSE). Bestehende MIT-Altrechte einschließlich der MIT-Rechte am vorhandenen [n8n-Connector](n8n-nodes-tollgate/LICENSE) bleiben erhalten. Fremdkomponenten behalten ihre eigenen Lizenzen. [DE/EN-Lizenzhistorie und Fremdrechte](docs/LICENSING.md).
+
+**License:** [Proprietary / Source-available Notice](LICENSE). Existing historical MIT rights, including MIT rights in the existing [n8n connector](n8n-nodes-tollgate/LICENSE), are preserved. Third-party components retain their own licenses. [DE/EN license history and third-party scope](docs/LICENSING.md).
+
+**Python:** ≥ 3.11 · **Repo:** [landjunge/tollgate](https://github.com/landjunge/tollgate)
 
 ### Owned CLI stop-only adapter / Auftragseigener CLI-Stopp
 

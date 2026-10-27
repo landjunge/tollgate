@@ -614,5 +614,5 @@ tollgate consumer-budget n8n --max-usd-day 0.5 --max-tool-calls 10
 
 ---
 
-**Pay the toll — or don't call.** · MIT · https://github.com/landjunge/tollgate  
+**Pay the toll — or don't call.** · [Proprietary / Source-available Notice](../LICENSE). Existing historical MIT rights, including MIT rights in the existing n8n connector, are preserved. Third-party components retain their own licenses. [License history](LICENSING.md). · https://github.com/landjunge/tollgate
 CLI: `tollgate help` · FAQ: [FAQ.md](FAQ.md) · DE: [HILFE.md](HILFE.md)
