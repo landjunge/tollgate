@@ -614,5 +614,5 @@ tollgate consumer-budget n8n --max-usd-day 0.5 --max-tool-calls 10
 
 ---
 
-**Pay the toll — or don't call.** · [Proprietary / Source-available Notice](../LICENSE). Existing historical MIT rights, including MIT rights in the existing n8n connector, are preserved. Third-party components retain their own licenses. [License history](LICENSING.md). · https://github.com/landjunge/tollgate
+Lizenz: [proprietärer Rechtevorbehalt](../LICENSE). Die Root-LICENSE bleibt bis zur ausdrücklichen Freigabe des neuen deutschen Volltextes im englischen Original bestehen. Diese deutschen Erläuterungen ersetzen sie nicht. Bestehende MIT-Altrechte einschließlich der MIT-Rechte am vorhandenen n8n-Connector bleiben erhalten. Fremdkomponenten behalten ihre eigenen Lizenzen. [Lizenzhistorie](LICENSING.md).
 CLI: `tollgate help` · FAQ: [FAQ.md](FAQ.md) · DE: [HILFE.md](HILFE.md)

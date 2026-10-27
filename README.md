@@ -14,14 +14,11 @@ TollGate prüft eine Handlung, bevor ein Agent sie ausführt. Es kann Schleifen 
 
 ---
 
-## Aktueller Funktionsstand / Current capabilities
+## Aktueller Funktionsstand
 
-**Deutsch:** TollGate prüft angeschlossene Modell- und Werkzeugaufrufe vor der Ausführung. Das Gateway bietet Verbrauchsgrenzen, Schleifenschutz, Scopes, Freeze und kontrollierte Weiterleitung. Der lokale Auftragskontrollkern ergänzt dauerhafte Reservierungen und Stopps für ausdrücklich angeschlossene Adapter. Freeze blockiert neue Aufrufe; es beendet keine beliebigen Prozesse und macht bereits ausgelöste Wirkungen nicht rückgängig. Kostenschätzungen sind keine Anbieterabrechnung.
+TollGate prüft angeschlossene Modell- und Werkzeugaufrufe vor der Ausführung. Das Gateway bietet Verbrauchsgrenzen, Schleifenschutz, Scopes, Freeze und kontrollierte Weiterleitung. Der lokale Auftragskontrollkern ergänzt dauerhafte Reservierungen und Stopps für ausdrücklich angeschlossene Adapter. Freeze blockiert neue Aufrufe; es beendet keine beliebigen Prozesse und macht bereits ausgelöste Wirkungen nicht rückgängig. Kostenschätzungen sind keine Anbieterabrechnung.
 
-**English:** TollGate checks connected model and tool calls before execution. The gateway provides usage limits, loop protection, scopes, freeze and controlled routing. Its local workflow-control core adds durable reservations and stop barriers for explicitly connected adapters. Freeze blocks new calls; it does not terminate arbitrary processes or undo effects already sent. Cost estimates are not provider invoices.
-
-Python 3.11+; Paketstand / package version: 1.0.12. [Schnellstart / Quick start](docs/QUICKSTART.md) · [Auftragskontrolle und Grenzen / Workflow control and limits](docs/WORKFLOW-CONTROL.md).
-
+Python 3.11+; Paketstand: 1.0.12. [Schnellstart](docs/QUICKSTART.md) · [Auftragskontrolle und Grenzen](docs/WORKFLOW-CONTROL.md).
 
 ## Für Nutzer
 
@@ -56,29 +53,22 @@ TollGate ist kein KI-Modell, kein Agent und kein Passwort-Tresor. Es ersetzt auc
 | Bereich | Aktueller Stand |
 |---|---|
 | Protect | Budgets, Schleifenstopps, Scopes und Freeze |
-| Route | Zustandsabhängige Weiterleitung und Failover |
+| Route | Zustandsabhängige Weiterleitung und Ausweichanbieter |
 | Prove | Chaos- und Wiederanlauf-Tests mit Nachweisen |
 | Schnittstellen | OpenAI-kompatibel, MCP und n8n |
 | Technik | Python und FastAPI |
 | Reife | In Entwicklung; vor Produktion selbst prüfen |
 
-### Kontrollumfang / Control scope
+### Kontrollumfang
 
 Freeze sperrt neue angeschlossene Aufrufe; es beendet keine beliebigen Prozesse
 und macht bereits versandte Wirkung nicht rückgängig. Tagesgrenzen und grobe
-USD-Schätzungen sind keine bestätigte Anbieterrechnung. Der neue lokale
+USD-Schätzungen sind keine bestätigte Anbieterrechnung. Der lokale
 [Auftragskontrollkern](docs/WORKFLOW-CONTROL.md) reserviert ganzzahlige
 USD-Microbeträge je KI/Gesamtauftrag dauerhaft und koppelt Stopps an den
-**tatsächlichen angeschlossenen Dispatch**. Neustart, Tageswechsel und Timeout
+**tatsächlichen angeschlossenen Versand**. Neustart, Tageswechsel und Zeitüberschreitung
 geben unklare Reservierungen nicht frei. Die Abnahme nutzt synthetische Adapter;
 KiraBridge/4AllPass-Livebetrieb und beliebige CLI-Kosten sind damit nicht freigegeben.
-
-Freeze blocks new connected calls; it does not terminate arbitrary processes or
-undo already sent effects. Daily estimates are not provider invoices. The local
-[workflow-control core](docs/WORKFLOW-CONTROL.md) adds durable integer-dollar
-reservations per AI/workflow and an ordered stop/dispatch barrier. Unknown
-obligations survive restart/day changes. Synthetic acceptance is not a production
-KiraBridge/4AllPass adapter or a hard cap for arbitrary subscription CLIs.
 
 [Produktseite](https://tollgate.netzwerkpunkt.de/) · [Schnellstart](docs/QUICKSTART.md)
 
@@ -86,11 +76,11 @@ KiraBridge/4AllPass adapter or a hard cap for arbitrary subscription CLIs.
 
 ## Für Entwickler
 
-TollGate ist ein vorgeschaltetes Admission Gate für Tool- und Modellaufrufe. Es entscheidet vor dem Request und hält den Grund der Entscheidung fest.
+TollGate ist eine vorgeschaltete Zugangskontrolle für Werkzeug- und Modellaufrufe. Es entscheidet vor der Anfrage und hält den Grund der Entscheidung fest.
 
-## How this is built / Wie dieses Projekt entsteht
+## Wie dieses Projekt entsteht
 
-**System Designer & Product Architect** — Daniel Filipek (landjunge)
+**Systemgestaltung und Produktarchitektur** — Daniel Filipek (landjunge)
 
 Ich arbeite anders: Ich entwickle Systeme und Produkte mit KI als technischem Partner.
 
@@ -98,8 +88,8 @@ Meine Stärke liegt darin, Probleme zu erkennen, Systeme in eigenständige Werkz
 
 Ich bin kein klassischer Softwareentwickler und kein Security-Spezialist. Die technische Umsetzung entsteht gemeinsam mit KI und muss – besonders bei sicherheitskritischen Projekten – überprüfbar sein.
 
-Was ich einbringe: Idee, Systemdenken, Anforderungen, gewünschtes Verhalten, klare Grenzen.  
-Was überprüfbar sein muss: der Code, die Specs, die Tests. Reviews sind willkommen.
+Was ich einbringe: Idee, Systemdenken, Anforderungen, gewünschtes Verhalten, klare Grenzen.
+Was überprüfbar sein muss: der Code, die Spezifikationen, die Tests. Prüfungen sind willkommen.
 
 Der Quelltext ist öffentlich einsehbar. Für neu unter dem Rechtevorbehalt veröffentlichtes Material gilt die [LICENSE](LICENSE); bestehende MIT-Altrechte bleiben erhalten. Kritik, Tests und Beiträge sind willkommen.
 
@@ -125,9 +115,9 @@ Evidence recorded.
 
 ---
 
-## 10 minutes (cold start)
+## In zehn Minuten ausprobieren
 
-**Primary path: native Python — no Docker.** Protect demo needs no provider keys.
+**Vorgesehener Weg: direkt mit Python.** Die Protect-Demo benötigt keine Anbieterschlüssel.
 
 ```bash
 git clone https://github.com/landjunge/tollgate.git && cd tollgate
@@ -137,7 +127,7 @@ python3 -m venv .venv && .venv/bin/pip install -e .
 ./scripts/demo-agent-safety.sh
 ```
 
-**USB stick / portable desk** (venv + data on the volume):
+**USB-Stick und tragbare Installation** mit Python-Umgebung und Daten auf dem Datenträger:
 
 ```bash
 ./scripts/portable-setup.sh
@@ -145,48 +135,48 @@ python3 -m venv .venv && .venv/bin/pip install -e .
 # details: docs/PORTABLE.md
 ```
 
-You should experience:
+Das solltest du sehen:
 
-| Step | What happens |
+| Schritt | Was passiert |
 |------|----------------|
-| **Protect** | Agent tool-loop → `🛑 REQUEST BLOCKED` (no $ required) |
-| **Prove** | Chaos / failover simulation → survived or clear next step |
-| **Result** | `tollgate certificate` scorecard + [dashboard](http://127.0.0.1:8787/dashboard) |
+| **Protect** | Werkzeugschleife des Agenten → `🛑 REQUEST BLOCKED` ohne kostenpflichtigen Aufruf |
+| **Prove** | Simulation eines Ausfalls und Anbieterwechsels → überstanden oder klarer nächster Schritt |
+| **Ergebnis** | Nachweisübersicht mit `tollgate certificate` und [Leitstand](http://127.0.0.1:8787/dashboard) |
 
-**Start here (3 docs):**  
-[Quickstart](docs/QUICKSTART.md) · [Portable / USB](docs/PORTABLE.md) · [How it works](docs/HOW_IT_WORKS.md) · [Production checklist](docs/PRODUCTION_CHECKLIST.md)
+**Hier beginnen:**
+[Schnellstart](docs/QUICKSTART.md) · [Tragbare Installation und USB](docs/PORTABLE.md) · [Funktionsweise](docs/HOW_IT_WORKS.md) · [Produktionscheckliste](docs/PRODUCTION_CHECKLIST.md)
 
-**More:** [SECURITY.md](docs/SECURITY.md) · [OPENAI.md](docs/OPENAI.md) · [HILFE.md](docs/HILFE.md) (DE) · [FAQ.md](docs/FAQ.md) · `tollgate help` · `tollgate doctor`
+**Weitere Hilfe:** [Sicherheit](docs/SECURITY.md) · [OpenAI-Anbindung](docs/OPENAI.md) · [Handbuch](docs/HILFE.md) · [Häufige Fragen](docs/FAQ.md) · `tollgate help` · `tollgate doctor`
 
-If that path is confusing, **stop shipping features** — fix the path.
+Ist dieser Weg unklar, muss zuerst der Einstieg verbessert werden, bevor weitere Funktionen hinzukommen.
 
 ---
 
-## Who it’s for
+## Für wen es gedacht ist
 
-| | |
+| Zielgruppe | Aufgabe |
 |--|--|
-| Teams running agents in production | cost · loops · outages · audit · freeze |
-| Agent frameworks (LangGraph, CrewAI, …) | sit in front of tools + LLMs |
-| n8n / automation | stop workflow agent-loops at the gate |
+| Teams, die Agenten produktiv betreiben | Kosten, Schleifen, Ausfälle, Prüfprotokoll und Sperre |
+| Agenten-Frameworks wie LangGraph oder CrewAI | Kontrolle vor Werkzeugen und Sprachmodellen |
+| n8n und Automatisierung | Agentenschleifen eines Ablaufs vor dem Aufruf stoppen |
 
-**Wedge:** LiteLLM connects models. Helicone shows traffic. **TollGate keeps agents in line.**
+LiteLLM verbindet Modelle. Helicone zeigt den Verkehr. **TollGate hält die Handlungen der Agenten unter Kontrolle.**
 
 ---
 
-## Product (short)
+## Das Produkt im Überblick
 
-| Pillar | Job |
+| Säule | Aufgabe |
 |--------|-----|
-| **Protect** | Budgets, tool-loop hard stops, scopes, freeze, audit |
-| **Route** | Health-aware failover, circuits |
-| **Prove** | Chaos/DR tests, resilience score, certificate scorecard |
+| **Protect** | Budgets, harte Stopps für Werkzeugschleifen, Berechtigungsbereiche, Sperre und Prüfprotokoll |
+| **Route** | Zustandsabhängiger Anbieterwechsel und Schutzschalter |
+| **Prove** | Chaos- und Wiederanlauftests, Belastbarkeitsbewertung und Nachweisübersicht |
 
-Deep dive: [docs/PRODUCT.md](docs/PRODUCT.md) · Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+Weitere Details: [Produktbeschreibung](docs/PRODUCT.md) · [Architektur](docs/ARCHITECTURE.md)
 
 ---
 
-## Everyday commands (after the 10 minutes)
+## Alltägliche Befehle
 
 ```bash
 tollgate status
@@ -197,170 +187,166 @@ tollgate freeze --reason "panic"    # blocks new controlled calls; not process t
 tollgate report                     # day brief
 ```
 
-Point an agent / OpenAI SDK:
+Agenten oder das OpenAI-SDK anbinden:
 
 ```bash
 export OPENAI_BASE_URL=http://127.0.0.1:8787/v1
 export OPENAI_API_KEY=support-agent   # open mode label, or id:secret
 ```
 
-## Language / Sprache
+## Sprache der Anwendung
 
-Tollgate speaks English and German. English stays the default, so existing
-scripts that read CLI output keep working.
+Die Anwendung unterstützt Englisch und Deutsch. Englisch bleibt der technische
+Standardwert, damit bestehende Skripte, die CLI-Ausgaben auswerten, weiter funktionieren.
+Die deutsche Dokumentation ändert dieses Programmverhalten nicht.
 
-| Way | Example |
+| Auswahl | Beispiel |
 |---|---|
-| Once | `tollgate --lang de help` |
-| Always | `export TOLLGATE_LANG=de` |
-| Automatic | from `LC_ALL`, `LC_MESSAGES` or `LANG` |
+| Einmalig | `tollgate --lang de help` |
+| Dauerhaft | `export TOLLGATE_LANG=de` |
+| Automatisch | aus `LC_ALL`, `LC_MESSAGES` oder `LANG` |
 
-`LANG=C` and `LANG=POSIX` mean "no preference" and are skipped, so a server
-shell never lands on a language nobody chose.
+`LANG=C` und `LANG=POSIX` bedeuten „keine Präferenz“ und werden übersprungen.
+So wird für eine Servershell keine unbeabsichtigte Sprache gewählt.
 
-The section words argparse prints itself (`usage:`, `options:`) come from
-Python and stay English.
+Von `argparse` selbst erzeugte Abschnittsnamen wie `usage:` und `options:`
+stammen aus Python und bleiben Englisch.
 
-The Control Room at `/dashboard` follows the same choice: `?lang=de` picks a
-language and is remembered in a cookie for a year, otherwise the browser
-decides. The switch sits in the header and inside the setup wizard, so it is
-reachable even on a first visit.
+Der Leitstand unter `/dashboard` folgt derselben Auswahl: `?lang=de` wählt eine
+Sprache, die ein Jahr lang in einem Cookie gespeichert wird. Andernfalls entscheidet
+die Browsersprache. Der Schalter sitzt im Kopfbereich und im Einrichtungsassistenten
+und ist damit auch beim ersten Besuch erreichbar.
 
-### Plain or expert wording / Klartext oder Fachsprache
+### Klartext oder Fachsprache
 
-Independent of English/German there are two levels of wording. **Plain is the
-default, expert is opt-in** — never the other way round. Whoever knows the
-terms switches them on; whoever does not is not run over by them.
+Unabhängig von Deutsch oder Englisch gibt es zwei Sprachebenen. **Klartext ist
+der Standard; Fachsprache wird ausdrücklich eingeschaltet.** Wer die Begriffe
+kennt, kann sie auswählen; alle anderen erhalten verständliche Formulierungen.
 
-| Way | Example |
+| Auswahl | Beispiel |
 |---|---|
-| Once | `tollgate --mode expert control` |
-| Always | `export TOLLGATE_MODE=expert` |
-| Control Room | switch next to DE/EN, remembered in a cookie for a year |
+| Einmalig | `tollgate --mode expert control` |
+| Dauerhaft | `export TOLLGATE_MODE=expert` |
+| Leitstand | Schalter neben DE/EN; für ein Jahr im Cookie gespeichert |
 
-| Plain (default) | Expert |
+| Klartext | Fachsprache |
 |---|---|
 | Leitstand · Nachweis · Protokoll · Anbieter | Control Room · Prove · Audit · Provider |
-| "Start Tollgate so agents can reach it" | "Run HTTP server (uvicorn)" |
-| Response time · Safety switch · State | Latency · Circuit · Health |
+| TollGate starten, damit Agenten es erreichen können | HTTP-Server mit uvicorn starten |
+| Antwortzeit · Sicherheitsschalter · Zustand | Latenz · Circuit · Health |
 
-The level is **not** guessed from the browser or the environment: plain
-applies to everyone until someone says otherwise. Both switches carry the
-other one's choice in their links, so picking EN does not throw the wording
-level away.
+Die Sprachebene wird nicht aus Browser oder Umgebung abgeleitet. Klartext gilt,
+bis jemand ausdrücklich anders entscheidet. Beide Schalter erhalten die jeweils
+andere Auswahl in ihren Verweisen; der Wechsel zu Englisch setzt die Sprachebene
+also nicht zurück.
 
-Not yet in expert wording: the twelve handbook topics behind
-`tollgate help <topic>`. The switch is wired (`<topic>#expert`), no topic has
-a second version yet, so plain stays.
+Für die zwölf Handbuchthemen hinter `tollgate help <topic>` gibt es bislang keine
+Fachsprachfassungen. Der Schalter ist über `<topic>#expert` vorbereitet; ohne
+zweite Fassung bleibt der Klartext bestehen.
 
-Not yet translated: text that arrives from the API (`/v1/control` headline and
-recommendations). Those would need the API to carry codes instead of English
-sentences — a change to the JSON contract, tracked separately.
+Noch nicht übersetzt sind Texte aus der API, etwa Überschrift und Empfehlungen
+von `/v1/control`. Dafür müsste die API Kennungen statt englischer Sätze liefern.
+Diese Änderung des JSON-Vertrags wird gesondert behandelt.
 
 ---
 
-## Shared rules of the NetzwerkPunkt tools
+## Gemeinsame Regeln der NetzwerkPunkt-Werkzeuge
 
-TollGate, ThreadDesk and 4AllPass share their look and their language rules.
-Anyone building a new tool takes the same values — they are not taste, they
-are standards you can look up. **4AllPass is the reference.**
+TollGate, ThreadDesk und 4AllPass teilen ihre Gestaltungs- und Sprachregeln.
+Neue Werkzeuge übernehmen dieselben nachprüfbaren Vorgaben. **4AllPass ist die Referenz.**
 
-**Colours** (identical in all tools)
+**Farben**
 
-| Token | Value | For |
+| Variable | Wert | Zweck |
 |---|---|---|
-| `--bg` | `#121316` | base surface |
-| `--bg-panel` | `#1a1b1f` | surface |
-| `--bg-card` | `#1e1f24` | card |
-| `--fg` | `#e2e4e9` | text |
-| `--fg-muted` | `#8b909a` | secondary text |
-| `--border` | `#2e3138` | divider between surfaces (decoration) |
-| `--border-strong` | `#5f646f` | **edge of controls** |
-| `--accent` | `#8f98a8` | accent |
-| `--ok` / `--warn` / `--err` | `#3d9b6a` / `#c9a227` / `#dc7070` | states |
+| `--bg` | `#121316` | Grundfläche |
+| `--bg-panel` | `#1a1b1f` | Fläche |
+| `--bg-card` | `#1e1f24` | Karte |
+| `--fg` | `#e2e4e9` | Text |
+| `--fg-muted` | `#8b909a` | nachrangiger Text |
+| `--border` | `#2e3138` | dekorative Trennung zwischen Flächen |
+| `--border-strong` | `#5f646f` | Kante von Bedienelementen |
+| `--accent` | `#8f98a8` | Hervorhebung |
+| `--ok` / `--warn` / `--err` | `#3d9b6a` / `#c9a227` / `#dc7070` | Zustände |
 
-In TollGate the same tokens are called `--line`, `--line2`, `--muted`,
-`--acc`, `--bad` — same values, older names.
+In TollGate heißen dieselben Variablen `--line`, `--line2`, `--muted`, `--acc`
+und `--bad`; die Werte sind gleich, die Namen älter.
 
-**Shape and size**
+**Form und Größe**
 
-- `border-radius: 0` everywhere. Round only where the shape *means* something
-  (map symbols, progress ring, status dot), with a reason in the code.
-- Exactly four font sizes: **13 / 16 / 20 / 25 px**. 16px base as recommended
-  for body text on the web, the steps around it at a ratio of 1.25 (major
-  third). Other tokens get deleted, not just avoided.
-- Spacing on an 8px grid: 4 / 8 / 12 / 16 / 24 / 32.
-- **Exactly two sizes for controls**, no more: `--control: 40px` for the
-  normal case (button, input, select) and `--control-sm: 32px` for dense
-  rows and tabs. Both sit on the 8px grid. Button, input and select are the
-  same height.
-- Under `@media (pointer: coarse)` every target becomes **44px**
-  (`--control-touch`). That is not a third size, it is the same elements
-  under a different input device — the number comes from Apple and Material.
-  The pointer is the right signal, **not** the window width: a narrow
-  desktop window is not a finger. WCAG 2.2 (2.5.8) asks for 24px as the
-  minimum; all three values are above it.
-- Contrast: **4.5:1** for text, **3:1** for anything else that carries
-  meaning (WCAG 2.2, 1.4.3 and 1.4.11).
-- Selects set `appearance: none` and draw their own arrow — otherwise the
-  operating system draws the menu, on Windows with a 3D effect.
-- Font: the operating system's. Nothing loaded from elsewhere.
+- Überall `border-radius: 0`. Runde Formen nur mit Bedeutung, etwa Kartensymbole,
+  Fortschrittsring und Statuspunkt, und mit Begründung im Code.
+- Genau vier Schriftgrößen: **13 / 16 / 20 / 25 px**. 16 px als Grundgröße für
+  Fließtext im Web; die Stufen folgen dem Verhältnis 1,25, einer großen Terz.
+  Andere Größenvariablen werden entfernt und nicht nur vermieden.
+- Abstände auf einem 8-px-Raster: 4 / 8 / 12 / 16 / 24 / 32.
+- **Genau zwei Größen für Bedienelemente:** `--control: 40px` für den Normalfall
+  mit Schaltfläche, Eingabe und Auswahl; `--control-sm: 32px` für dichte Zeilen
+  und Reiter. Beide liegen im 8-px-Raster; die Elemente haben dieselbe Höhe.
+- Unter `@media (pointer: coarse)` werden alle Ziele **44 px** groß
+  (`--control-touch`). Das ist dieselbe Oberfläche für ein anderes Eingabegerät,
+  keine dritte reguläre Größe. Die Vorgabe stammt aus Apple- und Material-Regeln.
+  Entscheidend ist die Zeigerart, nicht die Fensterbreite. WCAG 2.2, 2.5.8 nennt
+  24 px als Minimum; alle drei Werte liegen darüber.
+- Kontrast: **4,5:1** für Text und **3:1** für andere bedeutungstragende Elemente
+  nach WCAG 2.2, 1.4.3 und 1.4.11.
+- Auswahlfelder setzen `appearance: none` und zeichnen einen eigenen Pfeil.
+  Sonst zeichnet das Betriebssystem das Menü, unter Windows mit 3D-Effekt.
+- Die Anwendung verwendet die Systemschrift und lädt dafür keine externe Schrift.
 
-**Language**
+**Sprache**
 
-- Every tool is English **and** German from the start. Retrofitting is
-  expensive. Visible text belongs in a catalogue, never in the template.
-- Always **one** language at a time, never both side by side.
-- Resolution: `?lang=` → cookie → `Accept-Language` → default.
-- Plus the two levels of wording: **plain is the default, expert is opt-in**.
-  An expert version hangs off the same key, separated by `#expert` — not a
-  dot, otherwise `register.expert` would be the expert version of `register`.
-  With no expert version the plain text stays.
-- Every label says what happens. Every field says what it is for. No
-  abbreviation without spelling it out. Errors name the next step.
-- Proper nouns are not translated: TollGate, ThreadDesk, 4AllPass,
-  Gnom-Hub-V1, Grok, Codex, MCP.
+- Jedes Werkzeug unterstützt von Beginn an Englisch und Deutsch. Nachrüstung ist
+  aufwendig. Sichtbare Texte gehören in einen Katalog statt in die Vorlage.
+- Immer nur eine Sprache zugleich, keine parallelen Sprachfassungen nebeneinander.
+- Auflösung: `?lang=` → Cookie → `Accept-Language` → Standardwert.
+- Dazu zwei Sprachebenen: **Klartext als Standard, Fachsprache nach Auswahl**.
+  Eine Fachsprachfassung hängt mit `#expert` am selben Schlüssel. Ein Punkt würde
+  `register.expert` zur Fachsprachfassung von `register` machen.
+  Ohne Fachsprachfassung bleibt der Klartext erhalten.
+- Jede Beschriftung sagt, was geschieht; jedes Feld erklärt seinen Zweck.
+  Abkürzungen werden ausgeschrieben. Fehlermeldungen nennen den nächsten Schritt.
+- Eigennamen bleiben unverändert: TollGate, ThreadDesk, 4AllPass, Gnom-Hub-V1,
+  Grok, Codex und MCP.
 
-**A trap that bit twice:** `argparse` builds the help texts when the parser is
-*created*, not when it parses. `--lang` and `--mode` must therefore be read
-from `argv` by hand beforehand, or `tollgate --mode expert --help` is plain
-again.
+**Technischer Hinweis:** `argparse` erzeugt Hilfetexte beim Erstellen des Parsers,
+nicht erst bei der Auswertung. `--lang` und `--mode` müssen deshalb vorher aus
+`argv` gelesen werden; sonst erscheint `tollgate --mode expert --help` wieder
+im Klartext.
 
 ---
 
-## vs gateways (optional reading)
+## Vergleich mit Gateways
 
-| | **TollGate** | LiteLLM | Helicone |
+| Aufgabe | TollGate | LiteLLM | Helicone |
 |--|--------------|---------|----------|
-| Core job | **Agent safety + DR proof** | Multi-provider proxy | Observability |
-| Pre-admission hard deny | ✅ | optional | mostly post-hoc |
-| Chaos / prove | ✅ first-class | DIY | — |
+| Kernaufgabe | Agentensicherheit und Wiederanlaufnachweis | Proxy für mehrere Modellanbieter | Beobachtbarkeit |
+| Harte Sperre vor dem Aufruf | Vorhanden | Optional | Überwiegend nachträglich |
+| Chaos- und Wiederanlaufprüfung | Bestandteil des Produkts | Selbst zu ergänzen | Nicht angegeben |
 
 ---
 
-## Docs index
+## Dokumentationsverzeichnis
 
-| Doc | When |
+| Dokument | Zweck |
 |-----|------|
-| [HILFE.md](docs/HILFE.md) | **Hilfe (Deutsch)** |
-| [USER_GUIDE.md](docs/USER_GUIDE.md) | **User guide (English)** |
-| [FAQ.md](docs/FAQ.md) | **FAQ** |
-| [TEN_MINUTE.md](docs/TEN_MINUTE.md) | First 10 minutes |
-| [DEMO.md](docs/DEMO.md) | Pitch / screen share |
-| [GETTING_STARTED.md](docs/GETTING_STARTED.md) | Setup details |
-| [MAP.md](docs/MAP.md) · `tollgate search` | Find code |
-| [N8N.md](docs/N8N.md) · [OPENAI.md](docs/OPENAI.md) | Integrations |
-| [CHANGELOG.md](CHANGELOG.md) | Releases · **v1.0.0+** |
+| [HILFE.md](docs/HILFE.md) | Deutsches Handbuch |
+| [USER_GUIDE.md](docs/USER_GUIDE.md) | Bisheriges englisches Handbuch |
+| [FAQ.md](docs/FAQ.md) | Häufige Fragen |
+| [TEN_MINUTE.md](docs/TEN_MINUTE.md) | Die ersten zehn Minuten |
+| [DEMO.md](docs/DEMO.md) | Vorführung und Bildschirmpräsentation |
+| [GETTING_STARTED.md](docs/GETTING_STARTED.md) | Einzelheiten zur Einrichtung |
+| [MAP.md](docs/MAP.md) · `tollgate search` | Code finden |
+| [N8N.md](docs/N8N.md) · [OPENAI.md](docs/OPENAI.md) | Anbindungen |
+| [CHANGELOG.md](CHANGELOG.md) | Veröffentlichungen ab v1.0.0 |
+| [LICENSING.md](docs/LICENSING.md) | Lizenzstand, Altrechte und offene Textfreigabe |
 
-**Lizenz:** [Proprietärer Rechtevorbehalt / Source-available Notice](LICENSE). Bestehende MIT-Altrechte einschließlich der MIT-Rechte am vorhandenen [n8n-Connector](n8n-nodes-tollgate/LICENSE) bleiben erhalten. Fremdkomponenten behalten ihre eigenen Lizenzen. [DE/EN-Lizenzhistorie und Fremdrechte](docs/LICENSING.md).
+**Lizenz:** [Proprietärer Rechtevorbehalt](LICENSE). Die geltende Root-LICENSE liegt bis zur ausdrücklichen Freigabe des neuen deutschen Volltextes weiterhin im englischen Original vor. Die deutschen Hinweise sind Erläuterungen und ersetzen diesen Text nicht. Bestehende MIT-Altrechte einschließlich der MIT-Rechte am vorhandenen [n8n-Connector](n8n-nodes-tollgate/LICENSE) bleiben erhalten. Fremdkomponenten behalten ihre eigenen Lizenzen. [Lizenzhistorie und Fremdrechte](docs/LICENSING.md).
 
-**License:** [Proprietary / Source-available Notice](LICENSE). Existing historical MIT rights, including MIT rights in the existing [n8n connector](n8n-nodes-tollgate/LICENSE), are preserved. Third-party components retain their own licenses. [DE/EN license history and third-party scope](docs/LICENSING.md).
+**Python:** ≥ 3.11 · **Repository:** [landjunge/tollgate](https://github.com/landjunge/tollgate)
 
-**Python:** ≥ 3.11 · **Repo:** [landjunge/tollgate](https://github.com/landjunge/tollgate)
+### Auftragseigener CLI-Stopp
 
-### Owned CLI stop-only adapter / Auftragseigener CLI-Stopp
-
-An optional trusted process adapter can share the durable workflow stop barrier;
-CLI cost remains unknown, without a hard dollar cap or invented zero-cost quote.
-Optionale betreibergebundene Prozessadapter teilen die dauerhafte Auftragssperre;
-Kosten bleiben unbekannt. [DE/EN contract](docs/WORKFLOW-PROCESS-STOP.md).
+Optionale vertrauenswürdige Prozessadapter können die dauerhafte Auftragssperre
+mitnutzen. CLI-Kosten bleiben unbekannt; es wird weder eine harte Dollargrenze
+noch eine erfundene Nullkostenschätzung zugesagt. [Technische Vereinbarung](docs/WORKFLOW-PROCESS-STOP.md).

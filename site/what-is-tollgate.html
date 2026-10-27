@@ -1,17 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>What is Tollgate? AI Agent Safety by landjunge (Not OpenTollGate)</title>
-  <meta name="description" content="Tollgate by landjunge is an AI agent safety layer with publicly reviewable source (Protect · Route · Prove). It is not OpenTollGate, not a road toll product, and not a multi-model catalog. github.com/landjunge/tollgate"/>
-  <meta name="keywords" content="what is Tollgate, landjunge tollgate, Tollgate AI agent safety, OpenTollGate vs Tollgate, Protect Route Prove, AI agent budgets tool loops"/>
+  <title>Was ist TollGate? Sicherheit für KI-Agenten von landjunge</title>
+  <meta name="description" content="TollGate von landjunge ist eine Sicherheitsschicht für KI-Agenten mit öffentlich einsehbarem Quelltext: Protect · Route · Prove. Aktueller Rechtevorbehalt und historische MIT-Rechte sind zu beachten. github.com/landjunge/tollgate"/>
+  <meta name="keywords" content="Was ist TollGate, landjunge TollGate, Sicherheit für KI-Agenten, OpenTollGate und TollGate, Protect Route Prove, Agentenbudgets Werkzeugschleifen"/>
   <meta name="robots" content="index, follow, max-image-preview:large"/>
   <meta name="author" content="landjunge"/>
   <link rel="canonical" href="https://landjunge.github.io/tollgate/what-is-tollgate.html"/>
   <meta property="og:type" content="article"/>
-  <meta property="og:title" content="What is Tollgate? (landjunge AI agent safety)"/>
-  <meta property="og:description" content="Safety layer for AI agents with publicly reviewable source. Not OpenTollGate. Not highway tolls."/>
+  <meta property="og:locale" content="de_DE"/>
+  <meta property="og:title" content="Was ist TollGate? Sicherheit für KI-Agenten von landjunge"/>
+  <meta property="og:description" content="Sicherheitsschicht für KI-Agenten mit einsehbarem Quelltext. Aktueller Rechtevorbehalt; bestehende MIT-Altrechte bleiben erhalten."/>
   <meta property="og:url" content="https://landjunge.github.io/tollgate/what-is-tollgate.html"/>
   <meta property="og:image" content="https://landjunge.github.io/tollgate/assets/og.png"/>
   <meta name="twitter:card" content="summary_large_image"/>
@@ -20,11 +21,12 @@
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
+    "inLanguage": "de",
     "@type": "WebPage",
-    "name": "What is Tollgate?",
+    "name": "Was ist TollGate?",
     "url": "https://landjunge.github.io/tollgate/what-is-tollgate.html",
-    "description": "Disambiguation and definition of Tollgate by landjunge — AI agent safety layer.",
-    "isPartOf": { "@type": "WebSite", "name": "Tollgate AI Agent Safety", "url": "https://landjunge.github.io/tollgate/" },
+    "description": "Einordnung von TollGate von landjunge als Sicherheitsschicht für KI-Agenten.",
+    "isPartOf": { "@type": "WebSite", "name": "TollGate – Sicherheit für KI-Agenten", "url": "https://landjunge.github.io/tollgate/" },
     "about": {
       "@type": "SoftwareApplication",
       "name": "Tollgate",
@@ -36,18 +38,18 @@
       "mainEntity": [
         {
           "@type": "Question",
-          "name": "What is Tollgate by landjunge?",
+          "name": "Was ist TollGate von landjunge?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "An AI agent safety layer with publicly reviewable source: Protect (budgets, tool-loop hard stops, freeze), Route (provider failover), Prove (chaos tests and reliability certificate)."
+            "text": "Eine Sicherheitsschicht für KI-Agenten mit einsehbarem Quelltext: Protect für Budgets, harte Schleifenstopps und Sperren; Route für Anbieterwechsel; Prove für Chaosprüfungen und Zuverlässigkeitsnachweise."
           }
         },
         {
           "@type": "Question",
-          "name": "Is this the same as OpenTollGate?",
+          "name": "Ist das dasselbe wie OpenTollGate?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "No. OpenTollGate is a network-access payment protocol. landjunge/tollgate is unrelated software for keeping AI agents in line."
+            "text": "Nein. OpenTollGate ist ein Zahlungsprotokoll für Netzwerkzugang. landjunge/tollgate ist eine davon unabhängige Software zur Kontrolle von KI-Agenten."
           }
         }
       ]
@@ -60,57 +62,57 @@
     <div class="topbar-inner">
       <a class="brand" href="index.html">Tollgate</a>
       <nav class="nav-right">
-        <a href="blog/checklist.html">Checklist</a>
-        <a href="blog/launch.html">Launch</a>
+        <a href="blog/checklist.html">Prüfliste</a>
+        <a href="blog/launch.html">Erstveröffentlichung</a>
         <a class="cta" href="https://github.com/landjunge/tollgate" target="_blank" rel="noopener">GitHub</a>
       </nav>
     </div>
   </header>
 
   <main class="shell" style="padding:2.5rem 0 3.5rem;max-width:720px">
-    <p class="kicker">Definition · disambiguation</p>
+    <p class="kicker">Begriff und Einordnung</p>
     <h1 style="font-size:clamp(1.55rem,3.4vw,2.15rem);letter-spacing:-0.02em;line-height:1.15">
-      What is <em>Tollgate</em>?
+      Was ist <em>TollGate</em>?
     </h1>
     <p class="sec-lead">
-      <strong style="color:var(--paper)">Tollgate</strong> by
+      <strong style="color:var(--paper)">TollGate</strong> von
       <a href="https://github.com/landjunge">landjunge</a>
-      is a source-available <strong style="color:var(--paper)">AI agent safety layer</strong>.
-      It sits between your agents and the internet so costs, tool loops, and provider outages
-      do not run the show.
+      ist eine <strong style="color:var(--paper)">Sicherheitsschicht für KI-Agenten</strong> mit einsehbarem Quelltext.
+      Sie sitzt zwischen deinen Agenten und dem Internet, damit Kosten, Werkzeugschleifen
+      und Anbieterausfälle kontrollierbar bleiben.
     </p>
 
-    <p>Current use permissions follow the <a href="https://github.com/landjunge/tollgate/blob/main/LICENSE">proprietary source-available notice</a>. Existing historical MIT rights, including those of the unchanged n8n connector, remain in place. See the <a href="https://github.com/landjunge/tollgate/blob/main/docs/LICENSING.md">license history</a>.</p>
+    <p>Die aktuelle Nutzung richtet sich nach dem <a href="https://github.com/landjunge/tollgate/blob/main/LICENSE">proprietären Rechtevorbehalt</a>. Bis zur Freigabe des deutschen Volltextes bleibt dessen englisches Original bestehen. Diese Erläuterung ersetzt es nicht. Historische MIT-Rechte einschließlich der Rechte am vorhandenen n8n-Connector bleiben erhalten. Siehe <a href="https://github.com/landjunge/tollgate/blob/main/docs/LICENSING.md">Lizenzhistorie</a>.</p>
 
-    <h2 style="margin-top:2rem">In one line</h2>
+    <h2 style="margin-top:2rem">Auf einen Blick</h2>
     <p style="color:var(--muted)">
       <strong style="color:var(--paper)">Protect · Route · Prove</strong> —
-      budgets and hard denies before the call, failover when a provider dies,
-      chaos tests and a certificate scorecard so you have evidence, not vibes.
+      Budgets und harte Sperren vor dem Aufruf, Wechsel bei einem Anbieterausfall
+      sowie Chaosprüfungen und eine Nachweisübersicht für überprüfbare Ergebnisse.
     </p>
 
-    <h2 style="margin-top:1.75rem">What it is not</h2>
+    <h2 style="margin-top:1.75rem">Abgrenzung</h2>
     <ul style="color:var(--muted);line-height:1.7">
-      <li><strong style="color:var(--paper)">Not OpenTollGate</strong> — that project sells network access with micropayments. Different problem, different stack.</li>
-      <li><strong style="color:var(--paper)">Not a highway / road toll</strong> product.</li>
-      <li><strong style="color:var(--paper)">Not an LLM model catalog</strong> like a multi-provider marketplace (e.g. LiteLLM-style “connect every model”).</li>
+      <li><strong style="color:var(--paper)">Kein OpenTollGate</strong> — dieses Projekt verkauft Netzwerkzugang mit Kleinstzahlungen und löst eine andere Aufgabe.</li>
+      <li><strong style="color:var(--paper)">Kein Straßenmaut</strong>-Produkt.</li>
+      <li><strong style="color:var(--paper)">Kein Sprachmodellkatalog</strong> wie ein Marktplatz für mehrere Anbieter, der beliebige Modelle verbindet.</li>
     </ul>
 
-    <h2 style="margin-top:1.75rem">Canonical links</h2>
+    <h2 style="margin-top:1.75rem">Maßgebliche Verweise</h2>
     <ul style="color:var(--muted);line-height:1.7">
-      <li>Product site: <a href="https://landjunge.github.io/tollgate/">landjunge.github.io/tollgate</a></li>
+      <li>Produktseite: <a href="https://landjunge.github.io/tollgate/">landjunge.github.io/tollgate</a></li>
       <li>Repository: <a href="https://github.com/landjunge/tollgate">github.com/landjunge/tollgate</a></li>
-      <li>Safety checklist: <a href="blog/checklist.html">blog/checklist.html</a></li>
-      <li>Launch post: <a href="blog/launch.html">blog/launch.html</a></li>
-      <li>10-min cold path: <a href="https://gist.github.com/landjunge/5b36c2afc4e5242e55700aee28407f03">gist</a></li>
-      <li>Pairs with: <a href="https://landjunge.github.io/gnom-hub-v1/">Gnom-Hub</a> (local multi-agent desk)</li>
+      <li>Sicherheitsprüfliste: <a href="blog/checklist.html">blog/checklist.html</a></li>
+      <li>Beitrag zur Erstveröffentlichung: <a href="blog/launch.html">blog/launch.html</a></li>
+      <li>Einstieg in zehn Minuten: <a href="https://gist.github.com/landjunge/5b36c2afc4e5242e55700aee28407f03">gist</a></li>
+      <li>Zusammenspiel mit: <a href="https://landjunge.github.io/gnom-hub-v1/">Gnom-Hub</a> (lokale Arbeitsoberfläche für mehrere Agenten)</li>
     </ul>
 
-    <h2 style="margin-top:1.75rem">Try it (10 minutes)</h2>
+    <h2 style="margin-top:1.75rem">In zehn Minuten ausprobieren</h2>
     <div class="term" style="margin:1rem 0">
       <div class="term-bar">
-        <span>cold path</span>
-        <button type="button" class="btn sm" data-copy="#wit-cold">Copy</button>
+        <span>Erster Einstieg</span>
+        <button type="button" class="btn sm" data-copy="#wit-cold">Kopieren</button>
       </div>
       <pre id="wit-cold">git clone https://github.com/landjunge/tollgate.git &amp;&amp; cd tollgate
 python3 -m venv .venv &amp;&amp; .venv/bin/pip install -e .
@@ -119,8 +121,8 @@ python3 -m venv .venv &amp;&amp; .venv/bin/pip install -e .
     </div>
 
     <p style="color:var(--dim);font-size:0.9rem;margin-top:2rem">
-      Search engines: if you indexed a different “Tollgate”, this page is the intentional
-      definition for <code>landjunge/tollgate</code> — AI agent safety software only.
+      Hinweis zur Einordnung: Diese Seite beschreibt ausschließlich
+      <code>landjunge/tollgate</code>, die Sicherheitssoftware für KI-Agenten.
     </p>
   </main>
 
@@ -130,9 +132,9 @@ python3 -m venv .venv &amp;&amp; .venv/bin/pip install -e .
       <div class="foot-links">
         <a href="impressum.html">Impressum</a>
         <a href="datenschutz.html">Datenschutz</a>
-        <a href="index.html">Home</a>
+        <a href="index.html">Startseite</a>
         <a href="de.html">DE</a>
-        <a href="sitemap.xml">Sitemap</a>
+        <a href="sitemap.xml">Seitenübersicht</a>
       </div>
     </div>
   </footer>
