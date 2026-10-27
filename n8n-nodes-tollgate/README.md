@@ -1,12 +1,12 @@
 # n8n-nodes-tollgate
 
-Community node for **[Tollgate](https://github.com/landjunge/tollgate)** — local multi-consumer API admission gateway.
+Erweiterung für **[TollGate](https://github.com/landjunge/tollgate)** in n8n: lokale Zugangskontrolle für API-Aufrufe mehrerer Verbraucher.
 
-n8n never holds DeepSeek / Brave / Google keys. Only a **consumer label** (open mode) or `id:secret`.
+n8n speichert keine DeepSeek-, Brave- oder Google-Schlüssel. Verwendet wird nur eine **Verbraucherkennung** im offenen Modus oder `id:secret`.
 
-## Install
+## Installation
 
-### Local / custom nodes (desk)
+### Lokale und eigene Erweiterungen
 
 ```bash
 # from tollgate repo
@@ -21,53 +21,64 @@ npm install /path/to/tollgate/n8n-nodes-tollgate
 # restart n8n
 ```
 
-Env for n8n to load custom nodes:
+Umgebungsvariable zum Laden eigener n8n-Erweiterungen:
 
 ```bash
 export N8N_CUSTOM_EXTENSIONS=~/.n8n/custom
 # or install into n8n's node_modules as community node when published
 ```
 
-### Docker n8n
+### n8n im Container
 
-Mount or npm-install the package into the container’s custom extensions path, and point Base URL to:
+Das Paket in das Erweiterungsverzeichnis des Containers einbinden oder dort mit
+npm installieren. Als Basisadresse verwenden:
 
 `http://host.docker.internal:8787`
 
-## Credentials
+## Zugangsdaten
 
-| Field | Example |
+| Feld in n8n | Beispiel |
 |-------|---------|
-| Base URL | `http://127.0.0.1:8787` |
-| Consumer Key | `n8n` (open) or `n8n:<secret>` |
+| `Base URL` | `http://127.0.0.1:8787` |
+| `Consumer Key` | `n8n` im offenen Modus oder `n8n:<secret>` |
 
 ```bash
 tollgate consumer-add n8n
 tollgate consumer-budget n8n --max-usd-day 0.5 --max-calls-day 200
 ```
 
-## Operations
+## Vorgänge
 
-| Op | Endpoint |
+| Vorgang in n8n | Endpunkt |
 |----|----------|
-| **Chat** | `POST /v1/chat/completions` → field `text` convenience |
-| **Route** | `POST /v1/route` |
-| **Budget** | `GET /v1/budget` |
-| **Invoke** | `POST /v1/invoke` |
-| **Search** | invoke `brave` / `search` |
-| **Health** | `GET /v1/health` |
+| `Chat` | `POST /v1/chat/completions`; das Feld `text` erleichtert die Weiterverarbeitung |
+| `Route` | `POST /v1/route` |
+| `Budget` | `GET /v1/budget` |
+| `Invoke` | `POST /v1/invoke` |
+| `Search` | Aufruf von `brave` / `search` |
+| `Health` | `GET /v1/health` |
 
-## Without this node
+## Nutzung ohne diese Erweiterung
 
-Import HTTP workflows from `../configs/`:
+Die HTTP-Abläufe aus `../configs/` importieren:
 
 - `n8n-openai-chat.workflow.json`
 - `n8n-budget-gate.workflow.json`
 - `n8n-search.workflow.json`
 - `n8n-route-invoke.workflow.json`
 
-See [docs/N8N.md](../docs/N8N.md).
+Weitere Hinweise: [n8n-Anbindung](../docs/N8N.md).
 
-## License
+## Lizenz
 
-MIT
+MIT; der unveränderte historische Originaltext steht in der [LICENSE](LICENSE).
+Er bleibt Englisch und wird nicht einer neuen Sprachvorrangregel unterstellt.
+
+Der Connectorquellcode der Repositoryfassung `7a6c4429cd3db6c230d8012c4e67bcc981a37ba1`
+ist gegenüber der letzten Fassung vor dem Wechsel des Rootrechtevorbehalts
+unverändert. Seine bestehenden MIT-Rechte bleiben erhalten; der Rootvorbehalt
+widerruft sie nicht. Die aktuelle Root-LICENSE liegt bis zur Freigabe ihres
+neuen deutschen Volltextes weiterhin im englischen Original vor. Diese
+deutschen Erläuterungen ersetzen weder die MIT-Lizenz noch den Roottext.
+Siehe [Komponenten- und Lizenzhistorie](https://github.com/landjunge/tollgate/blob/main/docs/LICENSING.md).
+n8n selbst unterliegt eigenen Bedingungen.

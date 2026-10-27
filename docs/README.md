@@ -1,31 +1,33 @@
-# Tollgate docs
+# TollGate-Dokumentation
 
-**Repo:** https://github.com/landjunge/tollgate  
-**Website:** https://landjunge.github.io/tollgate/ (static pages in `site/`)  
-**Package path for provider truth:** `src/tollgate/distill/*.json`
+**Repository:** https://github.com/landjunge/tollgate
+**Website:** https://landjunge.github.io/tollgate/ (statische Seiten in `site/`)
+**Paketpfad der Anbieterspezifikationen:** `src/tollgate/distill/*.json`
 
-| Doc | Topic |
+| Dokument | Thema |
 |-----|--------|
 | **[HILFE.md](HILFE.md)** | **Deutsche Hilfe & Handbuch** |
-| **[USER_GUIDE.md](USER_GUIDE.md)** | **English user handbook** |
-| **[FAQ.md](FAQ.md)** | **FAQ (DE/EN questions)** |
-| [TEN_MINUTE.md](TEN_MINUTE.md) | **Cold customer — first 10 minutes** |
-| [GETTING_STARTED.md](GETTING_STARTED.md) | Setup details |
-| [DEMO.md](DEMO.md) | **Killer demo — agent loop + DR proof** |
-| [MAP.md](MAP.md) | **Repo map — modules, HTTP, CLI, concepts** |
-| [VISION.md](VISION.md) | Product lock, multi-consumer |
-| [PRODUCT.md](PRODUCT.md) | Safety layer for AI agents · Protect · Route · Prove |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | 7 layers, circuits, taxonomy |
-| [COST_LIMITS.md](COST_LIMITS.md) | Google off, budgets, `/v1/config` |
+| **[USER_GUIDE.md](USER_GUIDE.md)** | **Bisheriges englisches Nutzerhandbuch** |
+| **[FAQ.md](FAQ.md)** | **Häufige Fragen auf Deutsch und Englisch** |
+| [TEN_MINUTE.md](TEN_MINUTE.md) | **Die ersten zehn Minuten ohne Vorkenntnisse** |
+| [GETTING_STARTED.md](GETTING_STARTED.md) | Einzelheiten zur Einrichtung |
+| [DEMO.md](DEMO.md) | **Vorführung: Agentenschleife und Wiederanlaufnachweis** |
+| [MAP.md](MAP.md) | **Codeübersicht: Module, HTTP, CLI und Begriffe** |
+| [VISION.md](VISION.md) | Produktfestlegung und mehrere Verbraucher |
+| [PRODUCT.md](PRODUCT.md) | Sicherheitskontrolle für KI-Agenten · Protect · Route · Prove |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Sieben Schichten, Schutzschalter und Einordnung |
+| [COST_LIMITS.md](COST_LIMITS.md) | Google deaktiviert, Budgets, `/v1/config` |
 | [MCP.md](MCP.md) | stdio MCP + HTTP `/v1/*` |
-| [N8N.md](N8N.md) | n8n as consumer |
-| [KEYS_MODULE.md](KEYS_MODULE.md) | Module map (legacy; prefer MAP.md) |
-| [PORTABLE.md](PORTABLE.md) | USB stick / no host paths |
-| [OPENAI.md](OPENAI.md) | OpenAI drop-in base_url |
-| [STABILITY.md](STABILITY.md) | Scale, multi-worker, schema version, deprecation |
-| [OPERATIONS.md](OPERATIONS.md) | doctor, deploy, auto-maintenance boundary |
+| [N8N.md](N8N.md) | n8n als Verbraucher |
+| [KEYS_MODULE.md](KEYS_MODULE.md) | Ältere Modulübersicht; MAP.md bevorzugen |
+| [PORTABLE.md](PORTABLE.md) | USB-Stick ohne feste Hostpfade |
+| [OPENAI.md](OPENAI.md) | OpenAI-Anbindung über base_url |
+| [STABILITY.md](STABILITY.md) | Skalierung, mehrere Worker, Schemaversion und Ablösung |
+| [OPERATIONS.md](OPERATIONS.md) | doctor, Bereitstellung und Grenzen automatischer Wartung |
 
-## CLI help
+Aktueller Lizenzstand und offene Textfreigabe: [Lizenzhistorie](LICENSING.md).
+
+## Hilfe in der Kommandozeile
 
 ```bash
 tollgate help
@@ -36,7 +38,7 @@ tollgate help faq
 tollgate help troubleshoot
 ```
 
-## Search the repo
+## Repository durchsuchen
 
 ```bash
 tollgate search circuit breaker
@@ -44,19 +46,19 @@ tollgate search budget --kind concept
 tollgate search --map
 ```
 
-Also: root [`llms.txt`](../llms.txt) for agents.
+Für Agenten außerdem: [`llms.txt`](../llms.txt) im Hauptverzeichnis.
 
-## Rule (no more code thrash)
+## Regeln für gezielte Änderungen
 
-| Do | Don't |
+| Tun | Vermeiden |
 |----|--------|
-| Update distill JSON when APIs change | Invent endpoints inside random `.py` files |
-| Add `ops[]` for new MCP functions | Copy-paste limits into 5 modules |
-| Bump `distilled_at` | Rewrite router/service for every doc tweak |
+| Bei API-Änderungen die Spezifikations-JSON-Datei anpassen | Endpunkte in beliebigen `.py`-Dateien erfinden |
+| Für neue MCP-Funktionen `ops[]` ergänzen | Grenzen in mehrere Module kopieren |
+| `distilled_at` aktualisieren | Router und Dienst bei jeder Dokumentationsänderung umbauen |
 
-## Providers
+## Anbieter
 
-| ID | Distill JSON |
+| Kennung | Spezifikationsdatei |
 |----|----------------|
 | deepseek | `src/tollgate/distill/deepseek.json` |
 | worker | `src/tollgate/distill/worker.json` |
@@ -66,7 +68,7 @@ Also: root [`llms.txt`](../llms.txt) for agents.
 | nvidia | `src/tollgate/distill/nvidia.json` |
 | minimax | `src/tollgate/distill/minimax.json` |
 | opencode_zen | `src/tollgate/distill/opencode_zen.json` |
-| google | `src/tollgate/distill/google.json` (high_risk, off by default) |
+| google | `src/tollgate/distill/google.json` (`high_risk`, standardmäßig deaktiviert) |
 | telegram | `src/tollgate/distill/telegram.json` |
 
 ```python
@@ -76,4 +78,4 @@ spec = load_distill("brave")
 for op in ops_for("brave"):
     print(op["name"], "→", op["maps_to"])
 ```
-| [DESK.md](DESK.md) | Gnom + n8n runbook |
+| [DESK.md](DESK.md) | Betriebsanleitung für Gnom und n8n |

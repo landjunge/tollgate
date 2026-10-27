@@ -26,8 +26,43 @@ already granted for those historical revisions are not revoked. Material first
 published in the license-change commit or later is governed by this notice
 unless a later revision explicitly states otherwise.
 
+Identification of this existing boundary: the notice was introduced by commit
+a0044a4881c356b24595394cd8ec1e33bf2e5fd7 on 2026-10-07 (UTC). Its immediate
+parent, d07c3ffb7513473a3de1c87bd01e9a1c9ea39c85, contains the MIT notice
+reproduced below. See docs/LICENSING.md for the recorded component history.
+
 THE MATERIAL IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING
 FROM, OUT OF, OR IN CONNECTION WITH THE MATERIAL OR ITS USE.
+
+HISTORICAL MIT NOTICE — HISTORICALLY MIT-LICENSED MATERIAL ONLY
+
+The following is a verbatim copy of the MIT notice from the parent revision
+identified above. It preserves that notice for historical MIT material that
+is retained in later distributions, including the existing n8n connector.
+It does not grant MIT rights to material first published under the
+SOURCE-AVAILABLE NOTICE above. Existing historical permissions are unchanged.
+
+MIT License
+
+Copyright (c) 2026 landjunge
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
