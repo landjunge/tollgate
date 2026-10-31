@@ -1,362 +1,89 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/design/icons/dark/TollGate-dark-128.png">
-  <img src="assets/design/icons/light/TollGate-light-128.png" alt="TollGate" width="96" height="96">
-</picture>
-<p align="center"><img src="brand/wordmark.svg" width="520" alt="TollGate"></p>
+**English** · [Deutsch](README.de.md)
 
-<p align="center"><strong>Eine Sicherheitsschranke für KI-Agenten.</strong></p>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/design/icons/dark/TollGate-dark-256.png">
+    <img src="assets/design/icons/light/TollGate-light-256.png" alt="TollGate" width="256" height="256">
+  </picture>
+</p>
 
-TollGate prüft eine Handlung, bevor ein Agent sie ausführt. Es kann Schleifen stoppen, Budgets begrenzen und Ausfälle sichtbar machen.
+<p align="center">
+  <a href="https://github.com/landjunge/threaddesk/blob/docs/product-family-readme-20261031/README.md" title="ThreadDesk"><picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/readme/ThreadDesk-dark-128.png">
+    <img src="assets/readme/ThreadDesk-light-128.png" alt="ThreadDesk" width="48" height="48">
+  </picture></a>
+  &nbsp;
+  <a href="https://github.com/landjunge/KiraBridge/blob/docs/product-family-readme-20261031/README.md" title="KiraBridge"><picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/readme/KiraBridge-dark-128.png">
+    <img src="assets/readme/KiraBridge-light-128.png" alt="KiraBridge" width="48" height="48">
+  </picture></a>
+  &nbsp;
+  <a href="https://github.com/landjunge/4AllPass/blob/docs/product-family-readme-20261031/README.md" title="4AllPass"><picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/readme/4AllPass-dark-128.png">
+    <img src="assets/readme/4AllPass-light-128.png" alt="4AllPass" width="48" height="48">
+  </picture></a>
+  &nbsp;
+  <a href="https://github.com/landjunge/agent-authority-lab/blob/docs/product-family-readme-20261031/README.md" title="Agent Authority"><picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/readme/Agent-Authority-dark-128.png">
+    <img src="assets/readme/Agent-Authority-light-128.png" alt="Agent Authority" width="48" height="48">
+  </picture></a>
+</p>
 
-### 👤 [Für Nutzer – TollGate ausprobieren](#für-nutzer)
+<h1 align="center">TollGate</h1>
 
-### 🛠️ [Für Entwickler – Code und technische Dokumentation](#für-entwickler)
+<p align="center"><strong>A safety gate for AI agents.</strong></p>
 
----
+TollGate checks connected model and tool calls before they execute. It helps stop repeated calls, limit usage and explain decisions.
 
-## Aktueller Funktionsstand / Current capabilities
+**Source version: 1.0.12 · In development · Python 3.11 or newer**
 
-**Deutsch:** TollGate prüft angeschlossene Modell- und Werkzeugaufrufe vor der Ausführung. Das Gateway bietet Verbrauchsgrenzen, Schleifenschutz, Scopes, Freeze und kontrollierte Weiterleitung. Der lokale Auftragskontrollkern ergänzt dauerhafte Reservierungen und Stopps für ausdrücklich angeschlossene Adapter. Freeze blockiert neue Aufrufe; es beendet keine beliebigen Prozesse und macht bereits ausgelöste Wirkungen nicht rückgängig. Kostenschätzungen sind keine Anbieterabrechnung.
+[Quick start from source](docs/QUICKSTART.md) · [View source](https://github.com/landjunge/tollgate/tree/main)
 
-**English:** TollGate checks connected model and tool calls before execution. The gateway provides usage limits, loop protection, scopes, freeze and controlled routing. Its local workflow-control core adds durable reservations and stop barriers for explicitly connected adapters. Freeze blocks new calls; it does not terminate arbitrary processes or undo effects already sent. Cost estimates are not provider invoices.
+There is no published desktop installer. The [announcement release](https://github.com/landjunge/tollgate/releases/tag/announce-public) has no packaged downloads. Use requires permission under the [license](LICENSE).
 
-Python 3.11+; Paketstand / package version: 1.0.12. [Schnellstart / Quick start](docs/QUICKSTART.md) · [Auftragskontrolle und Grenzen / Workflow control and limits](docs/WORKFLOW-CONTROL.md).
+## What is available today
 
+- **Protect:** usage limits, loop protection, rules for permitted access and a freeze for new calls.
+- **Route:** health-aware routing and failover to configured providers.
+- **Prove:** outage and recovery simulations with reports about the tested setup.
+- **Connections:** an OpenAI-compatible gateway, MCP and n8n; English and German controls.
 
-## Für Nutzer
+The local workflow-control core adds durable reservations and stops for explicitly connected adapters. Acceptance with synthetic adapters is separate from configured production use with KiraBridge or 4AllPass. Cost estimates are not provider invoices and do not guarantee a spending cap for arbitrary terminal agents.
 
-### Einfach erklärt
+**Boundary:** Freeze blocks new connected calls. It does not terminate arbitrary processes or undo effects already sent. [Workflow control](docs/WORKFLOW-CONTROL.md) · [Process stops](docs/WORKFLOW-PROCESS-STOP.md).
 
-Ein KI-Agent kann Werkzeuge benutzen, Internetdienste aufrufen und dabei Kosten verursachen. Wenn etwas schiefläuft, kann er denselben Aufruf immer wieder ausführen.
+## Get started
 
-TollGate sitzt davor. Es beantwortet eine Frage:
+With permission to use the software and Python 3.11 or newer:
 
-> **Darf ich handeln?**
-
-### Was du davon hast
-
-- Endlosschleifen werden gestoppt.
-- Kosten können begrenzt werden.
-- Zugriffe erhalten klare Regeln.
-- Bei einem ausgefallenen Anbieter kann kontrolliert gewechselt werden.
-- Entscheidungen werden für eine spätere Prüfung festgehalten.
-
-### In drei Schritten
-
-1. **Installieren** – TollGate lokal einrichten.
-2. **Testen** – eine ungefährliche Agentenschleife ausführen.
-3. **Prüfen** – sehen, warum TollGate den Aufruf erlaubt oder blockiert hat.
-
-### Was TollGate nicht ist
-
-TollGate ist kein KI-Modell, kein Agent und kein Passwort-Tresor. Es ersetzt auch nicht die Entscheidung des Menschen. Es ist eine eigene Kontrollschicht vor einer Handlung.
-
-### Heutiger Stand – ehrlich
-
-| Bereich | Aktueller Stand |
-|---|---|
-| Protect | Budgets, Schleifenstopps, Scopes und Freeze |
-| Route | Zustandsabhängige Weiterleitung und Failover |
-| Prove | Chaos- und Wiederanlauf-Tests mit Nachweisen |
-| Schnittstellen | OpenAI-kompatibel, MCP und n8n |
-| Technik | Python und FastAPI |
-| Reife | In Entwicklung; vor Produktion selbst prüfen |
-
-### Kontrollumfang / Control scope
-
-Freeze sperrt neue angeschlossene Aufrufe; es beendet keine beliebigen Prozesse
-und macht bereits versandte Wirkung nicht rückgängig. Tagesgrenzen und grobe
-USD-Schätzungen sind keine bestätigte Anbieterrechnung. Der neue lokale
-[Auftragskontrollkern](docs/WORKFLOW-CONTROL.md) reserviert ganzzahlige
-USD-Microbeträge je KI/Gesamtauftrag dauerhaft und koppelt Stopps an den
-**tatsächlichen angeschlossenen Dispatch**. Neustart, Tageswechsel und Timeout
-geben unklare Reservierungen nicht frei. Die Abnahme nutzt synthetische Adapter;
-KiraBridge/4AllPass-Livebetrieb und beliebige CLI-Kosten sind damit nicht freigegeben.
-
-Freeze blocks new connected calls; it does not terminate arbitrary processes or
-undo already sent effects. Daily estimates are not provider invoices. The local
-[workflow-control core](docs/WORKFLOW-CONTROL.md) adds durable integer-dollar
-reservations per AI/workflow and an ordered stop/dispatch barrier. Unknown
-obligations survive restart/day changes. Synthetic acceptance is not a production
-KiraBridge/4AllPass adapter or a hard cap for arbitrary subscription CLIs.
-
-[Produktseite](https://tollgate.netzwerkpunkt.de/) · [Schnellstart](docs/QUICKSTART.md)
-
----
-
-## Für Entwickler
-
-TollGate ist ein vorgeschaltetes Admission Gate für Tool- und Modellaufrufe. Es entscheidet vor dem Request und hält den Grund der Entscheidung fest.
-
-## How this is built / Wie dieses Projekt entsteht
-
-**System Designer & Product Architect** — Daniel Filipek (landjunge)
-
-Ich arbeite anders: Ich entwickle Systeme und Produkte mit KI als technischem Partner.
-
-Meine Stärke liegt darin, Probleme zu erkennen, Systeme in eigenständige Werkzeuge zu zerlegen und klare Grenzen und Schnittstellen zu definieren. Produktvision, Prioritäten und Architekturentscheidungen kommen von mir. KI ist der technische Partner für Implementierung, Tests und Dokumentation.
-
-Ich bin kein klassischer Softwareentwickler und kein Security-Spezialist. Die technische Umsetzung entsteht gemeinsam mit KI und muss – besonders bei sicherheitskritischen Projekten – überprüfbar sein.
-
-Was ich einbringe: Idee, Systemdenken, Anforderungen, gewünschtes Verhalten, klare Grenzen.  
-Was überprüfbar sein muss: der Code, die Specs, die Tests. Reviews sind willkommen.
-
-Open Source und öffentlich entwickelt. Kritik, Tests und Beiträge sind willkommen.
-
-TollGate beantwortet **„Darf ich handeln?“** — ein eigenes Produkt, kein Plugin der anderen.
-
-```text
-AI Agent
-   │
-   ├── tool call #1
-   ├── tool call #2
-   ├── tool call #3
-   ├── tool call #4
-   └── tool call #5
-
-TollGate
-
-🛑 TOOL LOOP LIMIT EXCEEDED
-
-Agent blocked.
-Budget remaining: $1.72
-Evidence recorded.
-```
-
----
-
-## 10 minutes (cold start)
-
-**Primary path: native Python — no Docker.** Protect demo needs no provider keys.
-
-```bash
-git clone https://github.com/landjunge/tollgate.git && cd tollgate
-python3 -m venv .venv && .venv/bin/pip install -e .
+```sh
+git clone https://github.com/landjunge/tollgate.git
+cd tollgate
+python3 -m venv .venv
+.venv/bin/pip install -e .
 ./scripts/ten-minute.sh
-# 60-second Protect story (optional, server on :8787):
-./scripts/demo-agent-safety.sh
 ```
 
-**USB stick / portable desk** (venv + data on the volume):
+The Protect demo needs no provider keys. Then check the local dashboard to see why a call was allowed or blocked. Real model calls and routing require your own provider accounts. [Quick start](docs/QUICKSTART.md).
 
-```bash
-./scripts/portable-setup.sh
-./scripts/run.sh
-# details: docs/PORTABLE.md
-```
+## Planned collaboration
 
-You should experience:
+The five products remain independent. The goal is a shared workflow with **KiraBridge as the communication hub**:
 
-| Step | What happens |
-|------|----------------|
-| **Protect** | Agent tool-loop → `🛑 REQUEST BLOCKED` (no $ required) |
-| **Prove** | Chaos / failover simulation → survived or clear next step |
-| **Result** | `tollgate certificate` scorecard + [dashboard](http://127.0.0.1:8787/dashboard) |
+| Product | Role in the shared workflow |
+| --- | --- |
+| [ThreadDesk](https://github.com/landjunge/threaddesk/blob/docs/product-family-readme-20261031/README.md) | Keeps project context, knowledge and results. |
+| [KiraBridge](https://github.com/landjunge/KiraBridge/blob/docs/product-family-readme-20261031/README.md) | Relays tasks, questions and replies between chat, local agents and tools. |
+| [4AllPass](https://github.com/landjunge/4AllPass/blob/docs/product-family-readme-20261031/README.md) | Manages credentials; is intended to enable specifically approved access. |
+| [TollGate](https://github.com/landjunge/tollgate/blob/docs/product-family-readme-20261031/README.md) | Checks connected calls and enforces usage limits and stops. |
+| [Agent Authority](https://github.com/landjunge/agent-authority-lab/blob/docs/product-family-readme-20261031/README.md) | Shows observations, contradictions and missing evidence; does not approve actions. |
 
-**Start here (3 docs):**  
-[Quickstart](docs/QUICKSTART.md) · [Portable / USB](docs/PORTABLE.md) · [How it works](docs/HOW_IT_WORKS.md) · [Production checklist](docs/PRODUCTION_CHECKLIST.md)
+Some interfaces already exist. A fully configured and verified workflow across all five products is still planned. Approvals stay with the responsible tool and the human. KiraBridge and Agent Authority require access to their private repositories.
 
-**More:** [SECURITY.md](docs/SECURITY.md) · [OPENAI.md](docs/OPENAI.md) · [HILFE.md](docs/HILFE.md) (DE) · [FAQ.md](docs/FAQ.md) · `tollgate help` · `tollgate doctor`
+[User guide](docs/USER_GUIDE.md) · [Documentation](docs/README.md) · [Developer details](docs/DEVELOPERS.md) · [Product website](https://tollgate.netzwerkpunkt.de/)
 
-If that path is confusing, **stop shipping features** — fix the path.
+## License and contributions
 
----
+[Source-available, all rights reserved](LICENSE). Visible source does not grant general permission to use or redistribute it. Historical MIT license rights remain intact.
 
-## Who it’s for
-
-| | |
-|--|--|
-| Teams running agents in production | cost · loops · outages · audit · freeze |
-| Agent frameworks (LangGraph, CrewAI, …) | sit in front of tools + LLMs |
-| n8n / automation | stop workflow agent-loops at the gate |
-
-**Wedge:** LiteLLM connects models. Helicone shows traffic. **TollGate keeps agents in line.**
-
----
-
-## Product (short)
-
-| Pillar | Job |
-|--------|-----|
-| **Protect** | Budgets, tool-loop hard stops, scopes, freeze, audit |
-| **Route** | Health-aware failover, circuits |
-| **Prove** | Chaos/DR tests, resilience score, certificate scorecard |
-
-Deep dive: [docs/PRODUCT.md](docs/PRODUCT.md) · Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-
----
-
-## Everyday commands (after the 10 minutes)
-
-```bash
-tollgate status
-tollgate certificate --application "Customer Support Agent"
-tollgate consumer-budget support-agent --max-usd-day 2 --max-tool-calls 20
-tollgate chaos test opencode_zen --requests 10
-tollgate freeze --reason "panic"    # blocks new controlled calls; not process termination
-tollgate report                     # day brief
-```
-
-Point an agent / OpenAI SDK:
-
-```bash
-export OPENAI_BASE_URL=http://127.0.0.1:8787/v1
-export OPENAI_API_KEY=support-agent   # open mode label, or id:secret
-```
-
-## Language / Sprache
-
-Tollgate speaks English and German. English stays the default, so existing
-scripts that read CLI output keep working.
-
-| Way | Example |
-|---|---|
-| Once | `tollgate --lang de help` |
-| Always | `export TOLLGATE_LANG=de` |
-| Automatic | from `LC_ALL`, `LC_MESSAGES` or `LANG` |
-
-`LANG=C` and `LANG=POSIX` mean "no preference" and are skipped, so a server
-shell never lands on a language nobody chose.
-
-The section words argparse prints itself (`usage:`, `options:`) come from
-Python and stay English.
-
-The Control Room at `/dashboard` follows the same choice: `?lang=de` picks a
-language and is remembered in a cookie for a year, otherwise the browser
-decides. The switch sits in the header and inside the setup wizard, so it is
-reachable even on a first visit.
-
-### Plain or expert wording / Klartext oder Fachsprache
-
-Independent of English/German there are two levels of wording. **Plain is the
-default, expert is opt-in** — never the other way round. Whoever knows the
-terms switches them on; whoever does not is not run over by them.
-
-| Way | Example |
-|---|---|
-| Once | `tollgate --mode expert control` |
-| Always | `export TOLLGATE_MODE=expert` |
-| Control Room | switch next to DE/EN, remembered in a cookie for a year |
-
-| Plain (default) | Expert |
-|---|---|
-| Leitstand · Nachweis · Protokoll · Anbieter | Control Room · Prove · Audit · Provider |
-| "Start Tollgate so agents can reach it" | "Run HTTP server (uvicorn)" |
-| Response time · Safety switch · State | Latency · Circuit · Health |
-
-The level is **not** guessed from the browser or the environment: plain
-applies to everyone until someone says otherwise. Both switches carry the
-other one's choice in their links, so picking EN does not throw the wording
-level away.
-
-Not yet in expert wording: the twelve handbook topics behind
-`tollgate help <topic>`. The switch is wired (`<topic>#expert`), no topic has
-a second version yet, so plain stays.
-
-Not yet translated: text that arrives from the API (`/v1/control` headline and
-recommendations). Those would need the API to carry codes instead of English
-sentences — a change to the JSON contract, tracked separately.
-
----
-
-## Shared rules of the NetzwerkPunkt tools
-
-TollGate, ThreadDesk and 4AllPass share their look and their language rules.
-Anyone building a new tool takes the same values — they are not taste, they
-are standards you can look up. **4AllPass is the reference.**
-
-**Colours** (identical in all tools)
-
-| Token | Value | For |
-|---|---|---|
-| `--bg` | `#121316` | base surface |
-| `--bg-panel` | `#1a1b1f` | surface |
-| `--bg-card` | `#1e1f24` | card |
-| `--fg` | `#e2e4e9` | text |
-| `--fg-muted` | `#8b909a` | secondary text |
-| `--border` | `#2e3138` | divider between surfaces (decoration) |
-| `--border-strong` | `#5f646f` | **edge of controls** |
-| `--accent` | `#8f98a8` | accent |
-| `--ok` / `--warn` / `--err` | `#3d9b6a` / `#c9a227` / `#dc7070` | states |
-
-In TollGate the same tokens are called `--line`, `--line2`, `--muted`,
-`--acc`, `--bad` — same values, older names.
-
-**Shape and size**
-
-- `border-radius: 0` everywhere. Round only where the shape *means* something
-  (map symbols, progress ring, status dot), with a reason in the code.
-- Exactly four font sizes: **13 / 16 / 20 / 25 px**. 16px base as recommended
-  for body text on the web, the steps around it at a ratio of 1.25 (major
-  third). Other tokens get deleted, not just avoided.
-- Spacing on an 8px grid: 4 / 8 / 12 / 16 / 24 / 32.
-- **Exactly two sizes for controls**, no more: `--control: 40px` for the
-  normal case (button, input, select) and `--control-sm: 32px` for dense
-  rows and tabs. Both sit on the 8px grid. Button, input and select are the
-  same height.
-- Under `@media (pointer: coarse)` every target becomes **44px**
-  (`--control-touch`). That is not a third size, it is the same elements
-  under a different input device — the number comes from Apple and Material.
-  The pointer is the right signal, **not** the window width: a narrow
-  desktop window is not a finger. WCAG 2.2 (2.5.8) asks for 24px as the
-  minimum; all three values are above it.
-- Contrast: **4.5:1** for text, **3:1** for anything else that carries
-  meaning (WCAG 2.2, 1.4.3 and 1.4.11).
-- Selects set `appearance: none` and draw their own arrow — otherwise the
-  operating system draws the menu, on Windows with a 3D effect.
-- Font: the operating system's. Nothing loaded from elsewhere.
-
-**Language**
-
-- Every tool is English **and** German from the start. Retrofitting is
-  expensive. Visible text belongs in a catalogue, never in the template.
-- Always **one** language at a time, never both side by side.
-- Resolution: `?lang=` → cookie → `Accept-Language` → default.
-- Plus the two levels of wording: **plain is the default, expert is opt-in**.
-  An expert version hangs off the same key, separated by `#expert` — not a
-  dot, otherwise `register.expert` would be the expert version of `register`.
-  With no expert version the plain text stays.
-- Every label says what happens. Every field says what it is for. No
-  abbreviation without spelling it out. Errors name the next step.
-- Proper nouns are not translated: TollGate, ThreadDesk, 4AllPass,
-  Gnom-Hub-V1, Grok, Codex, MCP.
-
-**A trap that bit twice:** `argparse` builds the help texts when the parser is
-*created*, not when it parses. `--lang` and `--mode` must therefore be read
-from `argv` by hand beforehand, or `tollgate --mode expert --help` is plain
-again.
-
----
-
-## vs gateways (optional reading)
-
-| | **TollGate** | LiteLLM | Helicone |
-|--|--------------|---------|----------|
-| Core job | **Agent safety + DR proof** | Multi-provider proxy | Observability |
-| Pre-admission hard deny | ✅ | optional | mostly post-hoc |
-| Chaos / prove | ✅ first-class | DIY | — |
-
----
-
-## Docs index
-
-| Doc | When |
-|-----|------|
-| [HILFE.md](docs/HILFE.md) | **Hilfe (Deutsch)** |
-| [USER_GUIDE.md](docs/USER_GUIDE.md) | **User guide (English)** |
-| [FAQ.md](docs/FAQ.md) | **FAQ** |
-| [TEN_MINUTE.md](docs/TEN_MINUTE.md) | First 10 minutes |
-| [DEMO.md](docs/DEMO.md) | Pitch / screen share |
-| [GETTING_STARTED.md](docs/GETTING_STARTED.md) | Setup details |
-| [MAP.md](docs/MAP.md) · `tollgate search` | Find code |
-| [N8N.md](docs/N8N.md) · [OPENAI.md](docs/OPENAI.md) | Integrations |
-| [CHANGELOG.md](CHANGELOG.md) | Releases · **v1.0.0+** |
-
-**License:** All Rights Reserved · **Python:** ≥ 3.11 · **Repo:** [landjunge/tollgate](https://github.com/landjunge/tollgate)
-
-### Owned CLI stop-only adapter / Auftragseigener CLI-Stopp
-
-An optional trusted process adapter can share the durable workflow stop barrier;
-CLI cost remains unknown, without a hard dollar cap or invented zero-cost quote.
-Optionale betreibergebundene Prozessadapter teilen die dauerhafte Auftragssperre;
-Kosten bleiben unbekannt. [DE/EN contract](docs/WORKFLOW-PROCESS-STOP.md).
+Product concept and architecture: **Daniel Filipek (landjunge)**. AI assists with implementation and documentation. The documented checks do not replace an independent security audit; verifiable reviews are welcome.
