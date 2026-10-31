@@ -26,7 +26,7 @@ TollGate prüft angeschlossene Modell- und Werkzeugaufrufe, bevor sie ausgeführ
 
 Es gibt keinen veröffentlichten Desktop-Installer. Das [Ankündigungsrelease](https://github.com/landjunge/tollgate/releases/tag/announce-public) enthält keine fertigen Pakete. Die Nutzung benötigt eine Erlaubnis gemäß [Lizenz](LICENSE).
 
-## Was heute vorhanden ist
+## Wobei TollGate dir hilft
 
 - **Protect:** Verbrauchsgrenzen, Schleifenschutz, Regeln für erlaubte Zugriffe und eine Sperre für neue Aufrufe.
 - **Route:** zustandsabhängige Weiterleitung und Ausweichen auf konfigurierte Anbieter.
@@ -41,13 +41,9 @@ Der lokale Auftragskontrollkern ergänzt dauerhafte Reservierungen und Stopps f�
 
 Mit Nutzungserlaubnis und Python 3.11 oder neuer:
 
-```sh
-git clone https://github.com/landjunge/tollgate.git
-cd tollgate
-python3 -m venv .venv
-.venv/bin/pip install -e .
-./scripts/ten-minute.sh
-```
+1. **Einrichten.** Folge dem [Schnellstart](docs/QUICKSTART.md), um TollGate lokal zu installieren.
+2. **Demo starten.** Führe die Protect-Demo aus dem Schnellstart aus.
+3. **Ergebnis ansehen.** Öffne das lokale Dashboard und sieh nach, warum TollGate einen Aufruf erlaubt oder blockiert hat.
 
 Die Protect-Demo braucht keine Anbieter-Schlüssel. Prüfe anschließend im lokalen Dashboard, warum ein Aufruf erlaubt oder blockiert wurde. Für echte Modellaufrufe und Weiterleitung brauchst du eigene Anbieterzugänge. [Schnellstart](docs/QUICKSTART.md).
 
@@ -65,10 +61,10 @@ Die fünf Produkte bleiben eigenständig. Geplant ist ein gemeinsamer Ablauf mit
 
 Einzelne Schnittstellen sind vorhanden. Ein vollständig eingerichteter und geprüfter Ablauf aller fünf Produkte ist noch geplant. Freigaben bleiben beim zuständigen Werkzeug und beim Menschen. KiraBridge und Agent Authority benötigen Zugriff auf ihre privaten Repositorys.
 
-[Hilfe auf Deutsch](docs/HILFE.md) · [Dokumentation](docs/README.md) · [Entwicklerdetails](docs/DEVELOPERS.md) · [Produktseite](https://tollgate.netzwerkpunkt.de/)
-
-## Lizenz und Mitwirkung
+## Lizenz
 
 [Source-available, alle Rechte vorbehalten](LICENSE). Sichtbarer Quellcode erteilt keine allgemeine Nutzungs- oder Weiterverteilungserlaubnis. Historische MIT-Lizenzrechte bleiben erhalten.
 
 Produktidee und Architektur: **Daniel Filipek (landjunge)**. KI unterstützt Implementierung und Dokumentation. Die dokumentierten Prüfungen ersetzen kein unabhängiges Sicherheitsaudit; nachvollziehbare Reviews sind willkommen.
+
+[Hilfe auf Deutsch](docs/HILFE.md) · [Dokumentation](docs/README.md) · [Entwicklerdetails](docs/DEVELOPERS.md) · [Produktseite](https://tollgate.netzwerkpunkt.de/)

@@ -26,7 +26,7 @@ TollGate checks connected model and tool calls before they execute. It helps sto
 
 There is no published desktop installer. The [announcement release](https://github.com/landjunge/tollgate/releases/tag/announce-public) has no packaged downloads. Use requires permission under the [license](LICENSE).
 
-## What is available today
+## What TollGate helps you do
 
 - **Protect:** usage limits, loop protection, rules for permitted access and a freeze for new calls.
 - **Route:** health-aware routing and failover to configured providers.
@@ -41,13 +41,9 @@ The local workflow-control core adds durable reservations and stops for explicit
 
 With permission to use the software and Python 3.11 or newer:
 
-```sh
-git clone https://github.com/landjunge/tollgate.git
-cd tollgate
-python3 -m venv .venv
-.venv/bin/pip install -e .
-./scripts/ten-minute.sh
-```
+1. **Set up.** Follow the [quick start](docs/QUICKSTART.md) to install TollGate locally.
+2. **Run the demo.** Run the Protect demo from the quick start.
+3. **Inspect the result.** Open the local dashboard to see why TollGate allowed or blocked a call.
 
 The Protect demo needs no provider keys. Then check the local dashboard to see why a call was allowed or blocked. Real model calls and routing require your own provider accounts. [Quick start](docs/QUICKSTART.md).
 
@@ -65,10 +61,10 @@ The five products remain independent. The goal is a shared workflow with **KiraB
 
 Some interfaces already exist. A fully configured and verified workflow across all five products is still planned. Approvals stay with the responsible tool and the human. KiraBridge and Agent Authority require access to their private repositories.
 
-[User guide](docs/USER_GUIDE.md) · [Documentation](docs/README.md) · [Developer details](docs/DEVELOPERS.md) · [Product website](https://tollgate.netzwerkpunkt.de/)
-
-## License and contributions
+## License
 
 [Source-available, all rights reserved](LICENSE). Visible source does not grant general permission to use or redistribute it. Historical MIT license rights remain intact.
 
 Product concept and architecture: **Daniel Filipek (landjunge)**. AI assists with implementation and documentation. The documented checks do not replace an independent security audit; verifiable reviews are welcome.
+
+[User guide](docs/USER_GUIDE.md) · [Documentation](docs/README.md) · [Developer details](docs/DEVELOPERS.md) · [Product website](https://tollgate.netzwerkpunkt.de/)
